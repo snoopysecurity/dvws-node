@@ -1,0 +1,102 @@
+
+<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular.min.js"></script>
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<link href="index.css" rel="stylesheet" id="inline-css">
+<!------ Include the above in your HEAD tag ---------->
+
+<div class="sidenav">
+         <div class="login-main-text">
+            <h2>Damn Vulnerable Web Services<br> Public Notes Search</h2>
+            <p>You can search and see Public Notes created by other users here</p>
+            <p></p>
+         </div>
+      </div>
+      <div class="main">
+         <div class="col-md-6 col-sm-12">
+            <div class="login-form">
+                    <div ng-app="app" ng-controller="MyController">
+                            <h2>Public Notes</h2>
+                            <p>You can see public notes created by other users here:</p>
+                            <hr>
+
+
+                            <br>
+                            <p>Note Name: <input type="text" class="form-control" name="search" ng-model="search" /></p>
+                            <button class="btn btn-black" ng-click="SendData()">Submit</button>
+                            <br>
+                            <br>
+                            {{ serverresponse }}
+                            <br>
+                            <table>
+                                    <tr>
+                                        <th ng-repeat="(key, val) in items[0]">{{key}}</th>
+                                    </tr>
+                                    <tr ng-repeat="item in items">
+                                        <td ng-repeat="(key, val) in item">{{val}} </td>
+                                    </tr>
+                                </table>
+
+                        </div>
+
+
+
+            </div>
+         </div>
+
+      </div>
+
+      <script type="text/javascript">
+
+
+    var app = angular.module('app', [])
+    app.controller('MyController', function ($scope, $http, $window) {
+            $scope.SendData =  function () {
+                var get = $http({
+                    method: "POST",
+                    url: "/api/v2/notesearch",
+                    dataType: 'json',
+                    headers: { "Content-Type": "application/json" },
+                    headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') },
+                    data: { search: $scope.search }
+    
+                });
+    
+                get.success(function (data, status) {
+                    if (data.length < 1 || data == undefined) {
+                        $scope.serverresponse = 'Note not found'
+
+                        var getuserdata = $http({
+                            method: "GET",
+                            url: "/api/v2/notes/" + result[$scope.name],
+                            dataType: 'json',
+                            headers: { "Content-Type": "application/json" },
+                            headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+                        });
+
+                        getuserdata.success(function (data, status) {
+                            $scope.DataResponse = 'Note '  + $scope.name + ' Deleted'
+
+   
+                        });
+                        getuserdata.error(function (data, status) {
+                            $scope.DataResponse = 'Error! Could not fetch Data'
+                        });
+
+                    } else {
+                    $scope.items = data;
+                    }
+                });
+     
+                get.error(function (data, status) {
+                    $scope.items = 'Error';
+                });
+            
+            }
+    
+        });
+
+
+    </script>
+<!-- http://localhost:9090/xmlrpc -->

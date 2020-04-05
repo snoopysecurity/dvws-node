@@ -1,0 +1,106 @@
+
+<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular.min.js"></script>
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<link href="index.css" rel="stylesheet" id="inline-css">
+<!------ Include the above in your HEAD tag ---------->
+
+<div class="sidenav">
+         <div class="login-main-text">
+            <h2>Damn Vulnerable Web Services<br> Admin Area</h2>
+            <p>Functionality only availiable to Admin Users</p>
+            <p></p>
+         </div>
+      </div>
+      <div class="main">
+         <div class="col-md-6 col-sm-12">
+            <div class="login-form">
+                    <div ng-app="app" ng-controller="MyController">
+                            <h2>DVWS User Data</h2>
+                            <p>User Information</p>
+                     
+                            <br>
+                            {{ ResponseMessage  }}
+                            <br>
+                            <br>
+                            Details of user stored within DVWS:
+                           <textarea rows="19" cols="90">
+                            {{ items }}
+                           </textarea>
+                        </div>
+
+
+
+            </div>
+         </div>
+
+      </div>
+
+      <script type="text/javascript">
+
+
+         var app = angular.module('app', [])
+         app.controller('MyController', function ($scope, $http, $window) {
+                  getFromServer();
+                  function getFromServer() {
+                     var get = $http({
+                         method: "GET",
+                         url: "/api/v2/users/checkadmin",
+                         dataType: 'json',
+                         headers: { "Content-Type": "application/json" },
+                         headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+         
+                     });
+         
+                     get.success(function (data, status) {
+                        if (data.Success) {
+                        $scope.ResponseMessage  = data.Success
+                        var adUrl = data.AdminURL
+         
+                        getUsers();
+                        function getUsers() {
+                        var getuserdata = $http({
+                            method: "GET",
+                            url: adUrl,
+                            dataType: 'json',
+                            headers: { "Content-Type": "application/json" },
+                            headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+                        });
+
+                        getuserdata.success(function (data, status) {
+
+                              $scope.items = data;
+                        });
+
+                        
+                        getuserdata.error(function (data, status) {
+                           $scope.items = 0;
+                        });
+
+                     }
+                    
+
+
+                        } else if (data.Error) {
+                           var user = data.User
+                           $scope.ResponseMessage  = data.Error
+                           window.location = "home.html#" + user
+
+                        }
+
+
+          
+                     get.error(function (data, status) {
+                         $scope.ResponseMessage  = 'Authentication Error';
+                     });
+                 
+                  });
+
+               }
+         
+             });
+     
+     
+         </script>
+

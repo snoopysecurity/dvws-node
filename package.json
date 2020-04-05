@@ -1,0 +1,41 @@
+{
+  "name": "dvws-node",
+  "version": "0.0.1",
+  "description": "Damn Vulnerable Web Service",
+  "main": "index.js",
+  "scripts": {
+    "dvws": "cross-env NODE_ENV=development nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snoopysecurity/dvws-node"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/snoopysecurity/dvws-node/issues"
+  },
+  "homepage": "https://github.com/snoopysecurity/dvws-node#readme",
+  "dependencies": {
+    "bcrypt": "^3.0.1",
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.5",
+    "dotenv": "^6.0.0",
+    "express": "^4.16.3",
+    "express-jwt": "^5.3.1",
+    "express-jwt-permissions": "^1.3.3",
+    "http-proxy-middleware": "^1.0.3",
+    "install": "^0.13.0",
+    "jsonwebtoken": "^8.3.0",
+    "mongoose": "^5.8.5",
+    "mongoose-auto-increment": "^5.0.1",
+    "swagger-ui-express": "^4.1.4",
+    "xmlrpc": "^1.3.2"
+  },
+  "devDependencies": {
+    "morgan": "^1.9.1",
+    "nodemon": "^1.18.4",
+    "cross-env": "^5.2.0"
+  }
+}
