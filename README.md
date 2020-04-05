@@ -1,5 +1,5 @@
 # dvws-node
-Damn Vulnerable Web Services is a Damn Vulnerable Insecure API/Web Service. This is a replacement for https://github.com/snoopysecurity/dvws
+Damn Vulnerable Web Service is a Damn Vulnerable Insecure API/Web Service. This is a replacement for https://github.com/snoopysecurity/dvws
 
 
 This vulnerable API/Web Service contains the following vulnerabilities:
