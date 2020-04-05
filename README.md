@@ -18,6 +18,10 @@ This vulnerable API/Web Service contains the following vulnerabilities:
 * Cross-Site Request Forgery (CSRF)
 
 
+
+
+![DVWS](https://snoopysecurity.github.io/assets/dvws.png)
+
 ## Set Up Instructions
 
 **Node and NPM is needed to run dvws-node**
