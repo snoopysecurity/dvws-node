@@ -1,6 +1,9 @@
 # dvws-node
 Damn Vulnerable Web Service is a Damn Vulnerable Insecure API/Web Service. This is a replacement for https://github.com/snoopysecurity/dvws
 
+![DVWS](https://snoopysecurity.github.io/assets/dvws.png)
+
+
 
 This vulnerable API/Web Service contains the following vulnerabilities:
 
@@ -20,7 +23,6 @@ This vulnerable API/Web Service contains the following vulnerabilities:
 
 
 
-![DVWS](https://snoopysecurity.github.io/assets/dvws.png)
 
 ## Set Up Instructions
 
@@ -93,3 +95,8 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * Dockerize DVWS
 * Write Challenge Solution Wiki
 * Default Error Handling Pages
+
+
+## Any Questions
+
+Open a GitHub Issue :) 
