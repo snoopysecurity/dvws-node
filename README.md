@@ -59,6 +59,12 @@ npm run dvws
 
 ```
 
+Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensures URLs from swagger is resolved correctly (optional)
+
+```
+127.0.0.1    dvws.local
+```
+
 
 ## To Do
 * REST API SQL Injection
