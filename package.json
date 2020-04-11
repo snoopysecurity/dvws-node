@@ -30,6 +30,7 @@
     "jsonwebtoken": "^8.3.0",
     "mongoose": "^5.8.5",
     "mongoose-auto-increment": "^5.0.1",
+    "mysql": "^2.18.1",
     "swagger-ui-express": "^4.1.4",
     "xmlrpc": "^1.3.2"
   },

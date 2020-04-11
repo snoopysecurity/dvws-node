@@ -1,0 +1,149 @@
+
+<html>
+
+    <head>
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular.min.js"></script>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <link href="index.css" rel="stylesheet" id="inline-css">
+    <script type="text/javascript" src="passgen.js"></script>
+    <!------ Include the above in your HEAD tag ---------->
+    
+    </head>
+    
+    <body ng-app="rootApp">
+    
+    <div class="sidenav">
+             <div class="login-main-text">
+                <h2>Damn Vulnerable Web Services<br> PassPhrase Generator</h2>
+                <p>A random PassPhrase Generator</p>
+             </div>
+          </div>
+          <div class="main">
+            <div class="col-md-6 col-sm-12">
+                <div ng-app="myApp1">
+                        <div ng-controller="MyController">
+                   <br>
+                   <br>
+                   <h2>PassPhrase Generator</h2>
+                   <p> A random Passphrase generator. This feature can be used to create and store strong passsphrases which you can store here.</p>
+
+                <input type="text" name="reminder" ng-model="reminder" size="26" placeholder="A name to remind this PassPhrase"> <br>  <br> 
+                <input type='text' id='pass' name="pass" ng-model="pass" size="35" placeholder="PassPhrase"/> <br>
+                <br>
+                <input  class="btn btn-secondary" type='button' value ='Generate' onclick='document.getElementById("pass").value = Password.generate(16)'>
+                <button class="btn btn-black" ng-click="SendData()">Save Passphrase</button>
+
+                <br>
+                <br>
+                {{ DataResponse }}
+
+                        </div>
+                    </div>
+                <div id="myApp2">
+                    <div ng-controller="MyController2">
+                        <br>
+                        <br>
+                        <p>Your Saved PassPhrases can be seen below</p>
+                        <br>
+                        <table>
+                                <tr>
+                                    <th ng-repeat="(key, val) in items[0]">{{key}}</th>
+                                </tr>
+                                <tr ng-repeat="item in items">
+                                    <td ng-repeat="(key, val) in item">{{val}} </td>
+                                </tr>
+                            </table>
+
+                </div>
+        </div>
+               
+               </div>
+               
+
+   
+   
+
+   
+            </div>
+   
+         </div>
+   
+        </body>
+
+
+    <script type="text/javascript">
+
+        var rootApp = angular.module('rootApp', ['myApp1','myApp2']);
+        var myApp1 = angular.module('myApp1', []);
+        myApp1.controller('MyController', function ($scope, $http, $window) {
+    
+    
+    $scope.SendData = function () {
+        var post = $http({
+            method: "POST",
+            url: "/api/v2/passphrase",
+            dataType: 'json',
+            data: { passphrase: document.getElementById("pass").value, reminder: $scope.reminder },
+            headers: { "Content-Type": "application/json" },
+            headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+        });
+
+        post.success(function (data, status) {
+            $scope.DataResponse = data;
+        });
+
+        post.error(function (data, status) {
+                $scope.DataResponse = data.code;
+            });
+        }
+
+    });
+
+        var myApp2 = angular.module('myApp2', []);
+        myApp2.controller('MyController2', function ($scope, $http, $window) {
+
+            getFromServer();
+                  function getFromServer() {
+                     var get = $http({
+                         method: "GET",
+                         url: "/api/v2/users/checkadmin",
+                         dataType: 'json',
+                         headers: { "Content-Type": "application/json" },
+                         headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+         
+                     });
+         
+                     get.success(function (data, status) {
+                        var userUrl = data.User
+                    
+                    getUsers();
+                    function getUsers() {
+
+                    var get = $http({
+                    method: "GET",
+                    url: "/api/v2/passphrase/" + userUrl,
+                    dataType: 'json',
+                    headers: { "Content-Type": "application/json" },
+                    headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+    
+                });
+    
+                get.success(function (data, status) {
+                    $scope.items = data;
+                });
+     
+                get.error(function (data, status) {
+                    $scope.items = null;
+                });
+                    
+            } 
+            });           
+            }
+        });
+
+
+</script>
+</body>
+</html>

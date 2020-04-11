@@ -19,8 +19,8 @@ This vulnerable API/Web Service contains the following vulnerabilities:
 * Hidden API Functionality Exposure
 * Cross-Origin Resource Sharing Misonfiguration
 * Cross-Site Request Forgery (CSRF)
-
-
+* JSON Hijacking
+* REST API SQL Injection
 
 
 
@@ -38,6 +38,12 @@ Set up a mongoDB environment to listen on port `27017`. Docker can be used to qu
 
 ```
 docker run -d -p 27017-27019:27017-27019 --name mongodb mongo:4.0.4
+```
+
+Create a MySQL database which listens of port `3306` Docker can be used as follows
+
+```
+docker run -p 3306:3306 --name dvws-mysql -e MYSQL_ROOT_PASSWORD=mysecretpassword -d mysql:5.7
 ```
 
 Git clone the DVWS Repository 
@@ -58,6 +64,12 @@ npm install all dependencies
 npm install  
 ```
 
+Run the startup script which create some test data
+
+```
+startup_script.js
+```
+
 To start the application/API, run (sudo privileges is needed to bind to ports)
 
 ```
@@ -73,7 +85,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 
 
 ## To Do
-* REST API SQL Injection
 * XML Bomb Denial-of-Service
 * XPATH Injection
 * XML-RPC User Enumeration
@@ -87,7 +98,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * Type Confusion
 * Unsafe Deserialization  
 * LDAP Injection
-* JSON Hijacking
 * SOAP Injection
 * XML Injection
 
