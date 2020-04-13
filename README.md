@@ -68,14 +68,13 @@ npm install
 Run the startup script which create some test data
 
 ```
-startup_script.js
+node startup_script.js
 ```
 
 To start the application/API, run (sudo privileges is needed to bind to ports)
 
 ```
 npm run dvws
-
 ```
 
 Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensures URLs from swagger is resolved correctly (optional)
