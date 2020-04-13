@@ -20,7 +20,8 @@ This vulnerable API/Web Service contains the following vulnerabilities:
 * Cross-Origin Resource Sharing Misonfiguration
 * Cross-Site Request Forgery (CSRF)
 * JSON Hijacking
-* REST API SQL Injection
+* SQL Injection
+* XML External Entity Injection
 
 
 
@@ -89,7 +90,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * XPATH Injection
 * XML-RPC User Enumeration
 * API Endpoint Brute Forcing Challenges
-* XML External Entity Injection
 * CSV Injection
 * Path Traversal 
 * Same Origin Method Execution
@@ -100,6 +100,7 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * LDAP Injection
 * SOAP Injection
 * XML Injection
+* GRAPHQL Security
 
 ### Other Tasks To Complete:
 * Dockerize DVWS

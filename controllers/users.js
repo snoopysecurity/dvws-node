@@ -85,6 +85,7 @@ module.exports = {
         endresult = {}
         endresult['Success'] = 'User is Admin Privileged'
         endresult['AdminURL'] = '/api/v2/users'
+        endresult['User'] = result.user
         res.send(endresult);
       } else {
         endresult = {}

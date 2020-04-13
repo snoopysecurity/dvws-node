@@ -1,0 +1,51 @@
+<definitions name="UserService"
+   targetNamespace="http://www.examples.com/wsdl/dvwsuserservice.wsdl"
+   xmlns="http://schemas.xmlsoap.org/wsdl/"
+   xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+   xmlns:tns="http://www.examples.com/wsdl/dvwsuserservice.wsdl"
+   xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+ 
+   <message name="UsernameRequest">
+      <part name="username" type="xsd:string"/>
+   </message>
+	
+   <message name="UsernameResponse">
+      <part name="username" type="xsd:string"/>
+   </message>
+
+   <portType name="Username_PortType">
+      <operation name="Username">
+         <input message="tns:UsernameRequest"/>
+         <output message="tns:UsernameResponse"/>
+      </operation>
+   </portType>
+
+   <binding name="Username_Binding" type="tns:Username_PortType">
+      <soap:binding style="rpc"
+         transport="http://schemas.xmlsoap.org/soap/http"/>
+      <operation name="Username">
+         <soap:operation soapAction="Username"/>
+         <input>
+            <soap:body
+               encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+               namespace="urn:examples:usernameservice"
+               use="encoded"/>
+         </input>
+		
+         <output>
+            <soap:body
+               encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+               namespace="urn:examples:usernameservice"
+               use="encoded"/>
+         </output>
+      </operation>
+   </binding>
+
+   <service name="User_Service">
+      <documentation>WSDL File for DVWS User Service</documentation>
+      <port binding="tns:Username_Binding" name="Username_Port">
+         <soap:address
+            location="http://dvws.local/dvwsuserservice/" />
+      </port>
+   </service>
+</definitions>

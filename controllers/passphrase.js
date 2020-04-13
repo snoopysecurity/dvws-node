@@ -34,11 +34,10 @@ module.exports = {
   },
 
   get: (req, res) => {
-    console.log(req.params.username);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
       sql.query("select passphrase,reminder from passphrases WHERE username = '" + req.params.username + "'", function (err, result) {
         if (err) {
-          res.send(err);
+          res.send(err.code);
         } else {
         res.send(result);   
       } 

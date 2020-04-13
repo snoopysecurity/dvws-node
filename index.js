@@ -9,6 +9,8 @@ const cors = require('cors');
 const swaggerUI = require('swagger-ui-express');
 
 const swaggerDocument = require('./swagger');
+const soapservice = require('./soapserver/dvwsuserservice');
+
 
 const app = express();
 const router = express.Router();
@@ -21,6 +23,7 @@ const routes = require('./routes/index.js');
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use('/api-docs',swaggerUI.serve,swaggerUI.setup(swaggerDocument));
+app.use('/dvwsuserservice',soapservice);
 app.use(bodyParser.json());
 
 var corsOptions = {

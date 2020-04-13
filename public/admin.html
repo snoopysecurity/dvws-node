@@ -18,16 +18,13 @@
             <div class="login-form">
                     <div ng-app="app" ng-controller="MyController">
                             <h2>DVWS User Data</h2>
-                            <p>User Information</p>
-                     
-                            <br>
-                            {{ ResponseMessage  }}
-                            <br>
-                            <br>
-                            Details of user stored within DVWS:
-                           <textarea rows="19" cols="90">
-                            {{ items }}
-                           </textarea>
+                            <p>User Information:  {{ ResponseMessage  }}</p>
+                           <p>Search DVWS Users: </p> 
+                           Enter Username: <input type="text" name="name" ng-model="name" placeholder="User Name"> <br>
+                           <button type="submit" class="btn btn-black" ng-click="SendData1()">Search</button>
+                           <br>
+                           <br>
+                           {{ DataResponse }}
                         </div>
 
 
@@ -57,28 +54,6 @@
                         if (data.Success) {
                         $scope.ResponseMessage  = data.Success
                         var adUrl = data.AdminURL
-         
-                        getUsers();
-                        function getUsers() {
-                        var getuserdata = $http({
-                            method: "GET",
-                            url: adUrl,
-                            dataType: 'json',
-                            headers: { "Content-Type": "application/json" },
-                            headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-                        });
-
-                        getuserdata.success(function (data, status) {
-
-                              $scope.items = data;
-                        });
-
-                        
-                        getuserdata.error(function (data, status) {
-                           $scope.items = 0;
-                        });
-
-                     }
                     
 
 
@@ -88,8 +63,6 @@
                            window.location = "home.html#" + user
 
                         }
-
-
           
                      get.error(function (data, status) {
                          $scope.ResponseMessage  = 'Authentication Error';
@@ -98,9 +71,41 @@
                   });
 
                }
+               $scope.SendData1 = function () {
+            var post = $http({
+                method: "POST",
+                url: "/dvwsuserservice",
+                dataType: 'xml',
+                data: `<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:examples:usernameservice">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:Username soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <username xsi:type="xsd:string">` + $scope.name + `</username>
+      </urn:Username>
+   </soapenv:Body>
+</soapenv:Envelope>`,
+                headers: { "Content-Type": "application/xml" },
+                headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+            });
+ 
+            post.success(function (data, status) {
+                if (status == 200) {
+                  var xmlDoc = $.parseXML( data )
+                  $xml = $(xmlDoc),
+                  $value= $xml.find( "username" );
+                  var result = $value.text();
+                  $scope.DataResponse = result
+                }
+
+            });
+ 
+            post.error(function (data, status) {
+                $scope.DataResponse = data.errors;
+            });
+        }
          
              });
-     
-     
+
          </script>
 
+<!-- get all user data API functionality currently disabled-->

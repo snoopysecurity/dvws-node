@@ -9,68 +9,6 @@ module.exports = {
     "url" : "http://dvws.local"
   } ],
   "paths" : {
-    "/api/v2/users" : {
-      "post" : {
-        "description" : "Auto generated using Swagger Inspector",
-        "requestBody" : {
-          "content" : {
-            "application/x-www-form-urlencoded" : {
-              "schema" : {
-                "type" : "string"
-              },
-              "examples" : {
-                "0" : {
-                  "value" : "username=xxx&password=xxx"
-                }
-              }
-            }
-          }
-        },
-        "responses" : {
-          "201" : {
-            "description" : "Auto generated using Swagger Inspector",
-            "content" : {
-              "application/json; charset=utf-8" : {
-                "schema" : {
-                  "type" : "string"
-                },
-                "examples" : { }
-              }
-            }
-          }
-        },
-        "servers" : [ {
-          "url" : "http://dvws.local"
-        } ]
-      },
-      "servers" : [ {
-        "url" : "http://dvws.local"
-      } ]
-    },
-    "/api/v2/users/checkadmin" : {
-      "get" : {
-        "description" : "Auto generated using Swagger Inspector",
-        "responses" : {
-          "200" : {
-            "description" : "Auto generated using Swagger Inspector",
-            "content" : {
-              "application/json; charset=utf-8" : {
-                "schema" : {
-                  "type" : "string"
-                },
-                "examples" : { }
-              }
-            }
-          }
-        },
-        "servers" : [ {
-          "url" : "http://dvws.local"
-        } ]
-      },
-      "servers" : [ {
-        "url" : "http://dvws.local"
-      } ]
-    },
     "/api/v2/notes/{ID}" : {
       "put" : {
         "description" : "Auto generated using Swagger Inspector",
@@ -223,6 +161,87 @@ module.exports = {
             }
           }
         },
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : { }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://dvws.local"
+        } ]
+      },
+      "servers" : [ {
+        "url" : "http://dvws.local"
+      } ]
+    },
+    "/api/v2/users" : {
+      "post" : {
+        "description" : "Auto generated using Swagger Inspector",
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "string"
+              },
+              "examples" : {
+                "0" : {
+                  "value" : "username=xxx&password=xxx"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : { }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://dvws.local"
+        } ]
+      },
+      "get" : {
+        "description" : "Auto generated using Swagger Inspector",
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json; charset=utf-8" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : { }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://dvws.local"
+        } ]
+      },
+      "servers" : [ {
+        "url" : "http://dvws.local"
+      } ]
+    },
+    "/api/v2/users/checkadmin" : {
+      "get" : {
+        "description" : "Auto generated using Swagger Inspector",
         "responses" : {
           "200" : {
             "description" : "Auto generated using Swagger Inspector",
