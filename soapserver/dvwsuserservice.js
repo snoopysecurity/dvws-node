@@ -45,50 +45,50 @@ router.get('/', function (req, res, next) {
 });
 
 router.post('/', function (req, res, next) {
-            var options = {
-                noent: true,
-                dtdload: true
-            }
-            var xmlDoc = libxml.parseXml(req.body, options);
-            var xmlchild = xmlDoc.get('//username');
-            var username = xmlchild.text()
-            mongoose.connect(connUri, { useNewUrlParser : true, useUnifiedTopology: true }, (err) => {
-            User.findOne({username}, function(err,obj) { 
-                if (obj != null) {
-                        result = "User Exists:" + xmlchild.text()
-                        jsonresponse = {
-                            "soapenv:Envelope": {
+    var options = {
+        noent: true,
+        dtdload: true
+    }
+    var xmlDoc = libxml.parseXml(req.body, options);
+    var xmlchild = xmlDoc.get('//username');
+    var username = xmlchild.text()
+    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
+        User.findOne({ username }, function (err, obj) {
+            if (obj != null) {
+                result = "User Exists:" + xmlchild.text()
+                jsonresponse = {
+                    "soapenv:Envelope": {
+                        "$": {
+                            "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+                            "xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
+                            "xmlns:soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
+                            "xmlns:urn": "urn:examples:helloservice"
+                        },
+                        "soapenv:Header": [""],
+                        "soapenv:Body": [{
+                            "urn:UsernameResponse": [{
                                 "$": {
-                                    "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-                                    "xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-                                    "xmlns:soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
-                                    "xmlns:urn": "urn:examples:helloservice"
+                                    "soapenv:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/"
                                 },
-                                "soapenv:Header": [""],
-                                "soapenv:Body": [{
-                                    "urn:UsernameResponse": [{
-                                        "$": {
-                                            "soapenv:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/"
-                                        },
-                                        "username": [{
-                                            "_": result,
-                                            "$": {
-                                                "xsi:type": "xsd:string"
-                                            }
-                                        }
-                                        ]
+                                "username": [{
+                                    "_": result,
+                                    "$": {
+                                        "xsi:type": "xsd:string"
                                     }
-                                    ]
                                 }
                                 ]
                             }
+                            ]
                         }
-                        var builder = new Builder();
-                        var xmlresponse = builder.buildObject(jsonresponse);
-                        res.setHeader('Content-Type', 'application/xml');
-                        res.statusCode = 200;
-                        res.send(xmlresponse);
-            }  else {
+                        ]
+                    }
+                }
+                var builder = new Builder();
+                var xmlresponse = builder.buildObject(jsonresponse);
+                res.setHeader('Content-Type', 'application/xml');
+                res.statusCode = 200;
+                res.send(xmlresponse);
+            } else {
                 result = "User Not Found:" + xmlchild.text()
                 jsonresponse = {
                     "soapenv:Envelope": {
@@ -121,12 +121,12 @@ router.post('/', function (req, res, next) {
                 var xmlresponse = builder.buildObject(jsonresponse);
                 res.setHeader('Content-Type', 'application/xml');
                 res.send(xmlresponse);
-            }   
-            mongoose.connection.close();         
+            }
+            mongoose.connection.close();
         });
 
-        });
     });
+});
 router.use(function timeLogEnd(req, res, next) {
     var durationHR = process.hrtime(res.locals.startTimeHR);
     next();

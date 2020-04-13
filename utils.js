@@ -18,9 +18,9 @@ module.exports = {
         throw new Error(err);
       }
     } else {
-      result = { 
+      result = {
         error: `Authentication error. Token required.`,
-        status: 401 
+        status: 401
       };
       res.status(401).send(result);
     }

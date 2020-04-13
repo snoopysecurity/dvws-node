@@ -9,7 +9,7 @@ const stage = require('../config')[environment];
 const Schema = mongoose.Schema;
 const autoIncrement = require('mongoose-auto-increment');
 
-const connection = mongoose.createConnection(connUri,{ useNewUrlParser: true, useUnifiedTopology: true });
+const connection = mongoose.createConnection(connUri, { useNewUrlParser: true, useUnifiedTopology: true });
 autoIncrement.initialize(connection);
 
 const userSchema = new Schema({
@@ -33,12 +33,12 @@ const userSchema = new Schema({
 
 
 // encrypt password before save
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
   const user = this;
-  if(!user.isModified || !user.isNew) {
+  if (!user.isModified || !user.isNew) {
     next();
   } else {
-    bcrypt.hash(user.password, stage.saltingRounds, function(err, hash) {
+    bcrypt.hash(user.password, stage.saltingRounds, function (err, hash) {
       if (err) {
         console.log('Error hashing password for user', user.username);
         next(err);
