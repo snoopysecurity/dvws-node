@@ -100,6 +100,8 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * SOAP Injection
 * XML Injection
 * GRAPHQL Security
+* CRLF Injection
+
 
 ### Other Tasks To Complete:
 * Dockerize DVWS
