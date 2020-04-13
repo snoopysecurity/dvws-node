@@ -22,6 +22,7 @@ This vulnerable API/Web Service contains the following vulnerabilities:
 * JSON Hijacking
 * SQL Injection
 * XML External Entity Injection
+* Client Side Template Injection
 
 
 
