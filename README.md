@@ -61,11 +61,14 @@ Change directory to DVWS
 cd dvws-node
 ```
 
-npm install all dependencies
+npm install all dependencies 
 
 ```
 npm install  
 ```
+
+If you get errors when running `npm install` regarding `libxmljs` and pre-built binaries not found. Run `npm install --build-from-source` instead.
+
 
 Run the startup script which create some test data
 
