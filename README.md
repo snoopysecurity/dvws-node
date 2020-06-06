@@ -88,6 +88,10 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 127.0.0.1    dvws.local
 ```
 
+## Solutions
+* [DVWS Solutions Wiki](https://github.com/snoopysecurity/dvws-node/wiki)
+
+
 
 ## To Do
 * XML Bomb Denial-of-Service
