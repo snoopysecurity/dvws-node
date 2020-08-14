@@ -1,0 +1,21 @@
+version: '3'
+services:
+    dvws-mongo:
+        image: mongo:4.0.4
+    dvws-mysql:
+        image: mysql:5.7
+        environment:
+            MYSQL_ROOT_PASSWORD: mysecretpassword
+    web:
+        build: .
+        ports:
+        - "80:80"
+        command: sh -c "/wait && node startup_script.js && npm run dvws"
+        environment:
+            WAIT_HOSTS: dvws-mysql:3306, dvws-mongo:27017
+            WAIT_HOSTS_TIMEOUT: 60
+            SQL_LOCAL_CONN_URL: dvws-mysql
+            MONGO_LOCAL_CONN_URL: mongodb://dvws-mongo:27017/node-dvws
+        depends_on:
+            - dvws-mongo
+            - dvws-mysql
