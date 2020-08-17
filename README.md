@@ -29,6 +29,14 @@ This vulnerable API/Web Service contains the following vulnerabilities:
 
 ## Set Up Instructions
 
+### Docker Compose
+
+If you have docker compose installed on your system, all you need to execute is : `docker-compose up`
+
+If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup, then increase the value of environment variable : `WAIT_HOSTS_TIMEOUT`
+
+### Manual
+
 **Node and NPM is needed to run dvws-node**
 
 Tested on:
