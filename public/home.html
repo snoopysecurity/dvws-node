@@ -1,4 +1,3 @@
-
 <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular.min.js"></script>
 <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
@@ -7,35 +6,33 @@
 <!------ Include the above in your HEAD tag ---------->
 
 <div class="sidenav">
-         <div class="login-main-text">
-            <h2>Damn Vulnerable Web Services<br> Home Area</h2>
-            <p>All Accessible Areas can be found here</p>
-            <p></p>
-         </div>
-      </div>
-      <div class="main">
-         <div class="col-md-6 col-sm-12">
-            <div class="login-form">
-                    <div ng-app="app" ng-controller="MyController">
-                            <script>
-                            var url = window.location.href;var hash = url.substring(url.indexOf('#')+1);
-                                document.write('Welcome User: <b>' + hash + '</b>');
-                            </script>
-                            <hr>
-                            <div>
-                            The following areas can be accessed:<br>
-                            <a href="notes.html">Notes Area</a><br>
-                            <a href="admin.html">Admin Area</a><br>
-                            <a href="search.html">Public Notes Search</a><br>
-                            <a href="passphrasegen.html">Passphrase Generator</a><br>
-                            </div>
-                            
-                        </div>
-
-
-
+   <div class="login-main-text">
+      <h2>Damn Vulnerable Web Services<br> Home Area</h2>
+      <p>All Accessible Areas can be found here</p>
+      <p></p>
+   </div>
+</div>
+<div class="main">
+   <div class="col-md-6 col-sm-12">
+      <div class="login-form">
+         <div ng-app="app" ng-controller="MyController">
+            <script>
+               var url = window.location.href; var hash = url.substring(url.indexOf('#') + 1);
+               document.write('Welcome User: <b>' + hash + '</b>');
+            </script>
+            <hr>
+            <div>
+               The following areas can be accessed:<br>
+               <a href="notes.html">Notes Area</a><br>
+               <a href="admin.html">Admin Area</a><br>
+               <a href="search.html">Public Notes Search</a><br>
+               <a href="passphrasegen.html">Passphrase Generator</a><br>
             </div>
-         </div>
 
+         </div>
       </div>
+   </div>
+
+</div>
+
 

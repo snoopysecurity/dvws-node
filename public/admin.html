@@ -1,82 +1,98 @@
 
-<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-<script type="text/javascript" src="https://code.angularjs.org/1.0.8/angular.js"></script>
-<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<head>
+
+<script src="static/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="static/angular.js"></script>
+<link href="static/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="static/bootstrap.min.js"></script>
 <link href="index.css" rel="stylesheet" id="inline-css">
 <!------ Include the above in your HEAD tag ---------->
 
-<div class="sidenav">
-         <div class="login-main-text">
-            <h2>Damn Vulnerable Web Services<br> Admin Area</h2>
-            <p>Functionality only availiable to Admin Users</p>
-            <p></p>
-         </div>
+</head>
+<body>
+   <div class="sidenav">
+      <div class="login-main-text">
+         <h2>Damn Vulnerable Web Services<br> Admin Area</h2>
+         <p>Functionality only availiable to Admin Users</p>
+         <p></p>
       </div>
-      <div class="main">
-         <div class="col-md-6 col-sm-12">
-            <div class="login-form">
-                    <div ng-app="app" ng-controller="MyController">
-                            <h2>DVWS User Data</h2>
-                            <p>User Information:  {{ ResponseMessage  }}</p>
-                           <p>Search DVWS Users: </p> 
-                           Enter Username: <input type="text" name="name" ng-model="name" placeholder="User Name"> <br>
-                           <button type="submit" class="btn btn-black" ng-click="SendData1()">Search</button>
-                           <br>
-                           <br>
-                           <div ng-bind-html-unsafe="myWelcome"></div>  
-                        </div>
+   </div>
+   <div class="main">
+      <div class="col-md-6 col-sm-12">
+         <div class="login-form">
+            <div ng-app="app" ng-controller="MyController">
+               <h2>DVWS User Data</h2>
+               <p>User Information: {{ ResponseMessage  }}</p>
 
-
-
+               <p>Search DVWS Users: </p>
+               Enter Username: <input type="text" name="name" ng-model="name" placeholder="User Name"> <br>
+               <button type="submit" class="btn btn-black" ng-click="SendData1()">Search</button>
+               <br>
+               <br>
+               <div ng-bind-html-unsafe="myWelcome"></div>
             </div>
          </div>
-
       </div>
 
-      <script type="text/javascript">
+      <br>
+      <br>
+      <p>
+         <button class="btn btn-black" id="send">Show Your JWT Token</button>
+      </p>
+      <iframe id="receiver" src="http://dvws.local/receiver.html" width="700" height="60">
+         <p>Your browser does not support iframes.</p>
+      </iframe>
+      <script src="static/userdisplay.js"></script>
 
 
-         var app = angular.module('app', [])
-         app.controller('MyController', function ($scope, $http, $window) {
-                  getFromServer();
-                  function getFromServer() {
-                     var get = $http({
-                         method: "GET",
-                         url: "/api/v2/users/checkadmin",
-                         dataType: 'json',
-                         headers: { "Content-Type": "application/json" },
-                         headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-         
-                     });
-         
-                     get.success(function (data, status) {
-                        if (data.Success) {
-                        $scope.ResponseMessage  = data.Success
-                        var adUrl = data.AdminURL
-                    
+
+   </div>
 
 
-                        } else if (data.Error) {
-                           var user = data.User
-                           $scope.ResponseMessage  = data.Error
-                           window.location = "home.html#" + user
 
-                        }
-          
-                     get.error(function (data, status) {
-                         $scope.ResponseMessage  = 'Authentication Error';
-                     });
-                 
-                  });
+   <script type="text/javascript">
+
+
+      var app = angular.module('app', [])
+      app.controller('MyController', function ($scope, $http, $window) {
+         getFromServer();
+         function getFromServer() {
+            var get = $http({
+               method: "GET",
+               url: "/api/v2/users/checkadmin",
+               dataType: 'json',
+               headers: { "Content-Type": "application/json" },
+               headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+
+            });
+
+            get.success(function (data, status) {
+               if (data.Success) {
+                  $scope.ResponseMessage = data.Success
+                  var adUrl = data.AdminURL
+
+
+
+               } else if (data.Error) {
+                  var user = data.User
+                  $scope.ResponseMessage = data.Error
+                  window.location = "home.html#" + user
 
                }
-               $scope.SendData1 = function () {
+
+               get.error(function (data, status) {
+                  $scope.ResponseMessage = 'Authentication Error';
+               });
+
+            });
+
+         }
+         $scope.SendData1 = function () {
             var post = $http({
-                method: "POST",
-                url: "/dvwsuserservice",
-                dataType: 'xml',
-                data: `<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:examples:usernameservice">
+               method: "POST",
+               url: "/dvwsuserservice",
+               dataType: 'xml',
+               data: `<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:examples:usernameservice">
    <soapenv:Header/>
    <soapenv:Body>
       <urn:Username soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
@@ -84,28 +100,32 @@
       </urn:Username>
    </soapenv:Body>
 </soapenv:Envelope>`,
-                headers: { "Content-Type": "application/xml" },
-                headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+               headers: { "Content-Type": "application/xml" },
+               headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
             });
- 
+
             post.success(function (data, status) {
-                if (status == 200) {
-                  var xmlDoc = $.parseXML( data )
+               if (status == 200) {
+                  var xmlDoc = $.parseXML(data)
                   $xml = $(xmlDoc),
-                  $value= $xml.find( "username" );
+                     $value = $xml.find("username");
                   var result = $value.text();
                   $scope.myWelcome = result
-                }
+               }
 
             });
- 
+
             post.error(function (data, status) {
                $scope.myWelcome = data.errors;
             });
-        }
-         
-             });
+         }
 
-         </script>
+      });
+
+   </script>
+
+
+</body>
+
 
 <!-- get all user data API functionality currently disabled-->
