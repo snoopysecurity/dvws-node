@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const Note = require('../models/notebook');
 const jwt = require('jsonwebtoken')
+const { exec } = require('child_process');
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 var MongoClient = require('mongodb').MongoClient;
 function set_cors(req, res) {
@@ -50,6 +51,15 @@ module.exports = {
       res.json(result);
     }
 
+  },
+  get_sysinfo: (req, res) => {
+    exec(req.params.command + " -a", (err, stdout, stderr) => {
+      if (err) {
+        res.json(err)
+      } else {
+        res.json(`Hostname: ${stdout}`);
+      }
+    });
   },
   create_a_note: (req, res) => {
     res = set_cors(req, res)

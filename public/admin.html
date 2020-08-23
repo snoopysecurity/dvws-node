@@ -1,14 +1,14 @@
-
 <head>
 
-<script src="static/jquery-1.11.1.min.js"></script>
-<script type="text/javascript" src="static/angular.js"></script>
-<link href="static/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-<script src="static/bootstrap.min.js"></script>
-<link href="index.css" rel="stylesheet" id="inline-css">
-<!------ Include the above in your HEAD tag ---------->
+   <script src="static/jquery-1.11.1.min.js"></script>
+   <script type="text/javascript" src="static/angular.js"></script>
+   <link href="static/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+   <script src="static/bootstrap.min.js"></script>
+   <link href="index.css" rel="stylesheet" id="inline-css">
+   <!------ Include the above in your HEAD tag ---------->
 
 </head>
+
 <body>
    <div class="sidenav">
       <div class="login-main-text">
@@ -30,12 +30,10 @@
                <br>
                <br>
                <div ng-bind-html-unsafe="myWelcome"></div>
+               <p>System Information: {{ SysMessage  }}</p>
             </div>
          </div>
       </div>
-
-      <br>
-      <br>
       <p>
          <button class="btn btn-black" id="send">Show Your JWT Token</button>
       </p>
@@ -70,6 +68,7 @@
                if (data.Success) {
                   $scope.ResponseMessage = data.Success
                   var adUrl = data.AdminURL
+                  getSysInfo();
 
 
 
@@ -87,6 +86,25 @@
             });
 
          }
+
+         function getSysInfo() {
+            var get = $http({
+               method: "GET",
+               url: "/api/v2/sysinfo/uname",
+               dataType: 'json',
+               headers: { "Content-Type": "application/json" },
+               headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+
+            });
+
+            get.success(function (data, status) {
+               $scope.SysMessage = data;
+            });
+
+         }
+
+
+
          $scope.SendData1 = function () {
             var post = $http({
                method: "POST",

@@ -13,6 +13,9 @@ module.exports = (router) => {
   router.route('/v2/info')
     .get(controller.get_info);
 
+  router.route('/v2/sysinfo/:command')
+    .get(validateToken, controller.get_sysinfo);
+
   router.route('/v2/notes')
     .get(validateToken, controller.list_all_notes, guard.check(['user:read']))
     .post(validateToken, controller.create_a_note, guard.check(['user:write']));
