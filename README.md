@@ -24,6 +24,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * JSON Hijacking
 * SQL Injection
 * XML External Entity Injection
+* Command Injection
 * Postmessage Security (Not API related)
 
 
@@ -109,7 +110,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * CSV Injection
 * Path Traversal 
 * Same Origin Method Execution
-* OS Command Injection
 * Web Socket Security
 * Type Confusion
 * Unsafe Deserialization  
