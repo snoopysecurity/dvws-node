@@ -7,7 +7,7 @@ Damn Vulnerable Web Service is a Damn Vulnerable Insecure API/Web Service. This 
 
 
 
-This vulnerable API/Web Service contains the following vulnerabilities:
+This vulnerable application contains the following API/Web Service vulnerabilities:
 
 * Insecure Direct Object Reference
 * Horizontal Access Control Issues
@@ -24,7 +24,7 @@ This vulnerable API/Web Service contains the following vulnerabilities:
 * JSON Hijacking
 * SQL Injection
 * XML External Entity Injection
-
+* Postmessage Security (Not API related)
 
 
 ## Set Up Instructions
@@ -121,9 +121,7 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 
 
 ### Other Tasks To Complete:
-* Dockerize DVWS
-* Write Challenge Solution Wiki
-* Default Error Handling Pages
+* Complete writing Challenge Solution Wiki
 
 
 ## Any Questions
