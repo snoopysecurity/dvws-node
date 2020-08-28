@@ -16,7 +16,7 @@ console.log('Creating MySQL database for DVWS....');
 connection.connect(function (err) {
   if (err) throw err;
   console.log("Connected!");
-  connection.query("CREATE DATABASE dvws_sqldb", function (err, result) {
+  connection.query("DROP DATABASE IF EXISTS dvws_sqldb; CREATE DATABASE dvws_sqldb", function (err, result) {
     connection.end()
     if (err) throw err;
     console.log("SQL Database created");
