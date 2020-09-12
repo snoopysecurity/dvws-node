@@ -12,16 +12,18 @@ var connection = mysql.createConnection({
   password: connPass
 });
 
-console.log('Creating MySQL database for DVWS....');
+console.log('[+] Creating MySQL database for DVWS....');
 connection.connect(function (err) {
   if (err) throw err;
   console.log("Connected!");
-  connection.query("DROP DATABASE IF EXISTS dvws_sqldb; CREATE DATABASE dvws_sqldb", function (err, result) {
-    connection.end()
+  connection.query("DROP DATABASE IF EXISTS dvws_sqldb;", function (err, result) {
     if (err) throw err;
-    console.log("SQL Database created");
+    console.log("[+] Old SQL Database deleted");
+  });
+  connection.query("CREATE DATABASE dvws_sqldb;", function (err, result) {
+    if (err) throw err;
+    connection.end()
+    console.log("[+] SQL Database created");
 
   });
 });
-
-

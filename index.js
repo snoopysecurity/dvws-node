@@ -4,6 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const swaggerUI = require('swagger-ui-express');
+const fileUpload = require('express-fileupload');
 
 const swaggerDocument = require('./swagger'); //Swagger
 const soapservice = require('./soapserver/dvwsuserservice'); //SOAP Service
@@ -22,6 +23,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 app.use('/dvwsuserservice', soapservice);
 app.use(bodyParser.json());
+app.use(fileUpload({ parseNested: true }));
 
 var corsOptions = {
   origin: true,

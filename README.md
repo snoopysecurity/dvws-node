@@ -26,6 +26,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * XML External Entity Injection
 * Command Injection
 * Postmessage Security (JavaScript Security)
+* Prototype Pollution (JavaScript Security)
 
 
 ## Set Up Instructions
@@ -118,7 +119,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * XML Injection
 * GRAPHQL Security
 * CRLF Injection
-* Prototype Pollution (JavaScript Security)
 
 
 ### Other Tasks To Complete:

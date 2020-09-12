@@ -1,0 +1,146 @@
+<html>
+
+<head>
+    <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.1/angular.min.js"></script>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <link href="index.css" rel="stylesheet" id="inline-css">
+</head>
+
+<body ng-app="myApp">
+
+    <div class="sidenav">
+        <div class="login-main-text">
+            <h2>Damn Vulnerable Web Services<br> File Storage</h2>
+            <p>Files can be uploaded to dvws.</p>
+            <p></p>
+        </div>
+    </div>
+    <div class="main">
+
+        <div class="col-md-6 col-sm-12">
+            <div class="login-form">
+                <h2>File Storage</h2>
+                <p>Files can be uploaded to dvws.</p>
+                <br>
+                <div ng-controller="MyController2">
+                <p>User Uploaded Files</p>
+                <p>URLs to your saved files is displayed below</p>
+                <br>
+                {{arrayToString(array)}}
+                <br>
+                <br>
+                <br>
+                </div>
+                <p>Upload File</p>
+
+                <div ng-controller="myCtrl">
+                    <input type="file" file-model="myFile" />
+                    <button ng-click="uploadFile()">Upload</button>
+
+                    <br>
+                    <br>
+                    <br>
+                    {{ DataResponse }}
+
+                </div>
+
+
+
+            </div>
+
+
+
+        </div>
+    </div>
+
+    </div>
+
+    <script type="text/javascript">
+
+        var myApp = angular.module('myApp', []);
+
+        myApp.directive('fileModel', ['$parse', function ($parse) {
+            return {
+                restrict: 'A',
+                link: function (scope, element, attrs) {
+                    var model = $parse(attrs.fileModel);
+                    var modelSetter = model.assign;
+
+                    element.bind('change', function () {
+                        scope.$apply(function () {
+                            modelSetter(scope, element[0].files[0]);
+                        });
+                    });
+                }
+            };
+        }]);
+
+        
+        myApp.service('fileUpload', ['$http', function ($http) {
+            this.uploadFileToUrl = function (file, uploadUrl,$scope) {
+                var fd = new FormData();
+                fd.append('file', file);
+                $http.post(uploadUrl, fd, {
+                    transformRequest: angular.identity,
+                    headers: { 'Content-Type': undefined, 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') },
+                })
+                    .success(function (data, status) {
+                        $scope.DataResponse = data;
+                    })
+                    .error(function (data, status) {
+                        $scope.DataResponse = data;
+                    });
+            }
+
+        }]);
+
+        myApp.controller('myCtrl', ['$scope', 'fileUpload', function ($scope, fileUpload) {
+            $scope.uploadFile = function () {
+                var file = $scope.myFile;
+                var uploadUrl = "/api/upload";
+                fileUpload.uploadFileToUrl(file, uploadUrl,$scope);
+
+            };
+
+
+        }]);
+
+        myApp.controller('MyController2', function ($scope, $http, $window) {
+            getFromServer();
+            function getFromServer() {
+                var get = $http({
+                    method: "GET",
+                    url: "/api/upload",
+                    dataType: 'json',
+                    headers: { "Content-Type": "application/json" },
+                    headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+    
+                });
+
+                $scope.arrayToString = function(string){
+                        return string.join(", ");
+                    };
+    
+                get.success(function (data, status) {
+                    $scope.array = data;
+                });
+     
+                get.error(function (data, status) {
+                    $scope.array = "No Files Uploaded";
+                });
+            
+            }
+        });
+
+
+
+    </script>
+
+
+
+</body>
+
+</html>
