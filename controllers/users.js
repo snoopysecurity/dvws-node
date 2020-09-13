@@ -32,7 +32,7 @@ module.exports = {
           if (obj != null) {
             if (obj.username) {
               status = 409;
-              res.set({ 'content-type': 'text/html; charset=null' });
+              res.set({ 'content-type': 'text/plain; charset=null' });
               res.status(status).send('User ' + obj.username + ' already exists');
             } 
           } else {

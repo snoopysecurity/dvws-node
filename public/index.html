@@ -21,7 +21,7 @@
                             <button class="btn btn-black" ng-click="SendData()">Login</button>
                             <button class="btn btn-secondary" ng-click="SendData2()">Register</button>
                             <hr />
-                            {{ DataResponse }}
+                            <div ng-bind-html="DataResponse"></div>
                         </div>
 
 
@@ -33,7 +33,9 @@
 
 
     <script type="text/javascript">
-    var app = angular.module('app', [])
+    var app = angular.module('app', []).config(function ($sceProvider) {
+    $sceProvider.enabled(false);
+});
     app.controller('MyController', function ($scope, $http, $window) {
         $scope.SendData = function () {
             var post = $http({
