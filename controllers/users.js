@@ -31,9 +31,9 @@ module.exports = {
         User.findOne({username}, function(err,obj) { 
           if (obj != null) {
             if (obj.username) {
-              status = 409;
-              res.set({ 'content-type': 'text/plain; charset=null' });
-              res.status(status).send('User ' + obj.username + ' already exists');
+              res.writeHead(409, {'Content-Type': 'text/plain'});
+              res.write('User ' + obj.username + ' already exists');
+              res.end(); 
             } 
           } else {
 
