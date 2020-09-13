@@ -5,8 +5,8 @@ const validateToken = require('../utils').validateToken;
 module.exports = (router) => {
 
     router.route('/upload')
-      .post(controller.post);
+      .post(validateToken, controller.post);
   
       router.route('/upload')
-      .get(controller.get);
+      .get(validateToken, controller.get);
   };

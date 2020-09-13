@@ -67,12 +67,14 @@ module.exports = {
         fs.readdir(uploadPath, function (err, files) {
             if (err) {
                 res.json('No files Uploaded ' + err);
-            }
+            } else {
             files.forEach(function (file) {
                 resultData.push("http://dvws.local/uploads/" + result.user + "/" + file);
+                res.json(resultData);
                 
             });
-            res.json(resultData);
+        }
+            
         });
 
 
