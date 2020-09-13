@@ -4,9 +4,20 @@ const jwt = require('jsonwebtoken');
 
 const sql = require('../models/passphrase');
 
+function set_cors(req, res) {
+  if (req.get('origin')) {
+    res.header('Access-Control-Allow-Origin', req.get('origin'))
+    res.header('Access-Control-Allow-Credentials', true)
+  } else {
+    res.header('Access-Control-Allow-Origin', null)
+    res.header('Access-Control-Allow-Credentials', true)
+  }
+  return res;
+};
 
 module.exports = {
   save: (req, res) => {
+    res = set_cors(req, res)
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     if (req.body.passphrase === '' || req.body.reminder === '' ) {
       res.send('Passphrase or Reminder Empty');
@@ -34,12 +45,15 @@ module.exports = {
   },
 
   get: (req, res) => {
+    res = set_cors(req, res)
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
       sql.query("select passphrase,reminder from passphrases WHERE username = '" + req.params.username + "'", function (err, result) {
         if (err) {
           res.send(err.code);
         } else {
-        res.send(result);   
+        res.writeHead(200, {'Content-Type': 'application/json'});
+        res.write(JSON.stringify(result));
+        res.end(); 
       } 
       });
     

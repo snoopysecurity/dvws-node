@@ -11,5 +11,5 @@ module.exports = (router) => {
     .post(validateToken, controller.save);
 
   router.route('/v2/passphrase/:username')
-    .get(validateToken, controller.get)
+    .get(controller.get)
 };
