@@ -50,7 +50,7 @@ Tested on:
 Set up a mongoDB environment to listen on port `27017`. Docker can be used to quickly set this up. 
 
 ```
-docker run -d -p 27017-27019:27017-27019 --name mongodb mongo:4.0.4
+docker run -d -p 27017-27019:27017-27019 --name dvws-mongo mongo:4.0.4
 ```
 
 Create a MySQL database which listens of port `3306` Docker can be used as follows
@@ -71,13 +71,13 @@ Change directory to DVWS
 cd dvws-node
 ```
 
-npm install all dependencies 
+npm install all dependencies  (build for source is needed for `libxmljs`)
+
 
 ```
-npm install  
+npm install --build-from-source
 ```
 
-If you get errors when running `npm install` regarding `libxmljs` and pre-built binaries not found. Run `npm install --build-from-source` instead.
 
 
 Run the startup script which create some test data
