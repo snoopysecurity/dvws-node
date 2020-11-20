@@ -31,7 +31,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 
 ## Set Up Instructions
 
-### Docker Compose (Currently Not Working)
+### Docker Compose
 
 If you have docker compose installed on your system, all you need to execute is : `docker-compose up`
 
