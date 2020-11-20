@@ -24,7 +24,7 @@ module.exports = {
     mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
       if (!err) {
         let result = {}
-        const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
+        const token = req.headers.authorization.split(' ')[1]; 
         const options = {
           expiresIn: '2d',
           issuer: 'https://github.com/snoopysecurity',

@@ -71,7 +71,7 @@ Change directory to DVWS
 cd dvws-node
 ```
 
-npm install all dependencies  (build for source is needed for `libxmljs`)
+npm install all dependencies  (build from source is needed for `libxmljs`, you might also need install libxml depending on your OS: `sudo apt-get install -y libxml2 libxml2-dev`)
 
 
 ```
@@ -86,10 +86,10 @@ Run the startup script which create some test data
 node startup_script.js
 ```
 
-To start the application/API, run (sudo privileges is needed to bind to ports)
+To start the application/API, run (**sudo privileges** is needed to bind to ports)
 
 ```
-npm run dvws
+sudo npm run dvws
 ```
 
 Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensures URLs from swagger is resolved correctly (optional)
