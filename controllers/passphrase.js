@@ -15,6 +15,13 @@ function set_cors(req, res) {
   return res;
 };
 
+const options = {
+  expiresIn: '2d',
+  issuer: 'https://github.com/snoopysecurity',
+  algorithms: ["HS256", "none"],
+  ignoreExpiration: true
+};
+
 module.exports = {
   save: (req, res) => {
     res = set_cors(req, res)
@@ -24,10 +31,6 @@ module.exports = {
     } else {
       let result = {}
       const token = req.headers.authorization.split(' ')[1]; 
-      const options = {
-      expiresIn: '2d',
-      issuer: 'https://github.com/snoopysecurity',
-    };
     result = jwt.verify(token, process.env.JWT_SECRET, options);
     sql.query("CREATE TABLE IF NOT EXISTS `passphrases` (`username` varchar(200) NOT NULL,`passphrase` varchar(200) NOT NULL,`reminder` varchar(200) NOT NULL,`created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP)")
       

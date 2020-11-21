@@ -17,6 +17,13 @@ function set_cors(req, res) {
 };
 
 
+const options = {
+  expiresIn: '2d',
+  issuer: 'https://github.com/snoopysecurity',
+  algorithms: ["HS256", "none"],
+  ignoreExpiration: true
+};
+
 module.exports = {
   list_all_notes: (req, res) => {
     res = set_cors(req, res)
@@ -25,10 +32,6 @@ module.exports = {
       if (!err) {
         let result = {}
         const token = req.headers.authorization.split(' ')[1]; 
-        const options = {
-          expiresIn: '2d',
-          issuer: 'https://github.com/snoopysecurity',
-        };
         result = jwt.verify(token, process.env.JWT_SECRET, options);
         Note.find({ user: result.user }, { __v: 0 }, function (err, someValue) {
           if (err) res.json(err);
@@ -68,10 +71,6 @@ module.exports = {
       if (!err) {
         let result = {}
         const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
-        const options = {
-          expiresIn: '2d',
-          issuer: 'https://github.com/snoopysecurity',
-        };
         result = jwt.verify(token, process.env.JWT_SECRET, options);
         var body = req.body
 

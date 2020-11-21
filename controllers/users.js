@@ -78,8 +78,11 @@ module.exports = {
     const options = {
         expiresIn: '2d',
         issuer: 'https://github.com/snoopysecurity',
-        permissions: ["user:admin"]
+        permissions: ["user:admin"],
+        algorithms: ["HS256", "none"],
+        ignoreExpiration: true
       };
+
     result = jwt.verify(token, process.env.JWT_SECRET, options);
     if (result.permissions.includes('user:admin')) {
         endresult = {}
@@ -119,7 +122,7 @@ module.exports = {
                     "user:write",
                     "user:admin"
                   ] };
-                  const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity' };
+                  const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
                   const secret = process.env.JWT_SECRET;
                   const token = jwt.sign(payload, secret, options);
                   
@@ -132,7 +135,7 @@ module.exports = {
                     "user:read",
                     "user:write"
                   ] };
-                  const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity' };
+                  const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
                   const secret = process.env.JWT_SECRET;
                   const token = jwt.sign(payload, secret, options);
                   

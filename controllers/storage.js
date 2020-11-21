@@ -3,6 +3,15 @@ const url = require('url');
 const fs = require('fs');
 const http = require('http');
 
+
+const options = {
+    expiresIn: '2d',
+    issuer: 'https://github.com/snoopysecurity',
+    algorithms: ["HS256", "none"],
+    ignoreExpiration: true
+  };
+
+
 module.exports = {
     post: (req, res) => {
 
@@ -12,10 +21,6 @@ module.exports = {
         let result = {}
 
         const token = req.headers.authorization.split(' ')[1]; 
-        const options = {
-            expiresIn: '2d',
-            issuer: 'https://github.com/snoopysecurity',
-        };
         result = jwt.verify(token, process.env.JWT_SECRET, options);
 
 
@@ -34,9 +39,11 @@ module.exports = {
         }
 
         if (typeof sampleFile.name !== 'undefined') {
-            sampleFile.name = 'undefined';
-        }
-
+            if ( sampleFile.name.endsWith(".xml") == false ) {
+                res.status(400).send("Uploaded file is not an XML file.");
+                return;
+            }
+            }
 
         filePath = __dirname + '/../public/uploads/' + result.user + "/" + sampleFile.name;
 
@@ -54,10 +61,6 @@ module.exports = {
 
         let result = {}
         const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
-        const options = {
-            expiresIn: '2d',
-            issuer: 'https://github.com/snoopysecurity',
-        };
         result = jwt.verify(token, process.env.JWT_SECRET, options);
 
 
@@ -70,9 +73,9 @@ module.exports = {
             } else {
             files.forEach(function (file) {
                 resultData.push("http://dvws.local/uploads/" + result.user + "/" + file);
-                res.json(resultData);
                 
             });
+            res.json(resultData);
         }
             
         });
