@@ -1,10 +1,15 @@
 var mysql = require('mysql');
 require('dotenv').config();
 
+const mongoose = require('mongoose');
+
+const User = require('./models/users');
+
+
 const connHost = process.env.SQL_LOCAL_CONN_URL;
 const connUser = process.env.SQL_username;
 const connPass = process.env.SQL_password;
-
+const connUri = process.env.MONGO_LOCAL_CONN_URL;
 
 var connection = mysql.createConnection({
   host: connHost,
@@ -27,3 +32,32 @@ connection.connect(function (err) {
 
   });
 });
+
+function createAdmin() {
+  mongoose.connect(connUri, { useNewUrlParser : true, useUnifiedTopology: true }, (err) => {
+  let result = {};
+
+
+
+  const user = new User({
+    username: "admin",
+    password: "letmein",
+    admin: true
+  });
+
+  user.save((err, user) => {
+    if (!err) {
+      console.log(user);
+    } else {
+      result.error = err;
+      console.log(result.error);
+    }
+    // Close the connection after saving
+    mongoose.disconnect();
+  });
+});
+
+}
+
+
+createAdmin()
