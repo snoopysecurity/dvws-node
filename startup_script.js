@@ -53,8 +53,27 @@ function createAdmin() {
       console.log(result.error);
     }
     // Close the connection after saving
+
+  });
+
+  const user2 = new User({
+    username: "test",
+    password: "test",
+    admin: false
+  });
+
+  user2.save((err, user2) => {
+    if (!err) {
+      console.log(user2);
+    } else {
+      result.error = err;
+      console.log(result.error);
+    }
+    // Close the connection after saving
     mongoose.disconnect();
   });
+
+
 });
 
 }

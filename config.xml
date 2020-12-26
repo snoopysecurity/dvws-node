@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<config>
+		<release>0.0.1</release>
+		<user>
+			<login>test</login>
+			<password>test</password>
+		</user>
+		<db>
+		    <type>mysql</type>
+			<login>root</login>
+			<password>mysecretpassword</password>
+		</db>
+		<db>
+		    <type>mongodb</type>
+			<login>null</login>
+			<password>null</password>
+		</db>
+		<location>
+		<url>http://dvws.local:9090/xmlrpc</url>
+		<url>http://dvws.local/api-docs/#/</url>
+		</location>
+	</config>

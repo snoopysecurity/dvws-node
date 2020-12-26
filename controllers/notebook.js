@@ -3,6 +3,21 @@ const mongoose = require('mongoose');
 const Note = require('../models/notebook');
 const jwt = require('jsonwebtoken')
 const { exec } = require('child_process');
+var xpath = require('xpath');
+const xml2js = require('xml2js');
+const fs = require('fs');
+dom = require('xmldom').DOMParser
+const parser = new xml2js.Parser({ attrkey: "ATTR" });
+
+
+let xml_string = fs.readFileSync("config.xml", "utf8");
+xml_string = xml_string.replace(/>\s*/g, '>');  // Replace "> " with ">"
+xml_string = xml_string.replace(/\s*</g, '<');  // Replace "< " with "<"
+
+var doc = new dom().parseFromString(xml_string)
+var node = null;
+
+
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 var MongoClient = require('mongodb').MongoClient;
 function set_cors(req, res) {
@@ -63,6 +78,27 @@ module.exports = {
         res.json(`Hostname: ${stdout}`);
       }
     });
+  },
+  get_release: (req, res) => {
+
+    var uservalue = decodeURI(req.params.release.toString())
+    var xpath_result = xpath.evaluate(
+      "//config/*[local-name(.)='release' and //config//release/text()='" + uservalue + "']",            // xpathExpression
+      doc,                        // contextNode
+      null,                       // namespaceResolver
+      xpath.XPathResult.ANY_TYPE, // resultType
+      null                        // result
+    )
+    
+    var result = [];
+    node = xpath_result.iterateNext();
+    while (node) {
+        result.push(node.toString());
+        node = xpath_result.iterateNext();
+    }
+
+    res.send(result.toString());
+    
   },
   create_a_note: (req, res) => {
     res = set_cors(req, res)

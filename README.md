@@ -27,7 +27,8 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * Command Injection
 * Postmessage Security (JavaScript Security)
 * Prototype Pollution (JavaScript Security)
-
+* XPATH Injection
+* XML-RPC User Enumeration
 
 ## Set Up Instructions
 
@@ -105,8 +106,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 
 ## To Do
 * XML Bomb Denial-of-Service
-* XPATH Injection
-* XML-RPC User Enumeration
 * API Endpoint Brute Forcing Challenges
 * CSV Injection
 * Path Traversal 

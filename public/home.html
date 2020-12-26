@@ -20,6 +20,7 @@
                var url = window.location.href; var hash = url.substring(url.indexOf('#') + 1);
                document.write('Welcome User: <b>' + hash + '</b>');
             </script>
+             <p>DVWS Release: {{ ResponseMessage  }}</p>
             <hr>
             <div>
                The following areas can be accessed:<br>
@@ -29,11 +30,45 @@
                <a href="passphrasegen.html">Passphrase Generator</a><br>
                <a href="upload.html">File Upload Area</a><br>
             </div>
-
+            
          </div>
       </div>
    </div>
-
+  
 </div>
 
 
+
+
+<script type="text/javascript">
+
+
+   var app = angular.module('app', [])
+   app.controller('MyController', function ($scope, $http, $window) {
+      getFromServer();
+      function getFromServer() {
+         var get = $http({
+            method: "GET",
+            url: "/api/v2/0.0.1",
+            dataType: 'json',
+            headers: { "Content-Type": "application/json" }
+
+         });
+
+         get.success(function (data, status) {
+            if (data) {
+               $scope.ResponseMessage = data;
+
+      }
+   });
+
+
+   }
+
+});
+</script>
+
+
+</body>
+
+</html>
