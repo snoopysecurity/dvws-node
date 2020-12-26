@@ -13,7 +13,7 @@ module.exports = (router) => {
   router.route('/v2/info')
     .get(controller.get_info);
 
-  router.route('/v2/:release')
+  router.route('/v2/release/:release')
     .get(controller.get_release);
 
   router.route('/v2/sysinfo/:command')
