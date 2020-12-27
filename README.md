@@ -20,7 +20,6 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * Information Disclosure
 * Hidden API Functionality Exposure
 * Cross-Origin Resource Sharing Misonfiguration
-* Cross-Site Request Forgery (CSRF)
 * JSON Hijacking
 * SQL Injection
 * XML External Entity Injection
@@ -105,6 +104,7 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 
 
 ## To Do
+* Cross-Site Request Forgery (CSRF)
 * XML Bomb Denial-of-Service
 * API Endpoint Brute Forcing Challenges
 * CSV Injection
