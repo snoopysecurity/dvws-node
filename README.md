@@ -108,7 +108,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * Cross-Site Request Forgery (CSRF)
 * XML Bomb Denial-of-Service
 * API Endpoint Brute Forcing Challenges
-* CSV Injection
 * Path Traversal 
 * Same Origin Method Execution
 * Web Socket Security
