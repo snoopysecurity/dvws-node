@@ -99,6 +99,11 @@ module.exports = {
       }
   },
 
+  logout: (req, res) => {
+
+    res.redirect("http://" + req.params.redirect);
+      
+  },
 
 
   login: (req, res) => {

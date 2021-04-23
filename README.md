@@ -28,6 +28,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * Prototype Pollution (JavaScript Security)
 * XPATH Injection
 * XML-RPC User Enumeration
+* Open Redirect
 
 ## Set Up Instructions
 
@@ -118,7 +119,7 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * XML Injection
 * GRAPHQL Security
 * CRLF Injection
-* Open Redirect
+
 
 ### Other Tasks To Complete:
 * Complete writing Challenge Solution Wiki
