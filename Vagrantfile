@@ -17,4 +17,10 @@ Vagrant.configure("2") do |config|
 		cd /vagrant/
 		docker-compose up -d
 	SHELL
+
+	# test whether the vm is started in ninjaDVA context
+	if File.exists?("../ninjadva.rb")
+		require "../ninjadva"
+		NinjaDVA.new(config)
+	end
 end
