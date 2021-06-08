@@ -22,7 +22,7 @@
       <div class="main">
          <div class="col-md-6 col-sm-12">
 
-                
+
                 <br>
                 <br>
                 <h2>Save Secret Note</h2>
@@ -47,11 +47,11 @@
             {{ DataResponse }}
                 </div>
             </div>
-            
+
                     <br>
                     <br>
 
-  
+
                     <div id="myApp2">
                             <div ng-controller="MyController2">
                                 <h2>Your Stored Notes</h2>
@@ -90,7 +90,7 @@
                 headers: { "Content-Type": "application/json" },
                 headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
             });
- 
+
             post.success(function (data, status) {
                 if (status == 200) {
                     $scope.DataResponse = data.name + ' Note created successfully!';
@@ -102,7 +102,7 @@
                 }
 
             });
- 
+
             post.error(function (data, status) {
                 $scope.DataResponse = data.errors;
             });
@@ -114,9 +114,9 @@
                     dataType: 'json',
                     headers: { "Content-Type": "application/json" },
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-    
+
                 });
-    
+
                 get.success(function (data, status) {
                     result = {}
                     for(var i = 0; i < data.length; i++) {
@@ -149,13 +149,13 @@
                     } else {
                         $scope.DataResponse = 'Note not found'
                     }
-                    
+
                 });
-     
+
                 get.error(function (data, status) {
                     return null;
                 });
-        
+
         }
 
         $scope.SendData3 = function () {
@@ -165,9 +165,9 @@
                     dataType: 'json',
                     headers: { "Content-Type": "application/json" },
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-    
+
                 });
-    
+
                 get.success(function (data, status) {
                     result = {}
                     for(var i = 0; i < data.length; i++) {
@@ -199,16 +199,16 @@
                     } else {
                         $scope.DataResponse = 'Note not found'
                     }
-                    
+
                 });
-     
+
                 get.error(function (data, status) {
                     return null;
                 });
-        
+
         }
-      
-    
+
+
         });
 
         var myApp2 = angular.module('myApp2', []);
@@ -221,21 +221,21 @@
                     dataType: 'json',
                     headers: { "Content-Type": "application/json" },
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-    
+
                 });
-    
+
                 get.success(function (data, status) {
                     $scope.items = data;
                 });
-     
+
                 get.error(function (data, status) {
                     $scope.items = null;
                 });
-            
+
             }
-    
+
         });
-    
+
      </script>
 </body>
      </html>

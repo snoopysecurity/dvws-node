@@ -60,9 +60,9 @@
                     headers: { "Content-Type": "application/json" },
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') },
                     data: { search: $scope.search }
-    
+
                 });
-    
+
                 get.success(function (data, status) {
                     if (data.length < 1 || data == undefined) {
                         $scope.serverresponse = 'Note not found'
@@ -78,7 +78,7 @@
                         getuserdata.success(function (data, status) {
                             $scope.DataResponse = 'Note '  + $scope.name + ' Deleted'
 
-   
+
                         });
                         getuserdata.error(function (data, status) {
                             $scope.DataResponse = 'Error! Could not fetch Data'
@@ -88,13 +88,13 @@
                     $scope.items = data;
                     }
                 });
-     
+
                 get.error(function (data, status) {
                     $scope.items = 'Error';
                 });
-            
+
             }
-    
+
         });
 
 

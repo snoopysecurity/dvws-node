@@ -78,7 +78,7 @@
             };
         }]);
 
-        
+
         myApp.service('fileUpload', ['$http', function ($http) {
             this.uploadFileToUrl = function (file, uploadUrl,$scope) {
                 var fd = new FormData();
@@ -117,21 +117,21 @@
                     dataType: 'json',
                     headers: { "Content-Type": "application/json" },
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-    
+
                 });
 
                 $scope.arrayToString = function(string){
                         return string.join(", ");
                     };
-    
+
                 get.success(function (data, status) {
                     $scope.array = data;
                 });
-     
+
                 get.error(function (data, status) {
                     $scope.array = "No Files Uploaded";
                 });
-            
+
             }
         });
 

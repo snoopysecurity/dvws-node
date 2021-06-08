@@ -9,11 +9,11 @@
     <link href="index.css" rel="stylesheet" id="inline-css">
     <script type="text/javascript" src="passgen.js"></script>
     <!------ Include the above in your HEAD tag ---------->
-    
+
     </head>
-    
+
     <body ng-app="rootApp">
-    
+
     <div class="sidenav">
              <div class="login-main-text">
                 <h2>Damn Vulnerable Web Services<br> PassPhrase Generator</h2>
@@ -29,7 +29,7 @@
                    <h2>PassPhrase Generator</h2>
                    <p> A random Passphrase generator. This feature can be used to create and store strong passsphrases which you can store here.</p>
 
-                <input type="text" name="reminder" ng-model="reminder" size="26" placeholder="A name to remind this PassPhrase"> <br>  <br> 
+                <input type="text" name="reminder" ng-model="reminder" size="26" placeholder="A name to remind this PassPhrase"> <br>  <br>
                 <input type='text' id='pass' name="pass" ng-model="pass" size="35" placeholder="PassPhrase"/> <br>
                 <br>
                 <input  class="btn btn-secondary" type='button' value ='Generate' onclick='document.getElementById("pass").value = Password.generate(16)'>
@@ -58,18 +58,18 @@
 
                 </div>
         </div>
-               
+
                </div>
-               
 
-   
-   
 
-   
+
+
+
+
             </div>
-   
+
          </div>
-   
+
         </body>
 
 
@@ -78,8 +78,8 @@
         var rootApp = angular.module('rootApp', ['myApp1','myApp2']);
         var myApp1 = angular.module('myApp1', []);
         myApp1.controller('MyController', function ($scope, $http, $window) {
-    
-    
+
+
     $scope.SendData = function () {
         var post = $http({
             method: "POST",
@@ -112,13 +112,13 @@
                          dataType: 'json',
                          headers: { "Content-Type": "application/json" },
                          headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-         
+
                      });
-         
+
                      get.success(function (data, status) {
                          console.log(data.User)
                         var userUrl = data.User
-                    
+
                     getUsers();
                     function getUsers() {
 
@@ -128,19 +128,19 @@
                     dataType: 'json',
                     headers: { "Content-Type": "application/json" },
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-    
+
                 });
-    
+
                 get.success(function (data, status) {
                     $scope.items = data;
                 });
-     
+
                 get.error(function (data, status) {
                     $scope.items = null;
                 });
-                    
-            } 
-            });           
+
+            }
+            });
             }
         });
 

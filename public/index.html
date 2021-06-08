@@ -45,7 +45,7 @@
                 data: 'username=' + $scope.username +'&' + 'password=' + $scope.password,
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'}
             });
- 
+
             post.success(function (data, status) {
                 if (data.status == 200) {
                 $window.localStorage.setItem('JWTSessionID', data.token);
@@ -53,7 +53,7 @@
                 $scope.DataResponse = data.result.username;
                  }
             });
- 
+
             post.error(function (data, status) {
                 $scope.DataResponse = data.error;
             });
