@@ -7,11 +7,11 @@ const User = require('../models/users');
 
 function set_cors(req,res) {
   if (req.get('origin')) {
-  res.header('Access-Control-Allow-Origin', req.get('origin'))
-  res.header('Access-Control-Allow-Credentials', true)
+    res.header('Access-Control-Allow-Origin', req.get('origin'))
+    res.header('Access-Control-Allow-Credentials', true)
   } else {
-  res.header('Access-Control-Allow-Origin', null)
-  res.header('Access-Control-Allow-Credentials', true)
+    res.header('Access-Control-Allow-Origin', null)
+    res.header('Access-Control-Allow-Credentials', true)
   }
   return res;
 };
@@ -27,14 +27,14 @@ module.exports = {
       if (!err) {
         const { username, password } = req.body;
 
-      
-        User.findOne({username}, function(err,obj) { 
+
+        User.findOne({username}, function(err,obj) {
           if (obj != null) {
             if (obj.username) {
               res.writeHead(409, {'Content-Type': 'text/plain'});
               res.write('User ' + obj.username + ' already exists');
-              res.end(); 
-            } 
+              res.end();
+            }
           } else {
 
             const { username, password } = req.body;
@@ -56,7 +56,7 @@ module.exports = {
             });
 
           }
-        
+
         });
 
       } else {
@@ -67,7 +67,7 @@ module.exports = {
 
         mongoose.connection.close();
       }
-          
+
     });
 
   },
@@ -76,33 +76,33 @@ module.exports = {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
     const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
     const options = {
-        expiresIn: '2d',
-        issuer: 'https://github.com/snoopysecurity',
-        permissions: ["user:admin"],
-        algorithms: ["HS256", "none"],
-        ignoreExpiration: true
-      };
+      expiresIn: '2d',
+      issuer: 'https://github.com/snoopysecurity',
+      permissions: ["user:admin"],
+      algorithms: ["HS256", "none"],
+      ignoreExpiration: true
+    };
 
     result = jwt.verify(token, process.env.JWT_SECRET, options);
     if (result.permissions.includes('user:admin')) {
-        endresult = {}
-        endresult['Success'] = 'User is Admin Privileged'
-        endresult['AdminURL'] = '/api/v2/users'
-        endresult['User'] = result.user
-        res.send(endresult);
-      } else {
-        endresult = {}
-        endresult['Error'] = 'Error: User is missing [user:admin] privilege'
-        endresult['User'] = result.user
-        res.send(endresult);
+      endresult = {}
+      endresult['Success'] = 'User is Admin Privileged'
+      endresult['AdminURL'] = '/api/v2/users'
+      endresult['User'] = result.user
+      res.send(endresult);
+    } else {
+      endresult = {}
+      endresult['Error'] = 'Error: User is missing [user:admin] privilege'
+      endresult['User'] = result.user
+      res.send(endresult);
 
-      }
+    }
   },
 
   logout: (req, res) => {
 
     res.redirect("http://" + req.params.redirect);
-      
+
   },
 
 
@@ -130,7 +130,7 @@ module.exports = {
                   const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
                   const secret = process.env.JWT_SECRET;
                   const token = jwt.sign(payload, secret, options);
-                  
+
                   result.token = token;
                   result.status = status;
                   result.result = user;
@@ -143,19 +143,19 @@ module.exports = {
                   const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
                   const secret = process.env.JWT_SECRET;
                   const token = jwt.sign(payload, secret, options);
-                  
+
                   result.token = token;
                   result.status = status;
                   result.result = user;
                 }
                 // Create a token
-              
+
               } else {
                 status = 401;
                 result.status = status;
                 result.error = `Authentication error`;
               }
-              res.setHeader('Authorization', 'Bearer '+ result.token); 
+              res.setHeader('Authorization', 'Bearer '+ result.token);
               //res.cookie("SESSIONID", result.token, {httpOnly:true, secure:true});
               res.status(status).send(result);
             }).catch(err => {
@@ -172,7 +172,7 @@ module.exports = {
             result.error = 'Login Failed! User ' + username + ' not found!';
             res.status(status).send(result);
           }
-        }).then(() => 
+        }).then(() =>
           mongoose.connection.close());
       } else {
         status = 500;

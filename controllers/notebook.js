@@ -46,7 +46,7 @@ module.exports = {
     mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
       if (!err) {
         let result = {}
-        const token = req.headers.authorization.split(' ')[1]; 
+        const token = req.headers.authorization.split(' ')[1];
         result = jwt.verify(token, process.env.JWT_SECRET, options);
         Note.find({ user: result.user }, { __v: 0 }, function (err, someValue) {
           if (err) res.json(err);
@@ -89,16 +89,16 @@ module.exports = {
       xpath.XPathResult.ANY_TYPE, // resultType
       null                        // result
     )
-    
+
     var result = [];
     node = xpath_result.iterateNext();
     while (node) {
-        result.push(node.toString());
-        node = xpath_result.iterateNext();
+      result.push(node.toString());
+      node = xpath_result.iterateNext();
     }
 
     res.send(result.toString());
-    
+
   },
   create_a_note: (req, res) => {
     res = set_cors(req, res)
