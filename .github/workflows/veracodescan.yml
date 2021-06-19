@@ -11,8 +11,8 @@ jobs:
     name: veracodescan check
     steps:
     - uses: actions/setup-java@v1 # Make java accessible on path so the uploadandscan action can run.
-  with: 
-    java-version: '8'
+      with: 
+        java-version: '8'
 - uses: actions/upload-artifact@v2 # Copy files from repository to docker container so the next uploadandscan action can access them.
   with:
     path: dvws-node/* # Wildcards can be used to filter the files copied into the container. See: https://github.com/actions/upload-artifact
