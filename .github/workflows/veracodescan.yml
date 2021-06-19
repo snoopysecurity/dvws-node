@@ -1,4 +1,4 @@
-name: Veracode Upload And Scan
+name: veracodescan
 on: 
   push:
     branches: [ master ]
