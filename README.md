@@ -7,6 +7,10 @@ Damn Vulnerable Web Service is a Damn Vulnerable Insecure API/Web Service. This 
 
 
 
+
+
+
+
 This vulnerable application contains the following API/Web Service vulnerabilities:
 
 * Insecure Direct Object Reference
