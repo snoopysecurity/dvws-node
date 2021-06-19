@@ -1,4 +1,4 @@
-name: Veracode Upload and Scan
+name: veracodescan
 uses: veracode/veracode-uploadandscan-action
 on:
   push:
