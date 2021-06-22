@@ -39,9 +39,11 @@
 
 </div>
 
-<p>Log-out:<a href="/api/v2/users/logout/dvws.local">
-   <span class="glyphicon glyphicon-log-out"></span>
- </a>
+<p>Log-out:<script>
+      document.write(`<a href="/api/v2/users/logout/${document.domain}">
+         <span class="glyphicon glyphicon-log-out"></span>
+       </a>`);
+   </script>
 </p>
 
 
