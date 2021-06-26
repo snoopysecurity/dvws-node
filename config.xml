@@ -3,7 +3,7 @@
 		<release>0.0.1</release>
 		<user>
 			<login>test</login>
-			<password>test</password>
+			<password>test123</password>
 		</user>
 		<db>
 		    <type>mysql</type>
