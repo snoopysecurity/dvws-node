@@ -6,6 +6,10 @@ Damn Vulnerable Web Service is a Damn Vulnerable Insecure API/Web Service. This 
 ![DVWS](https://snoopysecurity.github.io/assets/dvws.png)
 
 
+New
+
+
+
 
 This vulnerable application contains the following API/Web Service vulnerabilities:
 
