@@ -10,7 +10,6 @@ const connection = mongoose.createConnection(connUri, { useNewUrlParser: true, u
 autoIncrement.initialize(connection);
 
 
-
 const NoteSchema = new Schema({
   name: {
     type: String,

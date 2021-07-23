@@ -20,6 +20,16 @@ var node = null;
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 var MongoClient = require('mongodb').MongoClient;
+
+mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
+  if (err) {
+    console.log(err);
+  } else {
+    console.log("Connected");
+  }
+
+});
+
 function set_cors(req, res) {
   if (req.get('origin')) {
     res.header('Access-Control-Allow-Origin', req.get('origin'))
@@ -43,8 +53,7 @@ module.exports = {
   list_all_notes: (req, res) => {
     res = set_cors(req, res)
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
-      if (!err) {
+
         let result = {}
         const token = req.headers.authorization.split(' ')[1]; 
         result = jwt.verify(token, process.env.JWT_SECRET, options);
@@ -52,8 +61,7 @@ module.exports = {
           if (err) res.json(err);
           res.send(someValue);
         });
-      }
-    });
+
 
   },
   get_info: (req, res) => {
@@ -103,8 +111,7 @@ module.exports = {
   create_a_note: (req, res) => {
     res = set_cors(req, res)
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
-      if (!err) {
+
         let result = {}
         const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
         result = jwt.verify(token, process.env.JWT_SECRET, options);
@@ -116,44 +123,38 @@ module.exports = {
             res.send(err);
           } else {
             res.json(note);
+
           }
+          
         });
 
-      }
-    });
   },
   read_a_note: (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
-      if (!err) {
 
         Note.findById(req.params.noteId, function (err, note) {
           if (err)
             res.send(err);
           res.json(note);
         });
-      }
-    });
+
   },
 
   update_a_note: (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
-      if (!err) {
+
         Note.findOneAndUpdate({ _id: req.params.noteId }, req.body, { new: true }, function (err, note) {
           if (err)
             res.send(err);
           res.json(note);
         });
-      }
 
-    });
+
   },
 
   delete_a_note: (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
-      if (!err) {
+
         Note.remove({
           _id: req.params.noteId
         }, function (err, note) {
@@ -161,8 +162,8 @@ module.exports = {
             res.send(err);
           res.json({ message: 'Note successfully deleted' });
         });
-      }
-    });
+
+
 
   },
 
@@ -176,20 +177,18 @@ module.exports = {
 
     MongoClient.connect(connUri2, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
       if (!err) {
-
-        const db = client.db('node-dvws')
-        const collection = db.collection('notes')
+        var db = client.db('node-dvws')
+        var collection = db.collection('notes')
         var search_name = req.body.search
         var type = 'public' //only display public notes
         var query = { $where: `this.type == '${type}' && this.name == '${search_name}'` };
         collection.find(query).toArray((err, items) => {
           res.send(items);
+          client.close();
         })
-      }
-
-
+        
+      }     
     });
 
   }
 }
-
