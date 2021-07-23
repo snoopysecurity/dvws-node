@@ -34,7 +34,23 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 
 ### Docker Compose
 
-If you have docker compose installed on your system, all you need to execute is : `docker-compose up`
+If you have docker compose installed on your system, all you need to execute is : 
+
+Clone DVWS
+
+```
+git clone https://github.com/snoopysecurity/dvws-node.git
+```
+Change directory to dvws-node 
+
+```
+cd dvws-node
+```
+Start Docker
+```
+`docker-compose up`
+```
+
 
 If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup, then increase the value of environment variable : `WAIT_HOSTS_TIMEOUT`
 
