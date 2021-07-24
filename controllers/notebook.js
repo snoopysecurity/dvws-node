@@ -58,8 +58,11 @@ module.exports = {
         const token = req.headers.authorization.split(' ')[1]; 
         result = jwt.verify(token, process.env.JWT_SECRET, options);
         Note.find({ user: result.user }, { __v: 0 }, function (err, someValue) {
-          if (err) res.json(err);
+          if (err) {
+            res.json(err);
+          } else {
           res.send(someValue);
+          }
         });
 
 
@@ -133,9 +136,11 @@ module.exports = {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
 
         Note.findById(req.params.noteId, function (err, note) {
-          if (err)
+          if (err) {
             res.send(err);
+          } else {
           res.json(note);
+          }
         });
 
   },
@@ -144,9 +149,11 @@ module.exports = {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
 
         Note.findOneAndUpdate({ _id: req.params.noteId }, req.body, { new: true }, function (err, note) {
-          if (err)
+          if (err) {
             res.send(err);
-          res.json(note);
+          } else {
+            res.json(note);
+          }
         });
 
 
@@ -158,13 +165,12 @@ module.exports = {
         Note.remove({
           _id: req.params.noteId
         }, function (err, note) {
-          if (err)
+          if (err) {
             res.send(err);
+          } else {  
           res.json({ message: 'Note successfully deleted' });
+          }
         });
-
-
-
   },
 
 

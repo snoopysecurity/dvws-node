@@ -36,7 +36,6 @@ module.exports = {
               res.end(); 
             } 
           } else {
-
             const { username, password } = req.body;
             const user = new User(req.body); // document = instance of a model
             // TODO: We can hash the password here as well before we insert
