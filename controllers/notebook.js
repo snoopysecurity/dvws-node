@@ -150,8 +150,10 @@ module.exports = {
         Note.findOneAndUpdate({ _id: req.params.noteId }, req.body, { new: true }, function (err, note) {
           if (err) {
             res.send(err);
+            mongoose.connection.close();
           } else {
             res.json(note);
+            mongoose.connection.close();
           }
         });
       });
@@ -166,8 +168,10 @@ module.exports = {
         }, function (err, note) {
           if (err) {
             res.send(err);
+            mongoose.connection.close();
           } else {  
           res.json({ message: 'Note successfully deleted' });
+          mongoose.connection.close();
           }
         });
       });
