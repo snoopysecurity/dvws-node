@@ -10,6 +10,12 @@ const swaggerDocument = require('./swagger'); //Swagger
 const soapservice = require('./soapserver/dvwsuserservice'); //SOAP Service
 const rpcserver = require('./rpc_server'); //XMLRPC Sever
 
+const connUri = process.env.MONGO_LOCAL_CONN_URL;
+const mongoose = require('mongoose');
+var MongoClient = require('mongodb').MongoClient;
+
+
+
 const app = express();
 const router = express.Router();
 
@@ -34,8 +40,25 @@ var corsOptions = {
 app.use(cors(corsOptions))
 app.use('/api', routes(router));
 
+
+
 app.listen(`${stage.port}`, () => {
-  console.log(`API listening at :${stage.port}, go to http://dvws.local (127.0.0.1)`);
-});
+    console.log(`API listening at :${stage.port}, go to http://dvws.local (127.0.0.1)`);
+  });
+
+
+
+connect();
+
+
+function connect() {
+  var options = { keepAlive: 1, useNewUrlParser: true };
+  const connUri2 = connUri.substr(0, connUri.lastIndexOf("/"));
+  mongoose.connect(connUri, options);
+  MongoClient.connect(connUri2, { useNewUrlParser: true, useUnifiedTopology: true });
+  return mongoose.connection;
+}
+
+
 
 module.exports = app;
