@@ -29,6 +29,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * XPATH Injection
 * XML-RPC User Enumeration
 * Open Redirect
+* Path Traversal 
 
 ## Set Up Instructions
 
@@ -50,7 +51,7 @@ Start Docker
 ```
 `docker-compose up`
 ```
-
+This will start the dvws service with the backend MySQL database and the NoSQL database.
 
 If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup, then increase the value of environment variable : `WAIT_HOSTS_TIMEOUT`
 
@@ -124,7 +125,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * Cross-Site Request Forgery (CSRF)
 * XML Bomb Denial-of-Service
 * API Endpoint Brute Forcing Challenges
-* Path Traversal 
 * Same Origin Method Execution
 * Web Socket Security
 * Type Confusion
