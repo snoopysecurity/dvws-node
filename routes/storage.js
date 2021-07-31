@@ -9,4 +9,7 @@ module.exports = (router) => {
   
       router.route('/upload')
       .get(validateToken, controller.get);
+
+      router.route('/download')
+      .post(validateToken, controller.fetch);
   };

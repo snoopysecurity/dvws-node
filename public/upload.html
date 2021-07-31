@@ -29,29 +29,47 @@
                 <p>User Uploaded Files</p>
                 <p>URLs to your saved files is displayed below</p>
                 <br>
-                {{arrayToString(array)}}
+                <table border=1>
+                    <thead>
+                        <tr>
+                            <th>Uploaded Files</th>
+                        </tr>
+                    </thead>
+                    <tr ng-repeat="item in itemsDetails">
+                        <td> {{item.name}} </td>
+                    </tr>
+                </table>
+
                 <br>
                 <br>
                 <br>
                 </div>
-                <p>Upload File</p>
+
 
                 <div ng-controller="myCtrl">
-                    <input type="file" file-model="myFile" />
-                    <button ng-click="uploadFile()">Upload</button>
 
-                    <br>
+                    <div style="width: 150%;">
+                        <div style="width: 50%; height: 100px; float: left;"> 
+                            <b>Upload File</b><br>
+                            Select File
+                            <input type="file" file-model="myFile" />
+                            <button ng-click="uploadFile()">Upload</button>
+                        </div>
+                        <div style="margin-left: 50%; height: 100px;"> 
+                            <b>Download File</b><br>
+                            Filename: 
+                            <input type="text" name="name" ng-model="name" placeholder="File Name"> 
+                            <button ng-click="downloadFile()">Download</button>
+                        </div>
+
                     <br>
                     <br>
                     {{ DataResponse }}
 
+
                 </div>
 
-
-
             </div>
-
-
 
         </div>
     </div>
@@ -59,9 +77,8 @@
     </div>
 
     <script type="text/javascript">
-
         var myApp = angular.module('myApp', []);
-
+        var returndict = [];
         myApp.directive('fileModel', ['$parse', function ($parse) {
             return {
                 restrict: 'A',
@@ -95,15 +112,38 @@
                     });
             }
 
+
+       
+
         }]);
 
-        myApp.controller('myCtrl', ['$scope', 'fileUpload', function ($scope, fileUpload) {
+        myApp.controller('myCtrl', ['$scope', 'fileUpload','$http', function ($scope, fileUpload,$http) {
             $scope.uploadFile = function () {
                 var file = $scope.myFile;
                 var uploadUrl = "/api/upload";
                 fileUpload.uploadFileToUrl(file, uploadUrl,$scope);
 
             };
+
+            $scope.downloadFile = function () {
+            var post = $http({
+                method: "POST",
+                url: "/api/download",
+                dataType: 'json',
+                data: { filename: $scope.name },
+                headers: { "Content-Type": "application/json" },
+                headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+            });
+ 
+            post.success(function (data, status) {
+                $scope.DataResponse = data;
+
+            });
+ 
+            post.error(function (data, status) {
+                $scope.DataResponse = data.errors;
+            });
+        }  
 
 
         }]);
@@ -120,21 +160,36 @@
     
                 });
 
-                $scope.arrayToString = function(string){
-                        return string.join(", ");
-                    };
-    
                 get.success(function (data, status) {
-                    $scope.array = data;
+                    data.forEach(createLink);
+
+
+                    
+                    $scope.itemsDetails = returndict;
                 });
      
                 get.error(function (data, status) {
-                    $scope.array = "No Files Uploaded";
+                    $scope.itemsDetails = "No Files Uploaded";
                 });
             
-            }
-        });
+                function createLink(value, index, array) {
+                var dict = {};
+                //var link = value;
+                dict["name"] = value 
+                //dict["link"] = link2
+                returndict.push(dict);
+                }
 
+
+
+            }
+
+
+    
+    });
+
+
+  
 
 
     </script>

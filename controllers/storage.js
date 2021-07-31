@@ -2,7 +2,8 @@ const jwt = require('jsonwebtoken');
 const url = require('url');
 const fs = require('fs');
 const http = require('http');
-
+const path = require('path');
+const os = require('os');
 
 const options = {
     expiresIn: '2d',
@@ -52,10 +53,18 @@ module.exports = {
             if (err) {
                 return res.status(500).send(err);
             }
-            res.json('File uploaded to your private user directory within ' + __dirname + '/../public/uploads/');
+            res.json('File uploaded to your private user directory');
         });
 
     },
+
+    fetch: (req, res) => {
+        const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
+        result = jwt.verify(token, process.env.JWT_SECRET, options);
+        var filename = path.resolve(process.cwd() + '/public/uploads/' + result.user + "/" + req.body.filename); 
+        res.download(filename);
+          
+      },
 
     get: (req, res) => {
 
@@ -72,7 +81,7 @@ module.exports = {
                 res.json('No files Uploaded ' + err);
             } else {
             files.forEach(function (file) {
-                resultData.push("/uploads/" + result.user + "/" + file);
+                resultData.push(file);
                 
             });
             res.json(resultData);
