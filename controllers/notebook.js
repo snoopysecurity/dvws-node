@@ -1,5 +1,3 @@
-const mongoose = require('mongoose');
-
 const Note = require('../models/notebook');
 const jwt = require('jsonwebtoken')
 const { exec } = require('child_process');
@@ -9,6 +7,7 @@ const fs = require('fs');
 dom = require('xmldom').DOMParser
 const parser = new xml2js.Parser({ attrkey: "ATTR" });
 
+var MongoClient = require('mongodb').MongoClient;
 
 let xml_string = fs.readFileSync("config.xml", "utf8");
 xml_string = xml_string.replace(/>\s*/g, '>');  // Replace "> " with ">"
@@ -17,10 +16,11 @@ xml_string = xml_string.replace(/\s*</g, '<');  // Replace "< " with "<"
 var doc = new dom().parseFromString(xml_string)
 var node = null;
 
-
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
-var MongoClient = require('mongodb').MongoClient;
+const connUri2 = connUri.substr(0, connUri.lastIndexOf("/"));
 
+
+  
 
 
 function set_cors(req, res) {
@@ -168,11 +168,10 @@ module.exports = {
   },
 
 
-  //old developer code, should be rewritten to use mongoose ORM but cba
+  //old developer code, should be rewritten to use mongoose ORM
   search_note: (req, res) => {
     res = set_cors(req, res)
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    connUri2 = connUri.substr(0, connUri.lastIndexOf("/"));
 
     MongoClient.connect(connUri2, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
       if (!err) {
@@ -190,4 +189,5 @@ module.exports = {
     });
 
   }
+  
 }

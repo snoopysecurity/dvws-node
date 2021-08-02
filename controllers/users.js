@@ -20,11 +20,10 @@ function set_cors(req,res) {
 
 module.exports = {
   add: (req, res) => {
-    mongoose.connect(connUri, { useNewUrlParser : true, useUnifiedTopology: true }, (err) => {
+
       let result = {};
       let status = 201;
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-      if (!err) {
         const { username, password } = req.body;
 
       
@@ -50,25 +49,10 @@ module.exports = {
                 result.error = err;
               }
               res.status(status).send(result);
-              // Close the connection after saving
-              mongoose.connection.close();
+
             });
-
           }
-        
         });
-
-      } else {
-        status = 500;
-        result.status = status;
-        result.error = err;
-        res.status(status).send(result);
-
-        mongoose.connection.close();
-      }
-          
-    });
-
   },
 
   checkadmin: (req, res) => {
@@ -109,11 +93,8 @@ module.exports = {
     const { username, password } = req.body;
     //set_cors(req,res);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
       let result = {};
       let status = 200;
-      if(!err) {
-
         User.findOne({username}, (err, user) => {
           if (!err && user) {
             // We could compare passwords in our model instead of below as well
@@ -163,7 +144,6 @@ module.exports = {
               result.error = err;
               res.status(status).send(result);
 
-              mongoose.connection.close();
             });
           } else {
             status = 404;
@@ -171,28 +151,18 @@ module.exports = {
             result.error = 'Login Failed! User ' + username + ' not found!';
             res.status(status).send(result);
           }
-        }).then(() => 
-          mongoose.connection.close());
-      } else {
-        status = 500;
-        result.status = status;
-        result.error = err;
-        res.status(status).send(result);
+        })
 
-        mongoose.connection.close();
-      }
-    });
+
   },
 
   getAll: (req, res) => {
     //res = set_cors(req,res)
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
       let result = {};
       let status = 200;
-      if (!err) {
 
-        if (result) {
+
           User.find({}, (err, users) => {
             if (!err) {
               result.status = status;
@@ -204,23 +174,7 @@ module.exports = {
               result.error = err;
             }
             res.status(status).send(result);
-          }).then(() => mongoose.connection.close());
-        } else {
-          status = 401;
-          result.status = status;
-          result.error = `Authentication error`;
-          res.status(status).send(result);
+          })
 
-          mongoose.connection.close();
-        }
-      } else {
-        status = 500;
-        result.status = status;
-        result.error = err;
-        res.status(status).send(result);
-
-        mongoose.connection.close();
-      }
-    });
   }
 };
