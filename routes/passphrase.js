@@ -10,6 +10,9 @@ module.exports = (router) => {
   router.route('/v2/passphrase')
     .post(validateToken, controller.save);
 
+  router.route('/v2/export')
+    .post(validateToken, controller.export);
+
   router.route('/v2/passphrase/:username')
     .get(controller.get)
 };

@@ -29,7 +29,8 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * XPATH Injection
 * XML-RPC User Enumeration
 * Open Redirect
-* Path Traversal 
+* Path Traversal
+* Unsafe Deserialization 
 
 ## Set Up Instructions
 
@@ -128,7 +129,6 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * Same Origin Method Execution
 * Web Socket Security
 * Type Confusion
-* Unsafe Deserialization  
 * LDAP Injection
 * SOAP Injection
 * XML Injection

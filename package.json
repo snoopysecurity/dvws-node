@@ -33,6 +33,8 @@
     "mongoose": "^5.10.15",
     "mongoose-auto-increment": "^5.0.1",
     "mysql": "^2.18.1",
+    "node-serialize": "0.0.4",
+    "pdfkit": "^0.12.3",
     "swagger-ui-express": "^4.1.4",
     "xml2js": "^0.4.23",
     "xmldom": "^0.4.0",
