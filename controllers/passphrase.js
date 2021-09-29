@@ -96,10 +96,14 @@ module.exports = {
       myDoc.fontSize(12)
       myDoc.text('Passphrases for created for user: ' + result.user);
       myDoc.text('--------------------------------------------------');
+      try {
       data.forEach(function (passphrases) {
         myDoc.text("Passphrase: " + passphrases.passphrase);
         myDoc.text("Passphrase Reminder: " + passphrases.reminder);
       })
+    } catch (e) {
+      myDoc.text("Parse Error");
+    }
       myDoc.end();
     }
 
