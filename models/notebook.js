@@ -8,6 +8,8 @@ const connUri = process.env.MONGO_LOCAL_CONN_URL;
 const Schema = mongoose.Schema;
 const autoIncrement = require('mongoose-auto-increment');
 
+const mongooseSuperIncrement = require('mongoose-super-increment');
+
 var options = { keepAlive: 1, useNewUrlParser: true, useUnifiedTopology: true };     
 //const connection = mongoose.createConnection(connUri, options);
 //autoIncrement.initialize(connection);
@@ -16,7 +18,10 @@ var options = { keepAlive: 1, useNewUrlParser: true, useUnifiedTopology: true };
 try {
   var coptions = { keepAlive: 1, useNewUrlParser: true };
   const connection = await mongoose.createConnection(connUri, options);
-  autoIncrement.initialize(connection);
+  mongooseSuperIncrement.initialize(connection);
+
+
+
   await mongoose.connect(connUri, coptions);
 } catch (error) {
   console.log(error);
