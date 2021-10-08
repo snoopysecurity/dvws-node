@@ -7,10 +7,10 @@ const stage = require('../config')[environment];
 
 // schema maps to a collection
 const Schema = mongoose.Schema;
-const autoIncrement = require('mongoose-auto-increment');
+const mongooseSuperIncrement = require('mongoose-super-increment');
 
 const connection = mongoose.createConnection(connUri, { useNewUrlParser: true, useUnifiedTopology: true });
-autoIncrement.initialize(connection);
+mongooseSuperIncrement.initialize(connection);
 
 const userSchema = new Schema({
   username: {
