@@ -6,7 +6,7 @@ const connUri = process.env.MONGO_LOCAL_CONN_URL;
 
 // schema maps to a collection
 const Schema = mongoose.Schema;
-const autoIncrement = require('mongoose-auto-increment');
+//const autoIncrement = require('mongoose-auto-increment');
 
 const mongooseSuperIncrement = require('mongoose-super-increment');
 
@@ -88,5 +88,5 @@ const NoteSchema = new Schema({
 
 
 
-NoteSchema.plugin(autoIncrement.plugin, 'Notes');
+NoteSchema.plugin(mongooseSuperIncrement.plugin, { model: 'Notes' });
 module.exports = mongoose.model('Notes', NoteSchema);
