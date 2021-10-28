@@ -24,13 +24,13 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * SQL Injection
 * XML External Entity Injection
 * Command Injection
-* Postmessage Security (JavaScript Security)
-* Prototype Pollution (JavaScript Security)
 * XPATH Injection
 * XML-RPC User Enumeration
 * Open Redirect
 * Path Traversal
 * Unsafe Deserialization 
+* Postmessage Security (JavaScript Security)
+* Prototype Pollution (JavaScript Security)
 
 ## Set Up Instructions
 
