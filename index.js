@@ -11,6 +11,10 @@ const soapservice = require('./soapserver/dvwsuserservice'); //SOAP Service
 const rpcserver = require('./rpc_server'); //XMLRPC Sever
 
 
+const { graphqlHTTP } = require('express-graphql');
+const schema = require('./graphql/schema');
+
+
 const app = express();
 const router = express.Router();
 
@@ -26,6 +30,7 @@ app.use('/dvwsuserservice', soapservice);
 app.use(bodyParser.json());
 app.use(fileUpload({ parseNested: true }));
 
+
 var corsOptions = {
   origin: true,
   credentials: true,
@@ -35,7 +40,13 @@ var corsOptions = {
 app.use(cors(corsOptions))
 app.use('/api', routes(router));
 
-
+app.use(
+  "/graphql",
+  graphqlHTTP({
+  schema: schema,
+  graphiql: true,
+  }));  
+  
 app.listen(`${stage.port}`, () => {
     console.log(`API listening at :${stage.port}, go to http://dvws.local (127.0.0.1)`);
   });

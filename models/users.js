@@ -1,15 +1,16 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-const connUri = process.env.MONGO_LOCAL_CONN_URL;
 const environment = process.env.NODE_ENV;
 const stage = require('../config')[environment];
+var connection = require('./db');
+
 
 // schema maps to a collection
 const Schema = mongoose.Schema;
 const mongooseSuperIncrement = require('mongoose-super-increment');
 
-const connection = mongoose.createConnection(connUri, { useNewUrlParser: true, useUnifiedTopology: true });
+
 mongooseSuperIncrement.initialize(connection);
 
 const userSchema = new Schema({
