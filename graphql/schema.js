@@ -137,13 +137,16 @@ const Mutation = new GraphQLObjectType({
         try {
           const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
           result = jwt.verify(token, process.env.JWT_SECRET, options);
-  
         } catch (error) {
           throw new Error( "Missing JWT Admin Auth Token");
         }
-
+        
+        UpdatedFile = {}
         filePath = __dirname + '/../public/uploads/' + result.user + "/" +  args.filePath;
-        return await fsPromise.writeFile(filePath, args.fileContent);
+        await fsPromise.writeFile(filePath, args.fileContent);
+        UpdatedFile['filePath'] = filePath
+        UpdatedFile['fileContent'] = args.fileContent
+        return UpdatedFile;
 
       }
     }
