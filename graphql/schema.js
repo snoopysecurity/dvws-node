@@ -3,7 +3,7 @@ const _ = require('lodash')
 const jwt = require('jsonwebtoken')
 var fsPromise = require("fs").promises;
 const { GraphQLObjectType, GraphQLString, GraphQLID, GraphQLBoolean, GraphQLList, GraphQLSchema, GraphQLNonNull } = graphql;
-
+const bcrypt = require('bcrypt');
 
 const Note = require('../models/notebook');
 const User = require('../models/users');
@@ -21,7 +21,8 @@ const UserType = new GraphQLObjectType({
       id: { type: GraphQLID },
       username: { type: GraphQLString },
       password: { type: GraphQLString },
-      admin: { type: GraphQLBoolean }
+      admin: { type: GraphQLBoolean },
+      token: { type: GraphQLString }
   })
 });
 
@@ -149,13 +150,88 @@ const Mutation = new GraphQLObjectType({
         return UpdatedFile;
 
       }
-    }
+    },
+    userLogin: {
+      type: UserType,
+      args: {
+      username: { type: GraphQLString },
+      password: { type: GraphQLString },
+    },
+    async resolve(parent, args, req){
 
+      let returnVar = {};
+      var argsusername = args.username;
+      var argspassword = args.password;
+
+
+      result =  await User.find({ username: argsusername }, 'username password').exec();
+      if( result.length == 0 ) {
+        throw new Error( "User Login Failed");
+      }
+
+      returnVar['username'] = result[0].username;
+      returnVar['password'] = result[0].password;
+
+
+      returnval = passwordCompare(argspassword,result);
+      token = await returnval.then(function(token) {
+        returnVar['token'] = token;
+      })
+      return returnVar;
+    }
+    
   }
 
 
+}
 
 })
+
+
+
+function passwordCompare(argspassword,dbresult) {
+  user = dbresult[0].username;
+  dbtoken = bcrypt.compare(argspassword, dbresult[0].password).then(match => {
+    if (match) {
+
+      if (user.admin == true) {
+        const payload = { user: dbresult[0].username,"permissions": [
+          "user:read",
+          "user:write",
+          "user:admin"
+        ] };
+        const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
+        const secret = process.env.JWT_SECRET;
+        const token = jwt.sign(payload, secret, options);
+        
+
+        return token;
+      } else {
+
+        const payload = { user: dbresult[0].username,"permissions": [
+          "user:read",
+          "user:write"
+        ] };
+        const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
+        const secret = process.env.JWT_SECRET;
+        const token = jwt.sign(payload, secret, options);
+
+        return token;       }
+
+    
+    } else {
+      throw new Error( "Authentication error");
+    //  console.log(result);
+      return result;
+    }
+
+  }).catch(err => {
+    dbtoken= err;
+  //  console.log(err);
+  });
+  return dbtoken;
+
+}
 
 module.exports = new GraphQLSchema({
   query: RootQuery,
