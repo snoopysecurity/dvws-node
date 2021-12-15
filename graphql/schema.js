@@ -79,6 +79,11 @@ const Gqresolvers = {
     },
   
   readNote: async (parent, args, context, info) => {
+
+    if ( typeof context.user == 'undefined' ){
+      throw new Error( "Missing JWT Admin Auth Token");
+   } 
+
       note = args.name;
       result = await Note.find({ name: note }, 'name body user _id type').exec();
       return result;
@@ -138,7 +143,6 @@ const Gqresolvers = {
          }
        }); 
        result = await Note.find({ name: args.name }, 'name body user _id type').exec();
-       console.log(result);
        return result;
 
       }

@@ -62,6 +62,7 @@ const server = new ApolloServer({
   introspection: true,
   playground: true,
   debug: true,
+  allowBatchedHttpRequests: true,
   schema: GqSchema,
   context: async ({ req }) => {
        let verifiedToken = {}
