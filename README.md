@@ -30,6 +30,9 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * Path Traversal
 * Unsafe Deserialization 
 * Sensitive Data Exposure
+* GraphQL Access Control Issues
+* GraphQL Introspection Enabled
+* GraphQL Path Traversal
 
 
 ## Set Up Instructions
@@ -132,7 +135,7 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * LDAP Injection
 * SOAP Injection
 * XML Injection
-* GRAPHQL Security
+* GRAPHQL Denial Of Service
 * CRLF Injection
 
 
