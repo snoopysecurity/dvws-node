@@ -137,6 +137,7 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * XML Injection
 * GRAPHQL Denial Of Service
 * CRLF Injection
+* GraphQL Injection
 
 
 ### Other Tasks To Complete:
