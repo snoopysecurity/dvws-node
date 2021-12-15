@@ -5,8 +5,6 @@ Damn Vulnerable Web Service is a Damn Vulnerable Insecure API/Web Service. This 
 
 ![DVWS](https://snoopysecurity.github.io/assets/dvws.png)
 
-
-
 This vulnerable application contains the following API/Web Service vulnerabilities:
 
 * Insecure Direct Object Reference
@@ -33,6 +31,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * GraphQL Access Control Issues
 * GraphQL Introspection Enabled
 * GraphQL Arbitrary File Write
+* GraphQL Batching Brute Force
 
 
 ## Set Up Instructions
