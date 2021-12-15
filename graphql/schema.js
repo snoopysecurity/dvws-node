@@ -11,7 +11,7 @@ const fsPromise = require("fs").promises;
 const bcrypt = require('bcrypt');
 const Note = require('../models/notebook');
 const User = require('../models/users');
-
+const sql = require('../models/passphrase');
 
 
 // A schema is a collection of type definitions (hence "typeDefs")
@@ -42,12 +42,17 @@ const GqtypeDefs = gql`
     fileContent: String
   }
 
+  type Passphrase {
+    passphrase: String
+    reminder: String
+  }
 
   type Query {
     userFindbyId(id: ID): User
     userSearchByUsername(username: String): [User]
     noteFindbyId(id: ID): Notebook
     readNote(name: String): [Notebook]
+    getPassphrase(reminder: String): Passphrase
   }
 
 
@@ -55,6 +60,7 @@ const GqtypeDefs = gql`
     updateUserUploadFile(filePath: String, fileContent: String): File
     userLogin(username: String, password: String): User
     createNote(name: String, body: String, type: [String]): [Notebook]
+
   }
 `;
 
@@ -82,14 +88,29 @@ const Gqresolvers = {
 
     if ( typeof context.user == 'undefined' ){
       throw new Error( "Missing JWT Admin Auth Token");
-   } 
-
+      } 
       note = args.name;
       result = await Note.find({ name: note }, 'name body user _id type').exec();
       return result;
-      }
-  
+      },
+  getPassphrase: async (parent, args, context, info) => {
 
+    var query = "select passphrase,reminder from passphrases WHERE reminder = " +  sql.escape(args.reminder) + "";
+    let sqlInput;
+    await(new Promise((resolve, reject) => {
+    sql.query( query, function (err, result, fields) {
+        if (err) {
+        throw new Error(err);  
+        resolve();
+        } else {
+            
+            sqlInput = result;
+            resolve()
+        }
+      });
+    }));
+    return sqlInput[0];
+      },
     },
     Mutation: {
       updateUserUploadFile: async (parent, args, context, info) => {
@@ -118,7 +139,6 @@ const Gqresolvers = {
           if( result.length == 0 ) {
             throw new Error( "User Login Failed");
           }
-          console.log(result);
           returnVar['username'] = result[0].username;
           returnVar['password'] = result[0].password;
     
