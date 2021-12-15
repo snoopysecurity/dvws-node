@@ -20,7 +20,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * Cross-Origin Resource Sharing Misonfiguration
 * JSON Hijacking
 * SQL Injection
-* XML External Entity Injection
+* XML External Entity Injection (XXE)
 * Command Injection
 * XPATH Injection
 * XML-RPC User Enumeration
