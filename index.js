@@ -10,9 +10,8 @@ const swaggerDocument = require('./swagger'); //Swagger
 const soapservice = require('./soapserver/dvwsuserservice'); //SOAP Service
 const rpcserver = require('./rpc_server'); //XMLRPC Sever
 
-
-const { graphqlHTTP } = require('express-graphql');
-const schema = require('./graphql/schema');
+const { ApolloServer } = require('apollo-server');
+const {  GqSchema } =  require('./graphql/schema');
 
 
 const app = express();
@@ -30,6 +29,16 @@ app.use('/dvwsuserservice', soapservice);
 app.use(bodyParser.json());
 app.use(fileUpload({ parseNested: true }));
 
+const jwt = require('jsonwebtoken')
+
+
+const options = {
+  expiresIn: '2d',
+  issuer: 'https://github.com/snoopysecurity',
+  algorithms: ["HS256", "none"],
+  ignoreExpiration: true
+};
+
 
 var corsOptions = {
   origin: true,
@@ -40,17 +49,34 @@ var corsOptions = {
 app.use(cors(corsOptions))
 app.use('/api', routes(router));
 
-app.use(
-  "/graphql",
-  graphqlHTTP({
-  schema: schema,
-  graphiql: true,
-  }));  
+
   
 app.listen(`${stage.port}`, () => {
-    console.log(`API listening at :${stage.port}, go to http://dvws.local (127.0.0.1)`);
+    console.log(`🚀 API listening at :${stage.port}, go to http://dvws.local (127.0.0.1)`);
   });
 
 
+  // The ApolloServer constructor requires two parameters: your schema
+// definition and your set of resolvers.
+const server = new ApolloServer({ 
+  introspection: true,
+  playground: true,
+  debug: true,
+  schema: GqSchema,
+  context: async ({ req }) => {
+       let verifiedToken = {}
+        try {
+         const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
+         verifiedToken = jwt.verify(token, process.env.JWT_SECRET, options);
+        } catch (error) {
+          verifiedToken = {}
+        }
+        return verifiedToken;
+  }, });
+
+
+server.listen().then(({ url }) => {
+    console.log(`🚀 GraphQL Server ready at ${url}`);
+  });;
 
 module.exports = app;

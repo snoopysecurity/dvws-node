@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 
-
+mongoose.set('useCreateIndex', true);
 
 
 var options = { keepAlive: 1, useNewUrlParser: true, useUnifiedTopology: true };     
