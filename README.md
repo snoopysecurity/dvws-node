@@ -32,7 +32,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * Sensitive Data Exposure
 * GraphQL Access Control Issues
 * GraphQL Introspection Enabled
-* GraphQL Path Traversal
+* GraphQL Arbitrary File Write
 
 
 ## Set Up Instructions
