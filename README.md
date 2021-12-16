@@ -127,8 +127,7 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 ## To Do
 * Cross-Site Request Forgery (CSRF)
 * XML Bomb Denial-of-Service
-* API Endpoint Brute Forcing Challenges
-* Same Origin Method Execution
+* API Endpoint Brute Forcing
 * Web Socket Security
 * Type Confusion
 * LDAP Injection
