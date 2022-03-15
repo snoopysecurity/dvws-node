@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const swaggerUI = require('swagger-ui-express');
 const fileUpload = require('express-fileupload');
+const path = require('path');
 
 const swaggerDocument = require('./swagger'); //Swagger
 const soapservice = require('./soapserver/dvwsuserservice'); //SOAP Service
@@ -23,6 +24,11 @@ const stage = require('./config')[environment];
 const routes = require('./routes/index.js');
 
 app.use(express.static('public'));
+app.use("/css", express.static(path.join(__dirname, "node_modules/bootstrap/dist/css")));
+app.use("/js", express.static(path.join(__dirname, "node_modules/bootstrap/dist/js")));
+app.use("/js", express.static(path.join(__dirname, "node_modules/jquery/dist")));
+app.use("/js", express.static(path.join(__dirname, "node_modules/angular")));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 app.use('/dvwsuserservice', soapservice);
