@@ -1,7 +1,7 @@
-<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.9/angular.min.js"></script>
-<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<script src="./js/jquery.min.js"></script>
+<script type="text/javascript" src="./js/angular.min.js"></script>
+<link href="./css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="./js/bootstrap.min.js"></script>
 <link href="index.css" rel="stylesheet" id="inline-css">
 <!------ Include the above in your HEAD tag ---------->
 
@@ -37,10 +37,8 @@
       </div>
       
       <br><br><br><br><br><br>
-      <p>Log-out:<script>
-         document.write(`<a href="/api/v2/users/logout/${document.domain}">
-            <span class="glyphicon glyphicon-log-out"></span>
-          </a>`);
+      <script>
+         document.write(`<a href="/api/v2/users/logout/${document.domain}">Logout</a>`);
       </script>
    </p>
    
