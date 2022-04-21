@@ -11,6 +11,7 @@ services:
         build: .
         ports:
         - "80:80"
+        - "4000:4000"          
         - "9090:9090"        
         command: sh -c "/wait && node startup_script.js && npm run dvws"
         environment:
