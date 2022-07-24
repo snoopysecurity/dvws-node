@@ -300,7 +300,107 @@ module.exports = {
       "servers": [{
         "url": "http://dvws.local"
       }]
-    }
+    },
+    "/api/v2/export": {
+      "post": {
+        "description": "Auto generated using Swagger Inspector",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/body_1"
+              },
+              "examples": {
+                "0": {
+                  "value": "{\"data\":\"W3sicGFzc3BocmFzZSI6IjdkNzM3ZDgxNWU0Yzc5ODI1ZDZlNjA0YTZjNWQ3MjZlIiwicmVtaW5kZXIiOiJ0d2VyZXdyIn0seyJwYXNzcGhyYXNlIjoiN2Q3MzdkODE1ZTRjNzk4MjVkNmU2MDRhNmM1ZDcyNmUiLCJyZW1pbmRlciI6InR3ZXJld3IifSx7InBhc3NwaHJhc2UiOiI1NDU4N2U2ODM1NmM2YjQ3MzE3MDViNzE2OTY4NGE0OSIsInJlbWluZGVyIjoic2Rmc2RmIn0seyJwYXNzcGhyYXNlIjoiMzM0NjgwMmQ1MTZiNzEzNjY4NWM0OTU2MzM3YzJkNTgiLCJyZW1pbmRlciI6IndlZXdyIn1d\"}"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Auto generated using Swagger Inspector",
+            "content": {
+              "application/json; charset=utf-8": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {}
+              }
+            }
+          }
+        },
+        "servers": [{
+          "url": "http://dvws.local"
+        }]
+      },
+      "servers": [{
+        "url": "http://dvws.local"
+      }]
+    },
+    "/api/v2/passphrase": {
+      "post": {
+        "description": "Auto generated using Swagger Inspector",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/body_1"
+              },
+              "examples": {
+                "0": {
+                  "value": "{\"passphrase\":\"7d737d815e4c79825d6e604a6c5d726e\",\"reminder\":\"twerewr\"}"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Passphrase Saved Successfully",
+            "content": {
+              "application/json; charset=utf-8": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {}
+              }
+            }
+          }
+        },
+        "servers": [{
+          "url": "http://dvws.local"
+        }]
+      },
+      "servers": [{
+        "url": "http://dvws.local"
+      }]
+    },
+    "/api/v2/passphrase/{username}": {
+      "get": {
+        "description": "Auto generated using Swagger Inspector",
+        "responses": {
+          "403": {
+            "description": "Auto generated using Swagger Inspector",
+            "content": {
+              "application/json; charset=utf-8": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {}
+              }
+            }
+          }
+        },
+        "servers": [{
+          "url": "http://dvws.local"
+        }]
+      },
+      "servers": [{
+        "url": "http://dvws.local"
+      }]
+    },
   },
   "components": {
     "schemas": {
