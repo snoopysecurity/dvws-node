@@ -128,7 +128,7 @@ module.exports = {
   },
   read_a_note: (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-        Note.findById(req.params.noteId, function (err, note) {
+        Note.findOne({no: req.params.noteId}, function (err, note) {
           if (err) {
             res.send(err);
           } else {
