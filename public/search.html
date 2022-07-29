@@ -38,6 +38,25 @@
                                     </tr>
                                 </table>
 
+                                <br>
+
+
+                                <button class="btn btn-black" ng-click="SendData2()">Display All Public Notes</button>
+                                <br>
+                                <br>
+                                <br>
+                                <br>
+                                {{ serverresponse2 }}
+                                <br>
+                                <table>
+                                        <tr>
+                                            <th ng-repeat="(key, val) in items1[0]">{{key}}</th>
+                                        </tr>
+                                        <tr ng-repeat="item in items1">
+                                            <td ng-repeat="(key, val) in item">{{val}} </td>
+                                        </tr>
+                                    </table>
+
                         </div>
 
 
@@ -61,6 +80,48 @@
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') },
                     data: { search: $scope.search }
     
+                });
+    
+                get.success(function (data, status) {
+                    if (data.length < 1 || data == undefined) {
+                        $scope.serverresponse = 'Note not found'
+
+                        var getuserdata = $http({
+                            method: "GET",
+                            url: "/api/v2/notes/" + result[$scope.name],
+                            dataType: 'json',
+                            headers: { "Content-Type": "application/json" },
+                            headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+                        });
+
+                        getuserdata.success(function (data, status) {
+                            $scope.DataResponse = 'Note '  + $scope.name + ' Deleted'
+
+   
+                        });
+                        getuserdata.error(function (data, status) {
+                            $scope.DataResponse = 'Error! Could not fetch Data'
+                        });
+
+                    } else {
+                    $scope.items = data;
+                    }
+                });
+     
+                get.error(function (data, status) {
+                    $scope.items = 'Error';
+                });
+            
+            }
+
+
+            $scope.SendData2 =  function () {
+                var get = $http({
+                    method: "GET",
+                    url: "/api/v2/notesearch/all",
+                    dataType: 'json',
+                    headers: { "Content-Type": "application/json" },
+                    headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
                 });
     
                 get.success(function (data, status) {

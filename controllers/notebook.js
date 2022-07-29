@@ -188,6 +188,26 @@ module.exports = {
       }     
     });
 
+  },
+
+  display_all: (req, res) => {
+    res = set_cors(req, res)
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+    const projection = { _id: 0, name: 1, body: 1, type: 1, user: 1};
+    MongoClient.connect(connUri2, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
+      if (!err) {
+        var db = client.db('node-dvws')
+        var collection = db.collection('notes')
+        var type = 'public' //only display public notes
+        var query = { $where: `this.type == '${type}'` };
+        collection.find(query).project(projection).toArray((err, items) => {
+          res.send(items);
+          client.close();
+        })
+        
+      }     
+    });
+
   }
   
 }
