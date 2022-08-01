@@ -125,9 +125,10 @@
                     }
 
                     if (result.hasOwnProperty($scope.name) === true) {
+
                         var put = $http({
                             method: "PUT",
-                            url: "/api/v2/notes/" + result[$scope.name],
+                            url: "/api/v2/notes/" + $scope.name,
                             dataType: 'json',
                             headers: { "Content-Type": "application/json" },
                             headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') },
@@ -178,7 +179,7 @@
                     if (result.hasOwnProperty($scope.name) === true) {
                         var put = $http({
                             method: "DELETE",
-                            url: "/api/v2/notes/" + result[$scope.name],
+                            url: "/api/v2/notes/" + $scope.name,
                             dataType: 'json',
                             headers: { "Content-Type": "application/json" },
                             headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }

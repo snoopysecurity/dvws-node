@@ -4,7 +4,8 @@
   "description": "Damn Vulnerable Web Service",
   "main": "index.js",
   "scripts": {
-    "dvws": "cross-env NODE_ENV=development nodemon index.js"
+    "dvws": "cross-env NODE_ENV=development nodemon index.js",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -49,7 +50,12 @@
     "xpath": "0.0.32"
   },
   "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
     "cross-env": "^5.2.0",
-    "nodemon": "^1.18.4"
+    "jest": "^28.1.3",
+    "nodemon": "^1.18.4",
+    "superagent": "^8.0.0",
+    "supertest": "^6.2.4"
   }
 }

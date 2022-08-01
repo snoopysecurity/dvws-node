@@ -140,8 +140,9 @@ module.exports = {
 
   update_a_note: (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-        Note.findOneAndUpdate({ _id: req.params.noteId }, req.body, { new: true }, function (err, note) {
+        Note.findOneAndUpdate({name: req.params.noteId }, req.body, { new: true }, function (err, note) {
           if (err) {
+
             res.send(err);
 
           } else {
@@ -155,7 +156,7 @@ module.exports = {
   delete_a_note: (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
         Note.remove({
-          _id: req.params.noteId
+          name: req.params.noteId
         }, function (err, note) {
           if (err) {
             res.send(err);
