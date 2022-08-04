@@ -1,7 +1,7 @@
 [![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/snoopysecurity/dvws-node) 
 
 # dvws-node
-Damn Vulnerable Web Service is a Damn Vulnerable Insecure API/Web Service. This is a replacement for https://github.com/snoopysecurity/dvws
+Damn Vulnerable Web Services is a vulnerable application with a web service and an API that can be used to learn about webservices/API related vulnerabilities.  This is a replacement for https://github.com/snoopysecurity/dvws
 
 ![DVWS](https://snoopysecurity.github.io/assets/dvws.png)
 
@@ -136,6 +136,7 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 * GRAPHQL Denial Of Service
 * CRLF Injection
 * GraphQL Injection
+* Webhook security
 
 
 ### Other Tasks To Complete:
