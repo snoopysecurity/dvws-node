@@ -36,29 +36,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 
 ## Set Up Instructions
 
-### Docker Compose
-
-If you have docker compose installed on your system, all you need to execute is : 
-
-Clone DVWS
-
-```
-git clone https://github.com/snoopysecurity/dvws-node.git
-```
-Change directory to dvws-node 
-
-```
-cd dvws-node
-```
-Start Docker
-```
-`docker-compose up`
-```
-This will start the dvws service with the backend MySQL database and the NoSQL database.
-
-If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup, then increase the value of environment variable : `WAIT_HOSTS_TIMEOUT`
-
-### Manual
+### Manual (Preferred Method)
 
 **Node and NPM is needed to run dvws-node**
 
@@ -110,7 +88,7 @@ node startup_script.js
 To start the application/API, run (**sudo privileges** is needed to bind to ports)
 
 ```
-sudo npm run dvws
+sudo npm start
 ```
 
 Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensures URLs from swagger is resolved correctly (optional)
@@ -118,6 +96,30 @@ Within your /etc/hosts file, ensure localhost resolves to dvws.local. This ensur
 ```
 127.0.0.1    dvws.local
 ```
+
+### Docker Compose
+
+If you have docker compose installed on your system, all you need to execute is : 
+
+Clone DVWS
+
+```
+git clone https://github.com/snoopysecurity/dvws-node.git
+```
+Change directory to dvws-node 
+
+```
+cd dvws-node
+```
+Start Docker
+```
+`docker-compose up`
+```
+This will start the dvws service with the backend MySQL database and the NoSQL database.
+
+If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup, then increase the value of environment variable : `WAIT_HOSTS_TIMEOUT`
+
+
 
 ## Solutions
 * [DVWS Solutions Wiki](https://github.com/snoopysecurity/dvws-node/wiki)

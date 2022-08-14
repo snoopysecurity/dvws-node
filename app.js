@@ -18,8 +18,7 @@ const {  GqSchema } =  require('./graphql/schema');
 const app = express();
 const router = express.Router();
 
-const environment = process.env.NODE_ENV;
-const stage = require('./config')[environment];
+
 
 const routes = require('./routes/index.js');
 
@@ -57,8 +56,8 @@ app.use('/api', routes(router));
 
 
   
-app.listen(`${stage.port}`, () => {
-    console.log(`🚀 API listening at :${stage.port}, go to http://dvws.local (127.0.0.1)`);
+app.listen(80, () => {
+    console.log(`🚀 API listening at 80, go to http://dvws.local (127.0.0.1)`);
   });
 
 

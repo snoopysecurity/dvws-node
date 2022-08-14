@@ -2,10 +2,10 @@
   "name": "dvws-node",
   "version": "0.0.1",
   "description": "Damn Vulnerable Web Service",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
-    "dvws": "cross-env NODE_ENV=development nodemon index.js",
-    "test": "jest"
+    "start": "node app.js",
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -38,11 +38,13 @@
     "jquery": "1.11.1",
     "jsonwebtoken": "^8.3.0",
     "libxmljs": "^0.19.7",
+    "mocha": "^10.0.0",
     "mongoose": "^5.10.15",
     "mongoose-super-increment": "^1.1.0",
     "mysql": "^2.18.1",
     "node-serialize": "0.0.4",
     "pdfkit": "^0.12.3",
+    "superagent-proxy": "^3.0.0",
     "swagger-ui-express": "^4.1.4",
     "xml2js": "^0.4.23",
     "xmldom": "^0.4.0",
@@ -50,7 +52,10 @@
     "xpath": "0.0.32"
   },
   "devDependencies": {
+    "chai": "^4.3.6",
+    "chai-http": "^4.3.0",
     "cross-env": "^5.2.0",
-    "nodemon": "^1.18.4"
+    "supertest": "^6.2.4",
+    "supertest-with-proxy": "^5.0.2"
   }
 }

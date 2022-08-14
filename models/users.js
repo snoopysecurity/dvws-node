@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-const environment = process.env.NODE_ENV;
-const stage = require('../config')[environment];
+
 var connection = require('./db');
 
 
