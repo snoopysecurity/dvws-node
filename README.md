@@ -141,10 +141,6 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 * Webhook security
 
 
-### Other Tasks To Complete:
-* Complete writing Challenge Solution Wiki
-
-
 ## Any Questions
 
 Open a GitHub Issue :) 
