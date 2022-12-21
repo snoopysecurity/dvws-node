@@ -3,7 +3,7 @@
 # dvws-node
 Damn Vulnerable Web Services is a vulnerable application with a web service and an API that can be used to learn about webservices/API related vulnerabilities.  This is a replacement for https://github.com/snoopysecurity/dvws
 
-![DVWS](https://snoopysecurity.github.io/assets/dvws.png)
+![DVWS](https://github.com/snoopysecurity/Public/blob/master/dvws/dvws.png)
 
 This vulnerable application contains the following API/Web Service vulnerabilities:
 
@@ -32,7 +32,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * GraphQL Introspection Enabled
 * GraphQL Arbitrary File Write
 * GraphQL Batching Brute Force
-
+* Client Side Template Injection
 
 ## Set Up Instructions
 
