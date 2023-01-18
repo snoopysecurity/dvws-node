@@ -166,6 +166,13 @@ Hasła są zaszyfrowane
 ![idor](resources/idor.png)
 
 5. Mass Assignment
+Atak polega na przypisywaniu wartości zmiennej po stronie serwera.
+Przykłądem jest tworzenie użytkownika bez uprawnień adminstratora. 
+W tym przypadku defaultowy obiekt użytkownika zostaje utworzony ze zmienną admin=false.
+Atak będzie polegał na narzuceniu zmiennej admin=true i jednoczesnym przejęciu uprawnień administratora.
+![mass-assignment](resources/mass-assignment.png)
+![mass-assignment2](resources/mass-assignment2.png)
+![mass-assignment3](resources/mass-assignment3.png)
 
 6. XML Cross-Site Scripting (XSS)
 ![xss](resources/xss.png)
@@ -179,6 +186,28 @@ Hasła są zaszyfrowane
 
 
 8. SQL Injection
+Ataki SQL Injection są niestety bardzo powszechne, a wynika to z dwóch czynników:
+znaczne rozpowszechnienie luk SQL Injection oraz atrakcyjność celu (tj. baza danych zazwyczaj zawiera wszystkie interesujące/krytyczne dane dla Twojej aplikacji). Wstrzyknięcia SQL są wprowadzane, gdy twórcy oprogramowania tworzą dynamiczne zapytania do bazy danych zbudowane z konkatenacji łańcuchów, które obejmują dane wejściowe wprowadzone przez użytkownika. Może to zostać wykorzystane do przeglądania, modyfikowania lub usuwania danych aplikacji, co wcześniej nie było możliwe, lub do powodowania trwałych zmian w zawartości lub zachowaniu aplikacji.
+
+Uniknięcie błędów iniekcji SQL jest proste. Deweloperzy muszą albo: 
+a) przestać pisać dynamiczne zapytania z konkatenacją łańcuchów;
+i/lub
+b) zapobiegać wpływaniu danych wejściowych użytkownika, które zawierają złośliwy kod SQL, na logikę wykonywanego zapytania.
+
+Poniżej przeprowadzono atak polegający na wstrzyknięciu w URL dodatkowego znaku ' po nazwie użytkownika.
+Przed atakiem:
+![sql1_1](resources/sql1_1.png)
+Atak:
+![sql_injection1](resources/sql_injection1.png)
+Po ataku:
+![sql_injection2](resources/sql_injection2.png)
+
+Kolejny atak polegał na podmienieniu nazwy użytkownika na frazę '1'='1
+![sql4](resources/sql4.png)
+![sql5](resources/sql5_2.png)
+
+
+
 
 9. Information Disclosure
 * uzytkownikowi po zalogowaniu zwracane sa zszyfrowane haslo
@@ -188,3 +217,10 @@ Hasła są zaszyfrowane
 
 10. Command Injection
 
+
+Vertical Access Control
+Horizontal Access Control
+Open Redirect
+Path Traversal
+Unsafe Deserialization
+Sensitive Data Exposure
