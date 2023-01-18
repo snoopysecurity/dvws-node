@@ -140,7 +140,51 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 * GraphQL Injection
 * Webhook security
 
+## Dokumentacja
 
-## Any Questions
+1. Hashowanie haseł
+Hasła są zaszyfrowane
+![password hashing](resources/password.png)
 
-Open a GitHub Issue :) 
+2. User Enumeration
+* tworze uzytkownika
+![new user](resources/create-user.png)
+* sprawdzam jaka jest odpowiedź serwera gdy on istnieje
+![test if user exist](resources/test-user.png)
+
+
+* sprawdzenie uzytkownika moze odbywac sie tez za pomoca xml
+![test if user exist](resources/test-user1.png)
+
+    mając taką odpowiedź, hacker moze teraz za pomocą techniki brute force sforsować hasło uytkownika
+
+3. NoSQL Injection - pozyskanie danych za pomocą zapytania do bazy
+    Dzięki temu mozna było pozyskać wszystkie dostępne notatki, nawet te, które nie są publiczne.
+![nosql](resources/nosql.png)
+
+4. Insecure Direct Object Reference
+![idor](resources/idor.png)
+
+5. Mass Assignment
+
+6. XML Cross-Site Scripting (XSS)
+![xss](resources/xss.png)
+![xss2](resources/xss2.png)
+![xss3](resources/xss3.png)
+
+7. Hidden API Functionality Exposure
+    Po uruchomieniu swaggera widać rózne dostępne endpointy. Wpisując w przeglądarkę po kolei kazdy endpoint, sprawdzane jest, czy sa on zabezpieczone.
+
+![api](resources/api.png)
+
+
+8. SQL Injection
+
+9. Information Disclosure
+* uzytkownikowi po zalogowaniu zwracane sa zszyfrowane haslo
+
+
+
+
+10. Command Injection
+
