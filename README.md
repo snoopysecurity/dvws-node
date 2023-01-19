@@ -166,6 +166,7 @@ Hasła są zaszyfrowane
 ![idor](resources/idor.png)
 
 5. Mass Assignment
+
 Atak polega na przypisywaniu wartości zmiennej po stronie serwera.
 Przykłądem jest tworzenie użytkownika bez uprawnień adminstratora. 
 W tym przypadku defaultowy obiekt użytkownika zostaje utworzony ze zmienną admin=false.
@@ -196,11 +197,19 @@ b) zapobiegać wpływaniu danych wejściowych użytkownika, które zawierają z�
 
 Poniżej przeprowadzono atak polegający na wstrzyknięciu w URL dodatkowego znaku ' po nazwie użytkownika.
 Przed atakiem:
+
+
 ![sql1_1](resources/sql1_1.png)
+
 Atak:
+
 ![sql_injection1](resources/sql_injection1.png)
+
+
 Po ataku:
+
 ![sql_injection2](resources/sql_injection2.png)
+
 
 Kolejny atak polegał na podmienieniu nazwy użytkownika na frazę '1'='1
 ![sql4](resources/sql4.png)
@@ -218,9 +227,46 @@ Kolejny atak polegał na podmienieniu nazwy użytkownika na frazę '1'='1
 10. Command Injection
 
 
-Vertical Access Control
-Horizontal Access Control
-Open Redirect
-Path Traversal
-Unsafe Deserialization
-Sensitive Data Exposure
+15. Vertical Access Control
+
+Pionowa eskalacja uprawnień jest możliwa, jeśli klucz kontrolowany przez użytkownika jest w rzeczywistości  flagą wskazującą status administratora, umożliwiając atakującemu uzyskanie dostępu administracyjnego.
+
+Wiele wywołań interfejsu API, które może wykonać tylko administrator w obszarze administracyjnym, może wywołać użytkownik bez uprawnień administratora.
+
+Po zalogowaniu na zwykłego użytkownika, wchodzimy w panel z danymi dla admina. Rozpoczyna się sprawdzanie uprawnień:
+![VAC1_](resources/VAC1_.png)
+
+Atak polega na podmienieniu URL:
+
+![VAC2_](resources/VAC2_.png)
+
+Użytkownik bez uprawnień administratora uzyskał dostęp do panelu admina:
+![VAC3](resources/VAC3.png)
+
+Sprawdzenie możliwość korzystania z panelu i wyszukanie innego użytkownika:
+
+![VAC4](resources/VAC4.png)
+![VAC5](resources/VAC5.png)
+
+16. Horizontal Access Control
+
+Możliwa pozioma eskalacja uprawnień (jeden użytkownik może przeglądać/modyfikować informacje innego użytkownika.
+Możliwe jest przeglądanie haseł utworzonych przez użytkownika, jeśli znasz nazwę użytkownika
+Możliwe jest przeprowadzenie ataku nie tylko za pomoca podmiany nazwy użytkownika, ale także podmiany ID
+
+Utworzenie rekordu danych dla użytkownika z uprawnieniami administratora.
+
+![HAC1](resources/HAC1.png)
+
+Zalogowanie na zwykłego użytkownika Marcin oraz podmiana nazwy użytkownika na tego z uprawnieniami administratora.
+
+![HAC2](resources/HAC2.png)
+
+Dostęp do passphare administratora :
+
+![HAC3](resources/HAC3.png)
+
+17. Open Redirect
+18. Path Traversal
+19. Unsafe Deserialization
+20. Sensitive Data Exposure
