@@ -43,7 +43,7 @@
     "mongoose-super-increment": "^1.1.0",
     "mysql": "^2.18.1",
     "node-serialize": "0.0.4",
-    "pdfkit": "^0.12.3",
+    "pdfkit": "^0.13.0",
     "superagent-proxy": "^3.0.0",
     "swagger-ui-express": "^4.1.4",
     "xml2js": "^0.4.23",
