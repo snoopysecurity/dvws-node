@@ -1,4 +1,4 @@
-var mysql = require('mysql');
+const Sequelize = require('sequelize');
 require('dotenv').config();
 
 const mongoose = require('mongoose');
@@ -11,33 +11,32 @@ const connUser = process.env.SQL_username;
 const connPass = process.env.SQL_password;
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 
-var connection = mysql.createConnection({
+const sequelize = new Sequelize('dvws_sqldb', connUser, connPass, {
   host: connHost,
-  user: connUser,
-  password: connPass
+  dialect: 'mysql'
 });
 
 console.log('[+] Creating MySQL database for DVWS....');
-connection.connect(function (err) {
-  if (err) throw err;
-  console.log("Connected!");
-  connection.query("DROP DATABASE IF EXISTS dvws_sqldb;", function (err, result) {
-    if (err) throw err;
+sequelize.query("DROP DATABASE IF EXISTS dvws_sqldb;")
+  .then(() => {
     console.log("[+] Old SQL Database deleted");
-  });
-  connection.query("CREATE DATABASE dvws_sqldb;", function (err, result) {
-    if (err) throw err;
-    connection.end()
+    return sequelize.query("CREATE DATABASE dvws_sqldb;");
+  })
+  .then(() => {
     console.log("[+] SQL Database created");
+    sequelize.close();
+    createAdmin();
+    
 
+  })
+  .catch(err => {
+    console.error(err);
+    sequelize.close();
   });
-});
 
 function createAdmin() {
   mongoose.connect(connUri, { useNewUrlParser : true, useUnifiedTopology: true }, (err) => {
   let result = {};
-
-
 
   const user = new User({
     username: "admin",
@@ -78,5 +77,3 @@ function createAdmin() {
 
 }
 
-
-createAdmin()
