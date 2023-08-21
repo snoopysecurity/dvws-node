@@ -23,6 +23,7 @@
     "angular": "1.3.9",
     "apollo-server": "^3.5.0",
     "bcrypt": "^3.0.1",
+    "bindings": "^1.5.0",
     "body-parser": "^1.18.3",
     "bootstrap": "4.0.0",
     "cors": "^2.8.5",
