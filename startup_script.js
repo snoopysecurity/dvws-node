@@ -7,8 +7,8 @@ const User = require('./models/users');
 
 
 const connHost = process.env.SQL_LOCAL_CONN_URL;
-const connUser = process.env.SQL_username;
-const connPass = process.env.SQL_password;
+const connUser = process.env.SQL_USERNAME;
+const connPass = process.env.SQL_PASSWORD;
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 
 const sequelize = new Sequelize('dvws_sqldb', connUser, connPass, {

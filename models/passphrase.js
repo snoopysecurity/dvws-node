@@ -2,8 +2,8 @@ const Sequelize = require('sequelize');
 require('dotenv').config();
 
 const connHost = process.env.SQL_LOCAL_CONN_URL;
-const connUser = process.env.SQL_username;
-const connPass = process.env.SQL_password;
+const connUser = process.env.SQL_USERNAME;
+const connPass = process.env.SQL_PASSWORD;
 const connDB = process.env.SQL_DB_NAME;
 
 const sequelize = new Sequelize(connDB, connUser, connPass, {
