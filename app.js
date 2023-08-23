@@ -56,8 +56,8 @@ app.use('/api', routes(router));
 
 
   
-app.listen(80, () => {
-    console.log(`🚀 API listening at 80, go to http://dvws.local (127.0.0.1)`);
+app.listen(process.env.EXPRESS_JS_PORT, () => {
+    console.log(`🚀 API listening at http://dvws.local${process.env.EXPRESS_JS_PORT == 80 ? "" : ":" + process.env.EXPRESS_JS_PORT } (127.0.0.1)`);
   });
 
 
@@ -81,7 +81,7 @@ const server = new ApolloServer({
   }, });
 
 
-server.listen().then(({ url }) => {
+server.listen({ port: process.env.GRAPHQL_PORT }).then(({ url }) => {
     console.log(`🚀 GraphQL Server ready at ${url}`);
   });;
 
