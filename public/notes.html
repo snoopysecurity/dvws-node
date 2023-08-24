@@ -13,84 +13,92 @@
 
 <body ng-app="rootApp">
 
-<div class="sidenav">
-         <div class="login-main-text">
+    <div class="sidenav">
+        <div class="login-main-text">
             <h2>Damn Vulnerable Web Services<br> Notes Area</h2>
             <p>Notes Area: You can create and store your personal notes here</p>
-         </div>
-      </div>
-      <div class="main">
-         <div class="col-md-6 col-sm-12">
-
-                
-                <br>
-                <br>
-                <h2>Save Secret Note</h2>
-                <p> Create a secret note you would like to Store, only accessible to you</p>
-                        <div id="myApp1">
-                                <div ng-controller="MyController1">
-                       <form ng-submit="save($element.action)">
+        </div>
+    </div>
+    <div class="main">
+        <div class="col-md-6 col-sm-12">
+        <br>
+        <br>
+            <h2>Save Secret Note</h2>
+            <p> Create a secret note you would like to Store, only accessible to you</p>
+            <div id="myApp1">
+                <div ng-controller="MyController1">
+                    <form ng-submit="save($element.action)">
                         <p>Note Type: Can be ['note', 'reminder', 'list', 'secret', 'public'], Default is public</p>
                         Note Name: <input type="text" name="name" ng-model="name" placeholder="Note Name"> <br>
                         <br>
-                        Note Type: <input type="text" name="Ntype" ng-model="Ntype" placeholder="['note', 'reminder', 'list', 'secret']">
+                        <label for="note-type-select">Note Type:</label>
+                        <select name="mySelect" id="note-type-select"
+                                ng-options="option.name for option in data.availableOptions track by option.id"
+                                ng-model="data.selectedOption"></select>
+
                         <br><br>
                         <button type="submit" class="btn btn-black" ng-click="SendData1()">Create Note</button>
                         <button type="submit" class="btn btn-black" ng-click="SendData2()">Update Note</button>
                         <button type="submit" class="btn btn-black" ng-click="SendData3()">Delete Note</button>
-                </form>
-                <br>
-            <textarea rows="5" cols="80" name="body" ng-model="body" placeholder="Enter Notes here..." form="usrform">
-            Enter Notes here...</textarea>
-            <br>
-            <br>
-            {{ DataResponse }}
+                    </form>
+                    <br>
+                    <textarea rows="5" cols="80" name="body" ng-model="body" placeholder="Enter Notes here..." form="usrform">
+                        Enter Notes here...
+                    </textarea>
+                    <br>
+                    <br>
+                    {{ DataResponse }}
                 </div>
             </div>
             
-                    <br>
-                    <br>
-
+            <br>
+            <br>
   
-                    <div id="myApp2">
-                            <div ng-controller="MyController2">
-                                <h2>Your Stored Notes</h2>
-                                <p>Your Saved Notes is displayed below</p>
-                                <br>
-                                <table>
-                                        <tr>
-                                            <th ng-repeat="(key, val) in items[0]">{{key}}</th>
-                                        </tr>
-                                        <tr ng-repeat="item in items">
-                                            <td ng-repeat="(key, val) in item">{{val}} </td>
-                                        </tr>
-                                    </table>
+            <div id="myApp2">
+                <div ng-controller="MyController2">
+                    <h2>Your Stored Notes</h2>
+                    <p>Your Saved Notes is displayed below</p>
+                    <br>
+                    <table>
+                        <tr>
+                            <th ng-repeat="(key, val) in items[0]">{{key}}</th>
+                        </tr>
+                        <tr ng-repeat="item in items">
+                            <td ng-repeat="(key, val) in item">{{val}} </td>
+                        </tr>
+                    </table>
 
-                        </div>
                 </div>
+            </div>
 
-
-
-
-         </div>
-
-      </div>
+        </div>
+    </div>
 
       <script type="text/javascript">
         var rootApp = angular.module('rootApp', ['myApp1','myApp2']);
 
         var myApp1 = angular.module('myApp1', []);
         myApp1.controller('MyController1', function ($scope, $http, $window,$timeout) {
+            $scope.data = {
+                availableOptions: [
+                    { id: '1', name: 'Public' },
+                    { id: '2', name: 'Note' },
+                    { id: '3', name: 'Reminder' },
+                    { id: '4', name: 'List' },
+                    { id: '5', name: 'Secret' }
+                    ],
+                    selectedOption: { id: '1', name: 'Public' }
+            };
             $scope.SendData1 = function () {
             var post = $http({
                 method: "POST",
                 url: "/api/v2/notes",
                 dataType: 'json',
-                data: { name: $scope.name, body: $scope.body, type: $scope.Ntype },
+                data: { name: $scope.name, body: $scope.body, type: $scope.data.selectedOption.name.toLowerCase() },
                 headers: { "Content-Type": "application/json" },
                 headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
             });
- 
+
             post.success(function (data, status) {
                 if (status == 200) {
                     $scope.DataResponse = data.name + ' Note created successfully!';
@@ -239,4 +247,4 @@
     
      </script>
 </body>
-     </html>
+</html>
