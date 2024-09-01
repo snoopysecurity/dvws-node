@@ -8,7 +8,6 @@ services:
             MYSQL_ROOT_PASSWORD: mysecretpassword
             MYSQL_DATABASE: dvws_sqldb
     web:
-        image: snoopysecurity/dvws-node:latest
         build: .
         ports:
         - "80:80"
