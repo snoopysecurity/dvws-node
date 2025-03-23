@@ -1,0 +1,25 @@
+# https://docs.github.com/en/actions/use-cases-and-examples/building-and-testing/building-and-testing-nodejs
+
+name: ci
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        node-version: [16.x, 18.x, 20.x, lts/*, latest]
+    runs-on: ${{ matrix.config.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - run: npm install
+      - run: npm run build --if-present
+      - run: npm test
