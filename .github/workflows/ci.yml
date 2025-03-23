@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
+      - run: npm update  # TODO: Remove this line.
       # - run: npm ci
       # - run: npm install
       - run: npm install --build-from-source
