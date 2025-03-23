@@ -15,12 +15,17 @@ jobs:
         node-version: [16.x, 18.x, 20.x, lts/*, latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2 libxml2-dev
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-      - run: npm ci
+      # - run: npm ci
       # - run: npm install
+      - run: npm install --build-from-source
       - run: npm run build --if-present
       - run: npm test
