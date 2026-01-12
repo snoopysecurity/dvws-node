@@ -41,8 +41,8 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 **Node and NPM is needed to run dvws-node**
 
 Tested on:
-* node v16.19.0
-* npm 8.19.3
+* node v16.19.0 / v22.x
+* npm 8.19.3 / 10.x
 
 
 Set up a mongoDB environment to listen on port `27017`. Docker can be used to quickly set this up. 
@@ -84,7 +84,7 @@ Run the startup script which create some test data
 node startup_script.js
 ```
 
-To start the application/API, run (**sudo privileges** is needed to bind to ports)
+To start the application/API, run (**sudo privileges** is needed to bind to port 80, which is the default. You can change the port in `.env` to avoid using sudo).
 
 ```
 sudo npm start
@@ -142,4 +142,4 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 
 ## Any Questions
 
-Open a GitHub Issue :) 
+Open a GitHub Issue :)
