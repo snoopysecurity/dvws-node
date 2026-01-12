@@ -4,10 +4,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const swaggerUI = require('swagger-ui-express');
+const swaggerGen = require('./swagger-generator');
 const fileUpload = require('express-fileupload');
 const path = require('path');
 
-const swaggerDocument = require('./swagger'); //Swagger
+// const swaggerDocument = require('./swagger'); //Swagger - Replaced by swagger-autogen
 const soapservice = require('./soapserver/dvwsuserservice'); //SOAP Service
 const rpcserver = require('./rpc_server'); //XMLRPC Sever
 
@@ -29,7 +30,11 @@ app.use("/js", express.static(path.join(__dirname, "node_modules/jquery/dist")))
 app.use("/js", express.static(path.join(__dirname, "node_modules/angular")));
 
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
+
+// Swagger generation and setup will be handled before app.listen
+// const swaggerOptions = { ... };
+// const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
 app.use('/dvwsuserservice', soapservice);
 app.use(bodyParser.json());
 app.use(fileUpload({ parseNested: true }));
@@ -56,9 +61,20 @@ app.use('/api', routes(router));
 
 
   
-app.listen(process.env.EXPRESS_JS_PORT, () => {
+swaggerGen().then(() => {
+  const swaggerOutput = require('./swagger-output.json');
+  
+  app.get('/openAPI-spec.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerOutput);
+  });
+
+  app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerOutput));
+
+  app.listen(process.env.EXPRESS_JS_PORT, () => {
     console.log(`🚀 API listening at http://dvws.local${process.env.EXPRESS_JS_PORT == 80 ? "" : ":" + process.env.EXPRESS_JS_PORT } (127.0.0.1)`);
   });
+});
 
 
   // The ApolloServer constructor requires two parameters: your schema
