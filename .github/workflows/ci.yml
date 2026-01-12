@@ -73,17 +73,21 @@ jobs:
         PID=$!
         echo "Server started with PID $PID"
         
-        # Wait for server to be ready (using wait-on)
-        npx wait-on tcp:3000 --timeout 60000
+        # Wait for server to be ready (using wait-on http)
+        npx wait-on http://127.0.0.1:3000/openAPI-spec.json --timeout 60000
         
-        # Run tests
+        # Run tests (allow failure so we can print logs)
+        set +e
         npm run test:vulnerabilities
         EXIT_CODE=$?
+        set -e
         
         # Kill server
         kill $PID
         
         # Display logs
+        echo "=== Application Logs ==="
         cat app.log
+        echo "========================"
         
         exit $EXIT_CODE
