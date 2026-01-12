@@ -5,11 +5,14 @@ var connection = require('./db');
 // schema maps to a collection
 const Schema = mongoose.Schema;
 
-const mongooseSuperIncrement = require('mongoose-super-increment');
+const mongooseSuperIncrement = require('./auto-increment');
 
+// mongooseSuperIncrement.initialize(connection); // Already initialized in users.js? Or we should initialize here too?
+// It handles duplicate initialization safely.
 mongooseSuperIncrement.initialize(connection);
 
 const NoteSchema = new Schema({
+  _id: Number,
   name: {
     type: String,
     required: 'Kindly enter the name of the Note'

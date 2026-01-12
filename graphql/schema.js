@@ -94,22 +94,19 @@ const Gqresolvers = {
       return result;
       },
   getPassphrase: async (parent, args, context, info) => {
-
+    // Preserving vulnerability: SQL Injection possible via args.reminder if sql.escape is not sufficient or if used improperly.
+    // However, sql.escape usually handles it. But let's keep the structure.
+    // Note: 'sql' is a Sequelize instance here.
+    
     var query = "select passphrase,reminder from passphrases WHERE reminder = " +  sql.escape(args.reminder) + "";
-    let sqlInput;
-    await(new Promise((resolve, reject) => {
-    sql.query( query, function (err, result, fields) {
-        if (err) {
-        throw new Error(err);  
-        resolve();
-        } else {
-            
-            sqlInput = result;
-            resolve()
-        }
-      });
-    }));
-    return sqlInput[0];
+    
+    try {
+        const [results, metadata] = await sql.query(query);
+        // results is an array of rows
+        return results[0];
+    } catch (err) {
+        throw new Error(err);
+    }
       },
     },
     Mutation: {
@@ -157,11 +154,13 @@ const Gqresolvers = {
        } 
 
        var new_note = new Note({ name: args.name , body: args.body, type: args.type, user: context.user});
-       new_note.save(function (err, note) {
-         if (err) {
+       
+       try {
+           await new_note.save();
+       } catch (err) {
            throw new Error(err);
-         }
-       }); 
+       }
+       
        result = await Note.find({ name: args.name }, 'name body user _id type').exec();
        return result;
 

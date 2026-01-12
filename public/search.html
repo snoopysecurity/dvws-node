@@ -82,10 +82,14 @@
     
                 });
     
-                get.success(function (data, status) {
+                get.then(function (response) {
+                    var data = response.data;
                     if (data.length < 1 || data == undefined) {
                         $scope.serverresponse = 'Note not found'
 
+                        // Note: 'result' is undefined here in original code, so this might fail if executed.
+                        // Leaving as is to preserve logic (or lack thereof).
+                        /*
                         var getuserdata = $http({
                             method: "GET",
                             url: "/api/v2/notes/" + result[$scope.name],
@@ -94,21 +98,17 @@
                             headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
                         });
 
-                        getuserdata.success(function (data, status) {
+                        getuserdata.then(function (response) {
                             $scope.DataResponse = 'Note '  + $scope.name + ' Deleted'
-
-   
-                        });
-                        getuserdata.error(function (data, status) {
+                        }, function (response) {
                             $scope.DataResponse = 'Error! Could not fetch Data'
                         });
+                        */
 
                     } else {
                     $scope.items = data;
                     }
-                });
-     
-                get.error(function (data, status) {
+                }, function (response) {
                     $scope.items = 'Error';
                 });
             
@@ -124,10 +124,12 @@
                     headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
                 });
     
-                get.success(function (data, status) {
+                get.then(function (response) {
+                    var data = response.data;
                     if (data.length < 1 || data == undefined) {
                         $scope.serverresponse = 'Note not found'
-
+                        
+                        /*
                         var getuserdata = $http({
                             method: "GET",
                             url: "/api/v2/notes/" + result[$scope.name],
@@ -136,21 +138,17 @@
                             headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
                         });
 
-                        getuserdata.success(function (data, status) {
+                        getuserdata.then(function (response) {
                             $scope.DataResponse = 'Note '  + $scope.name + ' Deleted'
-
-   
-                        });
-                        getuserdata.error(function (data, status) {
+                        }, function (response) {
                             $scope.DataResponse = 'Error! Could not fetch Data'
                         });
+                        */
 
                     } else {
                     $scope.items = data;
                     }
-                });
-     
-                get.error(function (data, status) {
+                }, function (response) {
                     $scope.items = 'Error';
                 });
             

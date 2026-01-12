@@ -95,12 +95,10 @@
                 headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
             });
 
-            post.success(function (data, status) {
-                $scope.DataResponse = data;
-            });
-
-            post.error(function (data, status) {
-                $scope.DataResponse = data.code;
+            post.then(function (response) {
+                $scope.DataResponse = response.data;
+            }, function (response) {
+                $scope.DataResponse = response.data.code;
             });
         }
 
@@ -124,7 +122,8 @@
 
             });
 
-            get.success(function (data, status) {
+            get.then(function (response) {
+                var data = response.data;
                 var userUrl = data.User
 
                 getUsers();
@@ -139,13 +138,12 @@
 
                     });
 
-                    get.success(function (data, status) {
+                    get.then(function (response) {
+                        var data = response.data;
                         $scope.items = data;
                         let objJsonStr = JSON.stringify(data);
                         result = btoa(objJsonStr);
-                    });
-
-                    get.error(function (data, status) {
+                    }, function (response) {
                         $scope.items = null;
                     });
 
@@ -164,13 +162,13 @@
                 responseType: 'blob'
             }, { responseType: 'arraybuffer' });
 
-            post.success(function (data) {
+            post.then(function (response) {
+                var data = response.data;
                 var file = new Blob([data], { type: 'application/pdf' });
                 var fileURL = URL.createObjectURL(file);
                 window.open(fileURL);
-            });
-
-            post.error(function (data, status, headers, config) {
+            }, function (response) {
+                var data = response.data;
                 $scope.DataResponse2 = data.code;
 
             });

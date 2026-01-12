@@ -4,10 +4,7 @@ const mongoose = require('mongoose');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 
-mongoose.set('useCreateIndex', true);
-
-
-var options = { keepAlive: 1, useNewUrlParser: true, useUnifiedTopology: true };     
+var options = {};     
 const connection = mongoose.createConnection(connUri, options);
 try {
     mongoose.connect(connUri, options);
@@ -50,4 +47,4 @@ function gracefulShutdown(msg, cb) {
   }
 
   
-module.exports = connection; 
+module.exports = connection;

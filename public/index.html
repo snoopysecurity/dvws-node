@@ -46,15 +46,15 @@
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'}
             });
  
-            post.success(function (data, status) {
+            post.then(function (response) {
+                var data = response.data;
                 if (data.status == 200) {
                 $window.localStorage.setItem('JWTSessionID', data.token);
                 window.location = "home.html#" + data.result.username;
                 $scope.DataResponse = data.result.username;
                  }
-            });
- 
-            post.error(function (data, status) {
+            }, function (response) {
+                var data = response.data;
                 $scope.DataResponse = data.error;
             });
         }
@@ -69,15 +69,15 @@
         });
 
 
-        post.success(function (data, status) {
+        post.then(function (response) {
+            var data = response.data;
             if (data.status == 201) {
             $scope.DataResponse = data.user + ' created successfully!';
              } else if (data.status == 409) {
             $scope.DataResponse = data;
              }
-        });
-
-        post.error(function (data, status) {
+        }, function (response) {
+            var data = response.data;
                 $scope.DataResponse = data;
             });
         }

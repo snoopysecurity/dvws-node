@@ -7,7 +7,7 @@ var connection = require('./db');
 
 // schema maps to a collection
 const Schema = mongoose.Schema;
-const mongooseSuperIncrement = require('mongoose-super-increment');
+const mongooseSuperIncrement = require('./auto-increment');
 
 
 mongooseSuperIncrement.initialize(connection);
