@@ -60,6 +60,8 @@ jobs:
     - name: Start Server and Run Tests
       env:
         EXPRESS_JS_PORT: 3000
+        XML_RPC_PORT: 9090
+        GRAPHQL_PORT: 4000
         SQL_LOCAL_CONN_URL: localhost
         SQL_USERNAME: root
         SQL_PASSWORD: mysecretpassword
@@ -71,11 +73,17 @@ jobs:
         PID=$!
         echo "Server started with PID $PID"
         
-        # Wait for server to be ready (swagger gen takes time)
-        sleep 10
+        # Wait for server to be ready (using wait-on)
+        npx wait-on tcp:3000 --timeout 60000
         
         # Run tests
         npm run test:vulnerabilities
+        EXIT_CODE=$?
         
         # Kill server
         kill $PID
+        
+        # Display logs
+        cat app.log
+        
+        exit $EXIT_CODE
