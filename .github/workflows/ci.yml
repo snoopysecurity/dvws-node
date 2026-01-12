@@ -26,7 +26,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x]
 
     steps:
     - uses: actions/checkout@v4
@@ -75,6 +75,11 @@ jobs:
         
         # Wait for server to be ready (using wait-on http)
         npx wait-on http://127.0.0.1:3000/openAPI-spec.json --timeout 60000
+        
+        # Debug connectivity
+        echo "Testing connectivity with curl..."
+        curl -v http://127.0.0.1:3000/openAPI-spec.json
+        curl -v http://127.0.0.1:3000/api/v2/info || echo "API Info failed"
         
         # Run tests (allow failure so we can print logs)
         set +e

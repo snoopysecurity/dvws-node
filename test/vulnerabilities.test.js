@@ -1,6 +1,8 @@
 require('dotenv').config();
-const request = require("supertest")("http://127.0.0.1/api/v2");
-const requestV1 = require("supertest")("http://127.0.0.1/api/v1");
+const port = process.env.EXPRESS_JS_PORT || 3000;
+console.log(`Testing against http://localhost:${port}`);
+const request = require("supertest")(`http://localhost:${port}/api/v2`);
+const requestV1 = require("supertest")(`http://localhost:${port}/api/v1`);
 const expect = require("chai").expect;
 
 describe("DVWS-Node Vulnerability Tests", function () {
