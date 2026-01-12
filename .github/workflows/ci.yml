@@ -1,0 +1,82 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:4.4
+        ports:
+          - 27017:27017
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: mysecretpassword
+          MYSQL_DATABASE: dvws_sqldb
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install system dependencies (Linux)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxml2 libxml2-dev
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci --build-from-source
+
+    - name: Seed Database
+      env:
+        SQL_LOCAL_CONN_URL: localhost
+        SQL_USERNAME: root
+        SQL_PASSWORD: mysecretpassword
+        MONGO_LOCAL_CONN_URL: mongodb://localhost:27017/node-dvws
+      run: node startup_script.js
+
+    - name: Start Server and Run Tests
+      env:
+        EXPRESS_JS_PORT: 3000
+        SQL_LOCAL_CONN_URL: localhost
+        SQL_USERNAME: root
+        SQL_PASSWORD: mysecretpassword
+        MONGO_LOCAL_CONN_URL: mongodb://localhost:27017/node-dvws
+        JWT_SECRET: access
+      run: |
+        # Start server in background
+        node app.js > app.log 2>&1 &
+        PID=$!
+        echo "Server started with PID $PID"
+        
+        # Wait for server to be ready (swagger gen takes time)
+        sleep 10
+        
+        # Run tests
+        npm run test:vulnerabilities
+        
+        # Kill server
+        kill $PID
