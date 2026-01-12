@@ -11,69 +11,72 @@ const connUser = process.env.SQL_USERNAME;
 const connPass = process.env.SQL_PASSWORD;
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 
+// We assume the DB 'dvws_sqldb' exists initially (created by docker-compose)
+// or we can connect without DB if we handle it.
+// The original script connected to it.
 const sequelize = new Sequelize('dvws_sqldb', connUser, connPass, {
   host: connHost,
   dialect: 'mysql'
 });
 
-console.log('[+] Creating MySQL database for DVWS....');
-sequelize.query("DROP DATABASE IF EXISTS dvws_sqldb;")
-  .then(() => {
-    console.log("[+] Old SQL Database deleted");
-    return sequelize.query("CREATE DATABASE dvws_sqldb;");
-  })
-  .then(() => {
-    console.log("[+] SQL Database created");
-    sequelize.close();
-    createAdmin();
+async function main() {
+    console.log('[+] Starting setup...');
     
-
-  })
-  .catch(err => {
-    console.error(err);
-    sequelize.close();
-  });
-
-function createAdmin() {
-  mongoose.connect(connUri, { useNewUrlParser : true, useUnifiedTopology: true }, (err) => {
-  let result = {};
-
-  const user = new User({
-    username: "admin",
-    password: "letmein",
-    admin: true
-  });
-
-  user.save((err, user) => {
-    if (!err) {
-      console.log(user);
-    } else {
-      result.error = err;
-      console.log(result.error);
+    // MySQL Setup
+    try {
+        console.log('[+] Resetting MySQL database for DVWS....');
+        await sequelize.authenticate();
+        await sequelize.query("DROP DATABASE IF EXISTS dvws_sqldb;");
+        console.log("[+] Old SQL Database deleted");
+        await sequelize.query("CREATE DATABASE dvws_sqldb;");
+        console.log("[+] SQL Database created");
+    } catch (err) {
+        console.error("[-] MySQL Error:", err);
+    } finally {
+        await sequelize.close();
     }
-    // Close the connection after saving
 
-  });
+    // MongoDB Setup
+    try {
+        console.log('[+] Creating MongoDB Admin/Test users...');
+        await mongoose.connect(connUri);
+        
+        // Reset Users collection
+        await User.deleteMany({});
+        console.log("[+] MongoDB Users collection cleared");
 
-  const user2 = new User({
-    username: "test",
-    password: "test",
-    admin: false
-  });
+        const user = new User({
+            username: "admin",
+            password: "letmein",
+            admin: true
+        });
 
-  user2.save((err, user2) => {
-    if (!err) {
-      console.log(user2);
-    } else {
-      result.error = err;
-      console.log(result.error);
+        try {
+            const savedUser = await user.save();
+            console.log("[+] Admin user created:", savedUser.username);
+        } catch (err) {
+            console.log("[-] Error creating admin (might exist):", err.message);
+        }
+
+        const user2 = new User({
+            username: "test",
+            password: "test",
+            admin: false
+        });
+
+        try {
+            const savedUser2 = await user2.save();
+            console.log("[+] Test user created:", savedUser2.username);
+        } catch (err) {
+            console.log("[-] Error creating test user (might exist):", err.message);
+        }
+
+    } catch (err) {
+        console.error("[-] Mongoose Error:", err);
+    } finally {
+        await mongoose.disconnect();
+        console.log('[+] Setup complete');
     }
-    // Close the connection after saving
-    mongoose.disconnect();
-  });
-
-
-});
-
 }
 
+main();

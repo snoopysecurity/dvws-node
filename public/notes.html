@@ -99,7 +99,9 @@
                 headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
             });
 
-            post.success(function (data, status) {
+            post.then(function (response) {
+                var data = response.data;
+                var status = response.status;
                 if (status == 200) {
                     $scope.DataResponse = data.name + ' Note created successfully!';
                     $scope.callAtTimeout = function() {
@@ -109,9 +111,8 @@
                             $timeout( function(){ $scope.callAtTimeout(); }, 2000);
                 }
 
-            });
- 
-            post.error(function (data, status) {
+            }, function (response) {
+                var data = response.data;
                 $scope.DataResponse = data.errors;
             });
         }
@@ -125,7 +126,8 @@
     
                 });
     
-                get.success(function (data, status) {
+                get.then(function (response) {
+                    var data = response.data;
                     result = {}
                     for(var i = 0; i < data.length; i++) {
                          obj = data[i];
@@ -143,15 +145,14 @@
                             data: { name: $scope.name, body: $scope.body},
                         });
 
-                        put.success(function (data, status) {
+                        put.then(function (response) {
                             $scope.DataResponse = 'Note '  + $scope.name + ' Updated'
                             $scope.callAtTimeout = function() {
                                 window.location = "notes.html"
                             }
 
                             $timeout( function(){ $scope.callAtTimeout(); }, 2000);
-                        });
-                        put.error(function (data, status) {
+                        }, function (response) {
                             $scope.DataResponse = 'Note was not updated'
                         });
 
@@ -159,9 +160,7 @@
                         $scope.DataResponse = 'Note not found'
                     }
                     
-                });
-     
-                get.error(function (data, status) {
+                }, function (response) {
                     return null;
                 });
         
@@ -177,7 +176,8 @@
     
                 });
     
-                get.success(function (data, status) {
+                get.then(function (response) {
+                    var data = response.data;
                     result = {}
                     for(var i = 0; i < data.length; i++) {
                          obj = data[i];
@@ -193,15 +193,14 @@
                             headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
                         });
 
-                        put.success(function (data, status) {
+                        put.then(function (response) {
                             $scope.DataResponse = 'Note '  + $scope.name + ' Deleted'
                             $scope.callAtTimeout = function() {
                                 window.location = "notes.html"
                             }
 
                             $timeout( function(){ $scope.callAtTimeout(); }, 2000);
-                        });
-                        put.error(function (data, status) {
+                        }, function (response) {
                             $scope.DataResponse = 'Note was not deleted'
                         });
 
@@ -209,9 +208,7 @@
                         $scope.DataResponse = 'Note not found'
                     }
                     
-                });
-     
-                get.error(function (data, status) {
+                }, function (response) {
                     return null;
                 });
         
@@ -233,11 +230,9 @@
     
                 });
     
-                get.success(function (data, status) {
-                    $scope.items = data;
-                });
-     
-                get.error(function (data, status) {
+                get.then(function (response) {
+                    $scope.items = response.data;
+                }, function (response) {
                     $scope.items = null;
                 });
             

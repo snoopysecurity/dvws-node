@@ -17,7 +17,8 @@ module.exports = {
         req.decoded = result;
         next();
       } catch (err) {
-        throw new Error(err);
+        // Return 401 instead of throwing 500 to handle malformed/expired tokens gracefully
+        res.status(401).send({ error: 'Authentication error. Invalid token.', details: err.message });
       }
     } else {
       result = {

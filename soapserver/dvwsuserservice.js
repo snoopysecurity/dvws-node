@@ -44,88 +44,71 @@ router.get('/', function (req, res, next) {
 
 });
 
-router.post('/', function (req, res, next) {
+router.post('/', async function (req, res, next) {
     var options = {
         noent: true,
         dtdload: true
     }
-    var xmlDoc = libxml.parseXml(req.body, options);
-    var xmlchild = xmlDoc.get('//username');
-    var username = xmlchild.text()
-    mongoose.connect(connUri, { useNewUrlParser: true, useUnifiedTopology: true }, (err) => {
-        User.findOne({ username }, function (err, obj) {
-            if (obj != null) {
-                result = "User Exists:" + xmlchild.text()
-                jsonresponse = {
-                    "soapenv:Envelope": {
-                        "$": {
-                            "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-                            "xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-                            "xmlns:soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
-                            "xmlns:urn": "urn:examples:helloservice"
-                        },
-                        "soapenv:Header": [""],
-                        "soapenv:Body": [{
-                            "urn:UsernameResponse": [{
-                                "$": {
-                                    "soapenv:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/"
-                                },
-                                "username": [{
-                                    "_": result,
-                                    "$": {
-                                        "xsi:type": "xsd:string"
-                                    }
-                                }
-                                ]
-                            }
-                            ]
-                        }
-                        ]
-                    }
-                }
-                var builder = new Builder();
-                var xmlresponse = builder.buildObject(jsonresponse);
-                res.setHeader('Content-Type', 'application/xml');
-                res.statusCode = 200;
-                res.send(xmlresponse);
-            } else {
-                result = "User Not Found:" + xmlchild.text()
-                jsonresponse = {
-                    "soapenv:Envelope": {
-                        "$": {
-                            "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-                            "xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-                            "xmlns:soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
-                            "xmlns:urn": "urn:examples:usernameservice"
-                        },
-                        "soapenv:Header": [""],
-                        "soapenv:Body": [{
-                            "urn:UsernameResponse": [{
-                                "$": {
-                                    "soapenv:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/"
-                                },
-                                "username": [{
-                                    "_": result,
-                                    "$": {
-                                        "xsi:type": "xsd:string"
-                                    }
-                                }
-                                ]
-                            }
-                            ]
-                        }
-                        ]
-                    }
-                }
-                var builder = new Builder();
-                var xmlresponse = builder.buildObject(jsonresponse);
-                res.setHeader('Content-Type', 'application/xml');
-                res.send(xmlresponse);
-            }
-            mongoose.connection.close();
-        });
+    try {
+        var xmlDoc = libxml.parseXml(req.body, options);
+        var xmlchild = xmlDoc.get('//username');
+        if (!xmlchild) {
+             res.statusCode = 400;
+             return res.send("Username missing");
+        }
+        var username = xmlchild.text()
+        
+        // Ensure connection is open (it should be from app start)
+        if (mongoose.connection.readyState === 0) {
+             await mongoose.connect(connUri);
+        }
 
-    });
+        const obj = await User.findOne({ username });
+        let result;
+        if (obj != null) {
+                result = "User Exists:" + xmlchild.text()
+        } else {
+                result = "User Not Found:" + xmlchild.text()
+        }
+        
+        jsonresponse = {
+            "soapenv:Envelope": {
+                "$": {
+                    "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+                    "xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
+                    "xmlns:soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
+                    "xmlns:urn": "urn:examples:helloservice" // or usernameservice
+                },
+                "soapenv:Header": [""],
+                "soapenv:Body": [{
+                    "urn:UsernameResponse": [{
+                        "$": {
+                            "soapenv:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/"
+                        },
+                        "username": [{
+                            "_": result,
+                            "$": {
+                                "xsi:type": "xsd:string"
+                            }
+                        }
+                        ]
+                    }
+                    ]
+                }
+                ]
+            }
+        }
+        var builder = new Builder();
+        var xmlresponse = builder.buildObject(jsonresponse);
+        res.setHeader('Content-Type', 'application/xml');
+        res.statusCode = 200;
+        res.send(xmlresponse);
+
+    } catch (err) {
+        console.error(err);
+        res.statusCode = 500;
+        res.send(err.toString());
+    }
 });
 router.use(function timeLogEnd(req, res, next) {
     var durationHR = process.hrtime(res.locals.startTimeHR);

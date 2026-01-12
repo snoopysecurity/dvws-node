@@ -19,40 +19,41 @@ function set_cors(req,res) {
 
 
 module.exports = {
-  add: (req, res) => {
+  add: async (req, res) => {
 
       let result = {};
       let status = 201;
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
         const { username, password } = req.body;
 
-      
-        User.findOne({username}, function(err,obj) { 
+        try {
+          const obj = await User.findOne({username});
           if (obj != null) {
             if (obj.username) {
               res.writeHead(409, {'Content-Type': 'text/plain'});
               res.write('User ' + obj.username + ' already exists');
               res.end(); 
+              return;
             } 
-          } else {
-            const { username, password } = req.body;
-            const user = new User(req.body); // document = instance of a model
-            // TODO: We can hash the password here as well before we insert
-            user.save((err, user) => {
-              if (!err) {
-                result.status = status;
-                result.user = user.username;
-                result.password = user.password;
-              } else {
-                status = 500;
-                result.status = status;
-                result.error = err;
-              }
-              res.status(status).send(result);
-
-            });
           }
-        });
+          
+          const user = new User(req.body); // document = instance of a model
+          // TODO: We can hash the password here as well before we insert
+          try {
+            const savedUser = await user.save();
+            result.status = status;
+            result.user = savedUser.username;
+            result.password = savedUser.password;
+          } catch (err) {
+            status = 500;
+            result.status = status;
+            result.error = err;
+          }
+          res.status(status).send(result);
+        } catch (err) {
+           // Handle findOne error
+           res.status(500).send(err);
+        }
   },
 
   checkadmin: (req, res) => {
@@ -89,16 +90,19 @@ module.exports = {
   },
 
 
-  login: (req, res) => {
+  login: async (req, res) => {
     const { username, password } = req.body;
     //set_cors(req,res);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
       let result = {};
       let status = 200;
-        User.findOne({username}, (err, user) => {
-          if (!err && user) {
+      
+      try {
+        const user = await User.findOne({username});
+        if (user) {
             // We could compare passwords in our model instead of below as well
-            bcrypt.compare(password, user.password).then(match => {
+            try {
+              const match = await bcrypt.compare(password, user.password);
               if (match) {
                 status = 200;
                 if (user.admin == true) {
@@ -138,43 +142,41 @@ module.exports = {
               res.setHeader('Authorization', 'Bearer '+ result.token); 
               //res.cookie("SESSIONID", result.token, {httpOnly:true, secure:true});
               res.status(status).send(result);
-            }).catch(err => {
+            } catch (err) {
               status = 500;
               result.status = status;
               result.error = err;
               res.status(status).send(result);
-
-            });
+            }
           } else {
             status = 404;
             result.status = status;
             result.error = 'Login Failed! User ' + username + ' not found!';
             res.status(status).send(result);
           }
-        })
-
-
+      } catch (err) {
+          status = 500;
+          result.status = status;
+          result.error = err;
+          res.status(status).send(result);
+      }
   },
 
-  getAll: (req, res) => {
+  getAll: async (req, res) => {
     //res = set_cors(req,res)
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
       let result = {};
       let status = 200;
 
-
-          User.find({}, (err, users) => {
-            if (!err) {
-              result.status = status;
-              result.error = err;
-              result.result = users;
-            } else {
-              status = 500;
-              result.status = status;
-              result.error = err;
-            }
-            res.status(status).send(result);
-          })
-
+      try {
+          const users = await User.find({});
+          result.status = status;
+          result.result = users;
+      } catch (err) {
+          status = 500;
+          result.status = status;
+          result.error = err;
+      }
+      res.status(status).send(result);
   }
 };
