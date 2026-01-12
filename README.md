@@ -41,8 +41,8 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 **Node and NPM is needed to run dvws-node**
 
 Tested on:
-* node v16.19.0 / v22.x
-* npm 8.19.3 / 10.x
+* node v20.x / v22.x
+* npm 10.x
 
 
 Set up a mongoDB environment to listen on port `27017`. Docker can be used to quickly set this up. 

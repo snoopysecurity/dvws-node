@@ -26,7 +26,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        node-version: [20.x, 22.x]
 
     steps:
     - uses: actions/checkout@v4
@@ -45,10 +45,9 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
 
     - name: Install Dependencies
-      run: npm ci --build-from-source
+      run: npm install --build-from-source
 
     - name: Seed Database
       env:
