@@ -6,27 +6,33 @@ const expect = require("chai").expect;
 
 describe("POST /users", function () {
   it("register a new user to the API", async function () {
+    // Use a random user to avoid conflicts
+    const randomUser = "test" + Date.now();
     const response = await request
       .post("/users")
-      .send({ username: "test3", password: "test3" });
+      .send({ username: randomUser, password: "password" });
 
     expect(response.status).to.eql(201);
-    expect(response.body.user).to.eql("test3");
+    expect(response.body.user).to.eql(randomUser);
   });
 });
 
 
 describe("POST /login", function () {
   it("login to the API and returns a token", async function () {
+    // Create fresh user
+    const username = "login_test_" + Date.now();
+    await request.post("/users").send({ username, password: "password" });
+
     const response = await request
       .post("/login")
-      .send({ username: "test", password: "test" });
+      .send({ username, password: "password" });
 
     const token = response.body.token;
     expect(response.status).to.eql(200);
 
     expect(response.body.result.admin).to.eql(false);
-    expect(response.body.result.username).to.eql("test");
+    expect(response.body.result.username).to.eql(username);
 
 
 
@@ -62,7 +68,11 @@ describe("GET/POST /api/v2/passphrase", function () {
       const responsePdf = await request
       .post("/export")
       .set('Authorization', 'Bearer ' + token)
-      .send({ data: "W3sicGFzc3BocmFzZSI6IjY5ODE1YjVlNjc3ZTZjNmU2NzQ2NmI1MjUzN2E0ODY3IiwicmVtaW5kZXIiOiJ0ZXN0In1d" });
+      .send({ 
+          data: "W3sicGFzc3BocmFzZSI6IjY5ODE1YjVlNjc3ZTZjNmU2NzQ2NmI1MjUzN2E0ODY3IiwicmVtaW5kZXIiOiJ0ZXN0In1d",
+          password: "test",
+          username: "test"
+      });
 
       expect(responsePdf.status).to.eql(200);
 
@@ -160,7 +170,10 @@ describe("GET/POST /notes", function () {
 
 
       expect(responseNote7.status).to.eql(200);
-      expect(responseNote7.body[0]['name']).to.eql("test2");
+      // Find our note
+      const note = responseNote7.body.find(n => n.name === "test2");
+      expect(note).to.exist;
+      expect(note.name).to.eql("test2");
 
   });
 });

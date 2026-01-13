@@ -64,42 +64,31 @@ router.post('/', async function (req, res, next) {
         }
 
         const obj = await User.findOne({ username });
-        let result;
+        let role = "user";
+        let status = "active";
+        
         if (obj != null) {
-                result = "User Exists:" + xmlchild.text()
-        } else {
-                result = "User Not Found:" + xmlchild.text()
+             role = obj.admin ? "admin" : "user";
         }
         
-        jsonresponse = {
-            "soapenv:Envelope": {
-                "$": {
-                    "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-                    "xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-                    "xmlns:soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
-                    "xmlns:urn": "urn:examples:helloservice" // or usernameservice
-                },
-                "soapenv:Header": [""],
-                "soapenv:Body": [{
-                    "urn:UsernameResponse": [{
-                        "$": {
-                            "soapenv:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/"
-                        },
-                        "username": [{
-                            "_": result,
-                            "$": {
-                                "xsi:type": "xsd:string"
-                            }
-                        }
-                        ]
-                    }
-                    ]
-                }
-                ]
-            }
-        }
-        var builder = new Builder();
-        var xmlresponse = builder.buildObject(jsonresponse);
+        // Vulnerability: SOAP Injection
+        // We are manually constructing the XML response using string concatenation with user input.
+        // This allows an attacker to inject arbitrary XML tags into the SOAP envelope.
+        // E.g. input: "test</username><role>admin</role><username>ignore"
+        
+        var xmlresponse = 
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:examples:helloservice">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <urn:UsernameResponse soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      <username xsi:type="xsd:string">${username}</username>
+      <role xsi:type="xsd:string">${role}</role>
+      <status xsi:type="xsd:string">${status}</status>
+    </urn:UsernameResponse>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
         res.setHeader('Content-Type', 'application/xml');
         res.statusCode = 200;
         res.send(xmlresponse);

@@ -27,6 +27,11 @@ const userSchema = new Schema({
   admin: {
     type: Boolean,
     default: false
+  },
+  bio: {
+    type: 'String',
+    required: false,
+    default: "No bio yet."
   }
 });
 

@@ -1,0 +1,52 @@
+<head>
+   <script src="static/jquery-1.11.1.min.js"></script>
+   <script type="text/javascript" src="static/angular.js"></script>
+   <link href="static/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+   <script src="static/bootstrap.min.js"></script>
+   <link href="index.css" rel="stylesheet" id="inline-css">
+</head>
+<body>
+   <div class="sidenav">
+      <div class="login-main-text">
+         <h2>Damn Vulnerable Web Services<br> Admin Area</h2>
+         <p>System Logs</p>
+         <br>
+         <a href="admin.html" class="btn btn-secondary">Back to Admin Panel</a>
+      </div>
+   </div>
+   <div class="main">
+      <div class="col-md-10 col-sm-12">
+         <div class="login-form">
+            <div ng-app="app" ng-controller="LogsController">
+               <h2>Login Activity Logs</h2>
+               <p>View recent login activity.</p>
+               <button class="btn btn-black" ng-click="GetLogs()">Refresh Logs</button>
+               <br><br>
+               <pre>{{ logs }}</pre>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <script type="text/javascript">
+      var app = angular.module('app', [])
+      app.controller('LogsController', function ($scope, $http) {
+         $scope.GetLogs = function() {
+            var get = $http({
+                method: "GET",
+                url: "/api/v2/admin/logs",
+                headers: {'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+            });
+            get.success(function(data) {
+                $scope.logs = data;
+            });
+            get.error(function(data) {
+                $scope.logs = "Error fetching logs (Unauthorized)";
+            });
+         }
+         
+         // Auto-load logs
+         $scope.GetLogs();
+      });
+   </script>
+</body>

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken')
 const { exec } = require('child_process');
 var xpath = require('xpath');
 const xml2js = require('xml2js');
+const libxml = require('libxmljs');
 const fs = require('fs');
 dom = require('@xmldom/xmldom').DOMParser
 const parser = new xml2js.Parser({ attrkey: "ATTR" });
@@ -200,6 +201,61 @@ module.exports = {
     } finally {
         await client.close();
     }
+  },
+
+  // Vulnerability: XML Bomb / XXE (Import Notes)
+  import_notes_xml: async (req, res) => {
+      res = set_cors(req, res);
+      
+      const xmlData = req.body.xml; 
+      if (!xmlData) {
+          return res.status(400).send({ error: "XML data required" });
+      }
+
+      // Verify token
+      let result = {};
+      try {
+          const token = req.headers.authorization.split(' ')[1]; 
+          result = jwt.verify(token, process.env.JWT_SECRET, options);
+      } catch (e) {
+          return res.status(401).send({ error: "Unauthorized" });
+      }
+      
+      const optionsXml = { 
+          noent: true, // VULNERABLE: Enables entity substitution
+          dtdload: true,
+          huge: true // VULNERABLE: Bypasses parser limits (e.g. max node depth) to facilitate DoS
+      };
+      
+      try {
+          const doc = libxml.parseXml(xmlData, optionsXml);
+          
+          // Parse and save notes
+          const notes = doc.find('//note');
+          let count = 0;
+          
+          for (const node of notes) {
+              const name = node.get('name') ? node.get('name').text() : ("Imported " + Date.now());
+              const body = node.get('body') ? node.get('body').text() : "";
+              const type = node.get('type') ? node.get('type').text() : "public";
+              
+              const newNote = new Note({
+                  name: name,
+                  body: body,
+                  type: type,
+                  user: result.user
+              });
+              await newNote.save();
+              count++;
+          }
+
+          res.send({ 
+              success: true, 
+              message: `Successfully imported ${count} notes.`,
+              parsedRoot: doc.root().name()
+          });
+      } catch (e) {
+          res.status(500).send(e);
+      }
   }
-  
 }

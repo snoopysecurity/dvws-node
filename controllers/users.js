@@ -1,9 +1,21 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const libxml = require('libxmljs');
+const xml2js = require('xml2js');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 const User = require('../models/users');
+
+const options = {
+  expiresIn: '2d',
+  issuer: 'https://github.com/snoopysecurity',
+  algorithms: ["HS256", "none"],
+  ignoreExpiration: true
+};
+
+// In-memory log store for login attempts (Vulnerable to Log Pollution)
+const loginLogs = [];
 
 function set_cors(req,res) {
   if (req.get('origin')) {
@@ -97,6 +109,12 @@ module.exports = {
       let result = {};
       let status = 200;
       
+      // Vulnerability: Log Pollution via CRLF Injection
+      // We log the username directly without sanitization.
+      // If username contains \n, it creates a fake log entry on a new line.
+      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || "unknown";
+      loginLogs.push(`[${new Date().toISOString()}] Login attempt from IP:${ip} User:${username}`);
+
       try {
         const user = await User.findOne({username});
         if (user) {
@@ -140,7 +158,8 @@ module.exports = {
                 result.error = `Authentication error`;
               }
               res.setHeader('Authorization', 'Bearer '+ result.token); 
-              //res.cookie("SESSIONID", result.token, {httpOnly:true, secure:true});
+              // Set cookie for CSRF demonstration
+              res.setHeader('Set-Cookie', `auth_token=${result.token}; Path=/; HttpOnly`);
               res.status(status).send(result);
             } catch (err) {
               status = 500;
@@ -178,5 +197,262 @@ module.exports = {
           result.error = err;
       }
       res.status(status).send(result);
+  },
+
+  getLoginLogs: (req, res) => {
+      // Returns raw logs. Vulnerable to Log Pollution/Forgery if displayed line-by-line.
+      res.set('Content-Type', 'text/plain');
+      res.send(loginLogs.join('\n'));
+  },
+
+  verifyOtp: async (req, res) => {
+    const { username, otp } = req.body;
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+    
+    // Vulnerability: No rate limiting implemented here
+    // An attacker can brute force the OTP
+    
+    try {
+      // Logic to verify OTP would go here
+      // For demonstration, we'll accept '123456' as the valid OTP
+      if (otp === '123456') {
+        res.status(200).send({
+          status: 200,
+          message: "OTP verified successfully"
+        });
+      } else {
+        res.status(401).send({
+          status: 401,
+          error: "Invalid OTP"
+        });
+      }
+    } catch (err) {
+      res.status(500).send({
+        status: 500,
+        error: err.message
+      });
+    }
+  },
+
+  // Vulnerability: CRLF Injection (HTTP Response Splitting)
+  downloadLogs: (req, res) => {
+    // Scenario: Admin downloading system logs with a custom filename prefix
+    const filename = req.query.filename || "system.log";
+    
+    // Vulnerability: The filename is reflected in the Content-Disposition header unsanitized.
+    // Attacker can inject CRLF (\r\n) to add malicious headers (e.g. Set-Cookie) or content (XSS).
+    
+    // Example Attack: 
+    // filename = "log.txt%0d%0aSet-Cookie: session_id=hacker_session%0d%0aContent-Type: text/html%0d%0a%0d%0a<script>alert('XSS')</script>"
+    
+    // Using setHeader directly to demonstrate the logic flaw.
+    // Note: Modern Node.js might throw ERR_INVALID_CHAR, but older versions or proxies might allow it.
+    
+    try {
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'text/plain');
+        res.send(`[INFO] System Log Generated at ${new Date().toISOString()}\n[INFO] User 'admin' logged in.`);
+    } catch (e) {
+        // If Node.js blocks it, we catch it but the code demonstrates the vulnerability pattern.
+        res.status(500).send("Error generating log: " + e.message);
+    }
+  },
+
+  // Vulnerability: XML Injection (Profile Export)
+  exportProfileXml: async (req, res) => {
+    // Scenario: User exports their profile to XML.
+    // Vulnerability: The 'bio' and 'username' fields are user-controlled and concatenated directly.
+    const username = req.body.username || "guest";
+    const bio = req.body.bio || "No bio";
+    
+    // Construct XML manually (Vulnerable)
+    const xml = `
+      <userProfile>
+        <username>${username}</username>
+        <role>user</role>
+        <bio>${bio}</bio>
+      </userProfile>
+    `;
+    
+    res.set('Content-Type', 'application/xml');
+    res.send(xml);
+  },
+
+  // Vulnerability: XML Injection (Profile Import - Mass Assignment)
+  importProfileXml: async (req, res) => {
+      // Scenario: User imports profile from XML.
+      // Vulnerability: The endpoint blindly accepts fields from the XML.
+      // Mass Assignment: If XML contains <admin>true</admin>, user becomes admin.
+      
+      const xmlData = req.body.xml;
+      if (!xmlData) return res.status(400).send("XML required");
+      
+      try {
+          const parser = new xml2js.Parser({ explicitArray: false });
+          const result = await parser.parseStringPromise(xmlData);
+          
+          if (result && result.userProfile) {
+              const profile = result.userProfile;
+              const targetUser = profile.username;
+              
+              // Build update object
+              const updateData = {};
+              if (profile.bio) updateData.bio = profile.bio;
+              // Vulnerability: Accepting admin flag from XML
+              if (profile.admin) updateData.admin = (profile.admin === 'true');
+              
+              const updatedUser = await User.findOneAndUpdate(
+                  { username: targetUser },
+                  updateData,
+                  { new: true }
+              );
+              
+              if (!updatedUser) {
+                  return res.status(404).send({ success: false, message: "Target user '" + targetUser + "' not found." });
+              }
+              
+              res.send({ 
+                  success: true, 
+                  message: "Profile updated successfully from XML.", 
+                  data: updatedUser
+              });
+          } else {
+              res.status(400).send("Invalid XML format. Root must be <userProfile>");
+          }
+      } catch (e) {
+          res.status(500).send("XML Import Error: " + e.message);
+      }
+  },
+
+  getProfile: async (req, res) => {
+      try {
+          const token = req.headers.authorization.split(' ')[1]; 
+          const decoded = jwt.verify(token, process.env.JWT_SECRET, options);
+          
+          const user = await User.findOne({ username: decoded.user });
+          if (!user) return res.status(404).send("User not found");
+          
+          res.send({
+              username: user.username,
+              bio: user.bio,
+              admin: user.admin
+          });
+      } catch (err) {
+          res.status(500).send(err.message);
+      }
+  },
+
+  // Vulnerability: JSON CSRF (Admin Create User)
+  adminCreateUser: async (req, res) => {
+    try {
+      // 1. Authenticate using Cookie (Vulnerable to CSRF if used with text/plain)
+      let token;
+      if (req.headers.cookie) {
+        const cookies = req.headers.cookie.split(';');
+        const authCookie = cookies.find(c => c.trim().startsWith('auth_token='));
+        if (authCookie) token = authCookie.split('=')[1];
+      }
+      
+      if (!token) return res.status(401).send({ error: "Unauthorized" });
+
+      // Verify token is Admin
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, options);
+      const user = await User.findOne({ username: decoded.user });
+      if (!user || !user.admin) return res.status(403).send({ error: "Forbidden: Admin only" });
+      
+      // 2. Parse Body (Vulnerable part: Parses JSON even if Content-Type is text/plain)
+      let data = req.body;
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch (e) { /* ignore */ }
+      }
+      
+      // 3. Create User
+      if (data && data.username && data.password) {
+          const existing = await User.findOne({ username: data.username });
+          if (existing) return res.status(409).send({ error: "User already exists" });
+
+          const newUser = new User({
+              username: data.username,
+              password: data.password,
+              admin: !!data.admin
+          });
+          await newUser.save();
+          res.status(200).send({ message: `User ${data.username} created successfully.` });
+      } else {
+          res.status(400).send({ error: "Missing username or password" });
+      }
+    } catch (err) {
+      res.status(500).send({ error: err.message });
+    }
+  },
+
+
+  // Vulnerability: API Endpoint Brute Forcing (Promo Code Enumeration)
+  redeemPromo: (req, res) => {
+    const { code } = req.body;
+    
+    // Vulnerability 1: Lack of Rate Limiting allows high-speed guessing
+    // Vulnerability 2: Predictable/Short codes (Enumeration)
+    
+    // Simulated valid codes
+    const validCodes = ["SUMMER2024", "WELCOME10", "VIP50"];
+    
+    if (validCodes.includes(code)) {
+      res.status(200).send({ 
+        success: true, 
+        message: `Promo code ${code} applied!`, 
+        discount: 20 
+      });
+    } else {
+      // Fast failure allows rapid brute forcing
+      res.status(400).send({ 
+        success: false, 
+        message: "Invalid promo code" 
+      });
+    }
+  },
+
+
+  // Vulnerability: LDAP Injection
+  ldapSearch: (req, res) => {
+    const user = req.query.user || req.body.user;
+    
+    // Vulnerability: Unsanitized input concatenated into LDAP filter
+    // Standard filter: (uid=username)
+    const filter = "(uid=" + user + ")";
+    
+    // Simulated LDAP Server Logic
+    let results = [];
+    
+    // 1. Wildcard Injection: user = "*"
+    if (user === "*" || filter.includes("(uid=*)")) {
+        results = ["admin", "guest", "manager"];
+    }
+    // 2. Attribute Injection: user = "admin)(objectClass=*)"
+    // Filter becomes: (uid=admin)(objectClass=*)
+    else if (filter.includes(")(objectClass=*)")) {
+        // Vulnerability Impact: By injecting a valid second filter, the attacker might bypass field restrictions
+        // or trigger a verbose mode, revealing sensitive attributes normally hidden.
+        results = [
+            { 
+                username: "admin", 
+                email: "admin@internal.dvws", 
+                guid: "a1b2-c3d4-e5f6", 
+                description: "Super User with unrestricted access",
+                password: "letmein" 
+            }
+        ];
+    }
+    // Normal match
+    else if (user === "admin") {
+        results = ["admin"];
+    }
+    
+    res.status(200).send({ 
+        filter: filter, // Reflect filter for educational/debugging
+        results: results 
+    });
   }
 };

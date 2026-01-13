@@ -1,0 +1,98 @@
+<head>
+   <script src="static/jquery-1.11.1.min.js"></script>
+   <script type="text/javascript" src="static/angular.js"></script>
+   <link href="static/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+   <script src="static/bootstrap.min.js"></script>
+   <link href="index.css" rel="stylesheet" id="inline-css">
+</head>
+<body ng-app="app">
+   <div class="sidenav">
+      <div class="login-main-text">
+         <h2>Damn Vulnerable Web Services<br> User Status</h2>
+         <p>Check user status and role (Admin Only)</p>
+         <br>
+         <a href="admin.html" class="btn btn-secondary">Back to Admin Panel</a>
+      </div>
+   </div>
+   <div class="main">
+      <div class="col-md-6 col-sm-12">
+         <div class="login-form">
+            <div ng-controller="StatusController">
+               <h3>Check User Status</h3>
+               <p>Enter Username to check status via Legacy SOAP Service.</p>
+               
+               <input type="text" ng-model="name" placeholder="User Name"> <br><br>
+               <button class="btn btn-black" ng-click="CheckStatus()">Check</button>
+               <br><br>
+               <div ng-if="userStatus" style="border: 1px solid #ccc; padding: 10px;">
+                  <p><strong>Username:</strong> {{ userStatus.username }}</p>
+                  <p><strong>Role:</strong> {{ userStatus.role }}</p>
+                  <p><strong>Status:</strong> {{ userStatus.status }}</p>
+               </div>
+               
+               <p style="color:red">{{ error }}</p>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <script type="text/javascript">
+      var app = angular.module('app', [])
+      app.controller('StatusController', function ($scope, $http) {
+         
+         function escapeXml(unsafe) {
+             return unsafe.replace(/[<>&'"]/g, function (c) {
+                 switch (c) {
+                     case '<': return "&lt;";
+                     case '>': return "&gt;";
+                     case '&': return "&amp;";
+                     case "'": return "'";
+                     case '"': return "&quot;";
+                 }
+             });
+         }
+
+         $scope.CheckStatus = function () {
+            $scope.error = "";
+            $scope.userStatus = null;
+            
+            // We encode the input to ensure it is sent as text content in the request.
+            // However, the backend blindly concatenates this decoded text into the response, causing injection.
+            var safeName = escapeXml($scope.name);
+            
+            var post = $http({
+               method: "POST",
+               url: "/dvwsuserservice",
+               dataType: 'xml',
+               data: `<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:examples:usernameservice">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:Username soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <username xsi:type="xsd:string">` + safeName + `</username>
+      </urn:Username>
+   </soapenv:Body>
+</soapenv:Envelope>`,
+               headers: { "Content-Type": "application/xml" },
+               headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+            });
+
+            post.success(function (data, status) {
+               if (status == 200) {
+                  var xmlDoc = $.parseXML(data);
+                  $xml = $(xmlDoc);
+                  $scope.userStatus = {
+                      // Vulnerability: Naively picking the first element allows injection to override the value
+                      username: $xml.find("username").eq(0).text(),
+                      role: $xml.find("role").eq(0).text(),
+                      status: $xml.find("status").eq(0).text()
+                  };
+               }
+            });
+
+            post.error(function (data, status) {
+               $scope.error = "Error checking status.";
+            });
+         }
+      });
+   </script>
+</body>

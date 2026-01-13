@@ -34,5 +34,7 @@ module.exports = (router) => {
     router.route('/v2/notesearch/all')
     .get(validateToken, controller.display_all, guard.check(['user:write']));
 
+  router.route('/v2/notes/import/xml')
+    .post(validateToken, controller.import_notes_xml);
 
 };

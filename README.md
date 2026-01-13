@@ -32,6 +32,11 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * GraphQL Introspection Enabled
 * GraphQL Arbitrary File Write
 * GraphQL Batching Brute Force
+* API Endpoint Brute Forcing
+* CRLF Injection
+* XML Injection
+* XML Bomb Denial-of-Service
+* SOAP Injection
 * Client Side Template Injection
 
 ## Set Up Instructions
@@ -127,15 +132,11 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 
 ## To Do
 * Cross-Site Request Forgery (CSRF)
-* XML Bomb Denial-of-Service
-* API Endpoint Brute Forcing
 * Web Socket Security
 * Type Confusion
 * LDAP Injection
-* SOAP Injection
-* XML Injection
+
 * GRAPHQL Denial Of Service
-* CRLF Injection
 * GraphQL Injection
 * Webhook security
 

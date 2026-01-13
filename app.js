@@ -71,7 +71,7 @@ swaggerGen().then(() => {
 
   app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerOutput));
 
-  app.listen(process.env.EXPRESS_JS_PORT, '0.0.0.0', () => {
+  const serverInstance = app.listen(process.env.EXPRESS_JS_PORT, '0.0.0.0', () => {
     console.log(`🚀 API listening at http://dvws.local${process.env.EXPRESS_JS_PORT == 80 ? "" : ":" + process.env.EXPRESS_JS_PORT } (127.0.0.1)`);
   });
 });

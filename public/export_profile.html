@@ -1,0 +1,84 @@
+<script src="./js/jquery.min.js"></script>
+<script type="text/javascript" src="./js/angular.min.js"></script>
+<link href="./css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="./js/bootstrap.min.js"></script>
+<link href="index.css" rel="stylesheet" id="inline-css">
+
+<div class="sidenav">
+   <div class="login-main-text">
+      <h2>Damn Vulnerable Web Services<br> Profile XML</h2>
+      <p>Export and Import your profile data via XML.</p>
+      <br>
+      <a href="home.html" class="btn btn-secondary">Back to Home</a>
+   </div>
+</div>
+<div class="main">
+   <div class="col-md-6 col-sm-12">
+      <div class="login-form">
+         <div ng-app="app" ng-controller="ProfileController">
+            <h3>Export Profile (XML)</h3>
+            <p>Enter your bio to include in the export.</p>
+            <textarea ng-model="bio" placeholder="My Bio..." rows="3" cols="50"></textarea><br><br>
+            <button class="btn btn-black" ng-click="ExportProfile()">Export XML</button>
+            <br><br>
+            <pre>{{ XmlResponse }}</pre>
+            
+            <hr>
+            <h3>Import Profile (XML)</h3>
+            <p>Update your profile by importing XML.</p>
+            <textarea ng-model="importXml" placeholder="Paste XML here..." rows="5" cols="50"></textarea><br><br>
+            <button class="btn btn-black" ng-click="ImportProfile()">Import XML</button>
+            <br><br>
+            <pre>{{ ImportResponse }}</pre>
+         </div>
+      </div>
+   </div>
+</div>
+
+<script type="text/javascript">
+   var app = angular.module('app', [])
+   app.controller('ProfileController', function ($scope, $http) {
+      // Default username
+      var username = "user";
+
+      // Fetch current profile to get correct username
+      function getProfile() {
+         $http({
+            method: "GET",
+            url: "/api/v2/users/profile",
+            headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+         }).then(function(response) {
+            if(response.data && response.data.username) {
+                username = response.data.username;
+            }
+         });
+      }
+      getProfile();
+      
+      $scope.ExportProfile = function() {
+         $http({
+            method: "POST",
+            url: "/api/v2/users/profile/export/xml",
+            data: { bio: $scope.bio, username: username },
+            headers: { "Content-Type": "application/json" }
+         }).then(function(response) {
+            $scope.XmlResponse = response.data;
+         }, function(response) {
+            $scope.XmlResponse = "Error exporting profile";
+         });
+      }
+      
+      $scope.ImportProfile = function() {
+         $http({
+            method: "POST",
+            url: "/api/v2/users/profile/import/xml",
+            data: { xml: $scope.importXml },
+            headers: { "Content-Type": "application/json" }
+         }).then(function(response) {
+            $scope.ImportResponse = response.data; // JSON response
+         }, function(response) {
+            $scope.ImportResponse = response.data;
+         });
+      }
+   });
+</script>
