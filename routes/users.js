@@ -6,6 +6,9 @@ const rateLimiter = require('../utils/rateLimiter');
 // Rate limiter for login: 100 attempts per 30 seconds
 const loginLimiter = rateLimiter({ windowMs: 30 * 1000, max: 100 });
 
+// Text parser for JSON CSRF vulnerability
+const textParser = bodyParser.text({ type: 'text/plain' });
+
 var guard = require('express-jwt-permissions')({
   requestProperty: 'identity',
   permissionsProperty: 'permissions'
@@ -42,7 +45,7 @@ module.exports = (router) => {
     .post(controller.importProfileXml);
 
   router.route('/v2/admin/create-user')
-    .post(bodyParser.text({ type: 'text/plain' }), controller.adminCreateUser);
+    .post(textParser, controller.adminCreateUser);
 
   router.route('/v2/users/ldap-search')
     .post(controller.ldapSearch)

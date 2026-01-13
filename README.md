@@ -37,6 +37,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * XML Injection
 * XML Bomb Denial-of-Service
 * SOAP Injection
+* Cross-Site Request Forgery (CSRF)
 * Client Side Template Injection
 
 ## Set Up Instructions
@@ -74,7 +75,7 @@ Change directory to DVWS
 cd dvws-node
 ```
 
-npm install all dependencies  (build from source is needed for `libxmljs`, you might also need install libxml depending on your OS: `sudo apt-get install -y libxml2 libxml2-dev`)
+npm install all dependencies  (build from source is needed for `libxmljs`, you might also need to install libxml depending on your OS: `sudo apt-get install -y libxml2 libxml2-dev`)
 
 
 ```
@@ -131,11 +132,10 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 
 
 ## To Do
-* Cross-Site Request Forgery (CSRF)
+
 * Web Socket Security
 * Type Confusion
 * LDAP Injection
-
 * GRAPHQL Denial Of Service
 * GraphQL Injection
 * Webhook security
