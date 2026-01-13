@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const libxml = require('libxmljs');
 const xml2js = require('xml2js');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
@@ -234,29 +233,7 @@ module.exports = {
     }
   },
 
-  // Vulnerability: CRLF Injection (HTTP Response Splitting)
-  downloadLogs: (req, res) => {
-    // Scenario: Admin downloading system logs with a custom filename prefix
-    const filename = req.query.filename || "system.log";
-    
-    // Vulnerability: The filename is reflected in the Content-Disposition header unsanitized.
-    // Attacker can inject CRLF (\r\n) to add malicious headers (e.g. Set-Cookie) or content (XSS).
-    
-    // Example Attack: 
-    // filename = "log.txt%0d%0aSet-Cookie: session_id=hacker_session%0d%0aContent-Type: text/html%0d%0a%0d%0a<script>alert('XSS')</script>"
-    
-    // Using setHeader directly to demonstrate the logic flaw.
-    // Note: Modern Node.js might throw ERR_INVALID_CHAR, but older versions or proxies might allow it.
-    
-    try {
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', 'text/plain');
-        res.send(`[INFO] System Log Generated at ${new Date().toISOString()}\n[INFO] User 'admin' logged in.`);
-    } catch (e) {
-        // If Node.js blocks it, we catch it but the code demonstrates the vulnerability pattern.
-        res.status(500).send("Error generating log: " + e.message);
-    }
-  },
+
 
   // Vulnerability: XML Injection (Profile Export)
   exportProfileXml: async (req, res) => {
@@ -342,10 +319,9 @@ module.exports = {
       }
   },
 
-  // Vulnerability: JSON CSRF (Admin Create User)
   adminCreateUser: async (req, res) => {
     try {
-      // 1. Authenticate using Cookie (Vulnerable to CSRF if used with text/plain)
+     
       let token;
       if (req.headers.cookie) {
         const cookies = req.headers.cookie.split(';');
@@ -360,7 +336,7 @@ module.exports = {
       const user = await User.findOne({ username: decoded.user });
       if (!user || !user.admin) return res.status(403).send({ error: "Forbidden: Admin only" });
       
-      // 2. Parse Body (Vulnerable part: Parses JSON even if Content-Type is text/plain)
+      // 2. Parse Body (Parses JSON even if Content-Type is text/plain)
       let data = req.body;
       if (typeof data === 'string') {
         try {
@@ -388,31 +364,6 @@ module.exports = {
     }
   },
 
-
-  // Vulnerability: API Endpoint Brute Forcing (Promo Code Enumeration)
-  redeemPromo: (req, res) => {
-    const { code } = req.body;
-    
-    // Vulnerability 1: Lack of Rate Limiting allows high-speed guessing
-    // Vulnerability 2: Predictable/Short codes (Enumeration)
-    
-    // Simulated valid codes
-    const validCodes = ["SUMMER2024", "WELCOME10", "VIP50"];
-    
-    if (validCodes.includes(code)) {
-      res.status(200).send({ 
-        success: true, 
-        message: `Promo code ${code} applied!`, 
-        discount: 20 
-      });
-    } else {
-      // Fast failure allows rapid brute forcing
-      res.status(400).send({ 
-        success: false, 
-        message: "Invalid promo code" 
-      });
-    }
-  },
 
 
   // Vulnerability: LDAP Injection
