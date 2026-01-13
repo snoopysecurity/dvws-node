@@ -70,11 +70,7 @@ router.post('/', async function (req, res, next) {
         if (obj != null) {
              role = obj.admin ? "admin" : "user";
         }
-        
-        // Vulnerability: SOAP Injection
-        // We are manually constructing the XML response using string concatenation with user input.
-        // This allows an attacker to inject arbitrary XML tags into the SOAP envelope.
-        // E.g. input: "test</username><role>admin</role><username>ignore"
+    
         
         var xmlresponse = 
 `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
