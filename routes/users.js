@@ -28,12 +28,8 @@ module.exports = (router) => {
   router.route('/v2/users/logout/:redirect')
     .get(controller.logout);    
 
-  
   router.route('/v2/login')
     .post(loginLimiter, controller.login);
-
-  router.route('/v2/users/verify-otp')
-    .post(controller.verifyOtp);
 
   router.route('/v2/users/logs/download')
     .get(controller.downloadLogs);

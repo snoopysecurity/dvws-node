@@ -204,36 +204,6 @@ module.exports = {
       res.send(loginLogs.join('\n'));
   },
 
-  verifyOtp: async (req, res) => {
-    const { username, otp } = req.body;
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
-    
-    // Vulnerability: No rate limiting implemented here
-    // An attacker can brute force the OTP
-    
-    try {
-      // Logic to verify OTP would go here
-      // For demonstration, we'll accept '123456' as the valid OTP
-      if (otp === '123456') {
-        res.status(200).send({
-          status: 200,
-          message: "OTP verified successfully"
-        });
-      } else {
-        res.status(401).send({
-          status: 401,
-          error: "Invalid OTP"
-        });
-      }
-    } catch (err) {
-      res.status(500).send({
-        status: 500,
-        error: err.message
-      });
-    }
-  },
-
-
 
   // Vulnerability: XML Injection (Profile Export)
   exportProfileXml: async (req, res) => {
