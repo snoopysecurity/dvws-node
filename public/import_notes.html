@@ -1,0 +1,65 @@
+<head>
+   <script src="./js/jquery.min.js"></script>
+   <script type="text/javascript" src="./js/angular.min.js"></script>
+   <link href="./css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+   <script src="./js/bootstrap.min.js"></script>
+   <link href="index.css" rel="stylesheet" id="inline-css">
+</head>
+<body ng-app="app">
+   <div class="sidenav">
+      <div class="login-main-text">
+         <h2>Damn Vulnerable Web Services<br> Import Notes</h2>
+         <p>Import notes from XML file.</p>
+         <br>
+         <a href="notes.html" class="btn btn-secondary">Back to Notes</a>
+      </div>
+   </div>
+   <div class="main">
+      <div class="col-md-8 col-sm-12">
+         <div class="login-form">
+            <div ng-controller="ImportController">
+               <h3>Import Notes (XML)</h3>
+               <p>Paste your XML below.</p>
+               
+               <p><strong>Example XML Format:</strong></p>
+               <pre><notes>
+
+<pre>
+&lt;notes&gt;
+  &lt;note&gt;
+    &lt;name&gt;My Note&lt;/name&gt;
+    &lt;body&gt;Content here&lt;/body&gt;
+    &lt;type&gt;secret&lt;/type&gt;
+  &lt;/note&gt;
+&lt;/notes&gt;
+</pre>
+</notes></pre>
+               
+               <textarea ng-model="xmlData" rows="10" cols="60" placeholder="Paste XML here..."></textarea>
+               <br><br>
+               <button class="btn btn-black" ng-click="ImportXML()">Import</button>
+               <br><br>
+               <pre>{{ ImportResponse }}</pre>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <script type="text/javascript">
+      var app = angular.module('app', [])
+      app.controller('ImportController', function ($scope, $http) {
+         $scope.ImportXML = function() {
+            $http({
+                method: "POST",
+                url: "/api/v2/notes/import/xml",
+                data: { xml: $scope.xmlData },
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+            }).then(function(response) {
+                $scope.ImportResponse = response.data.message;
+            }, function(response) {
+                $scope.ImportResponse = response.data.error;
+            });
+         }
+      });
+   </script>
+</body>

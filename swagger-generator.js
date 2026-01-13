@@ -8,7 +8,7 @@ const doc = {
   },
   servers: [
     {
-      url: 'http://dvws.local'
+      url: 'http://dvws.local/api'
     }
   ],
 };

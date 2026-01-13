@@ -14,6 +14,8 @@
       <div class="login-main-text">
          <h2>Damn Vulnerable Web Services<br> Admin Area</h2>
          <p>Functionality only available to Admin Users</p>
+         <br>
+         <a href="home.html" class="btn btn-secondary">Back to Home</a>
          <p></p>
       </div>
    </div>
@@ -24,13 +26,15 @@
                <h2>DVWS User Data</h2>
                <p>User Information: {{ ResponseMessage  }}</p>
 
-               <p>Search DVWS Users: </p>
-               Enter Username: <input type="text" name="name" ng-model="name" placeholder="User Name"> <br>
-               <button type="submit" class="btn btn-black" ng-click="SendData1()">Search</button>
+               <p>System Information (OS): {{ SysMessage  }}</p>
+               
                <br>
-               <br>
-               <div ng-bind-html-unsafe="myWelcome"></div>
-               <p>System Information: {{ SysMessage  }}</p>
+               <h3>Admin Tools</h3>
+               <p>
+                  <a href="admin_user_status.html" class="btn btn-black">Check User Status (Legacy SOAP)</a><br><br>
+                  <a href="admin_create_user.html" class="btn btn-black">Create User</a><br><br>
+                  <a href="admin_logs.html" class="btn btn-black">View Login Activity Logs</a>
+               </p>
             </div>
          </div>
       </div>
@@ -103,40 +107,7 @@
 
          }
 
-
-
-         $scope.SendData1 = function () {
-            var post = $http({
-               method: "POST",
-               url: "/dvwsuserservice",
-               dataType: 'xml',
-               data: `<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:examples:usernameservice">
-   <soapenv:Header/>
-   <soapenv:Body>
-      <urn:Username soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-         <username xsi:type="xsd:string">` + $scope.name + `</username>
-      </urn:Username>
-   </soapenv:Body>
-</soapenv:Envelope>`,
-               headers: { "Content-Type": "application/xml" },
-               headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
-            });
-
-            post.success(function (data, status) {
-               if (status == 200) {
-                  var xmlDoc = $.parseXML(data)
-                  $xml = $(xmlDoc),
-                     $value = $xml.find("username");
-                  var result = $value.text();
-                  $scope.myWelcome = result
-               }
-
-            });
-
-            post.error(function (data, status) {
-               $scope.myWelcome = data.errors;
-            });
-         }
+         // CheckStatus logic moved to admin_user_status.html
 
       });
 

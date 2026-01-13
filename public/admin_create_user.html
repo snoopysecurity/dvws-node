@@ -1,0 +1,57 @@
+<head>
+   <script src="static/jquery-1.11.1.min.js"></script>
+   <script type="text/javascript" src="static/angular.js"></script>
+   <link href="static/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+   <script src="static/bootstrap.min.js"></script>
+   <link href="index.css" rel="stylesheet" id="inline-css">
+</head>
+<body ng-app="app">
+   <div class="sidenav">
+      <div class="login-main-text">
+         <h2>Damn Vulnerable Web Services<br> Create User</h2>
+         <p>Create new users (Admin Only)</p>
+         <br>
+         <a href="admin.html" class="btn btn-secondary">Back to Admin Panel</a>
+      </div>
+   </div>
+   <div class="main">
+      <div class="col-md-6 col-sm-12">
+         <div class="login-form">
+            <div ng-controller="CreateUserController">
+               <h3>Create New User</h3>
+               <form>
+                  <label>Username</label>
+                  <input type="text" class="form-control" ng-model="username">
+                  <label>Password</label>
+                  <input type="password" class="form-control" ng-model="password">
+                  <label>
+                     <input type="checkbox" ng-model="admin"> Is Admin?
+                  </label>
+                  <br><br>
+                  <button type="submit" class="btn btn-black" ng-click="CreateUser()">Create</button>
+               </form>
+               <br>
+               <p>{{ responseMessage }}</p>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <script type="text/javascript">
+      var app = angular.module('app', [])
+      app.controller('CreateUserController', function ($scope, $http) {
+         $scope.CreateUser = function() {
+            $http({
+                method: "POST",
+                url: "/api/v2/admin/create-user",
+                data: { username: $scope.username, password: $scope.password, admin: $scope.admin },
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') }
+            }).then(function(response) {
+                $scope.responseMessage = response.data.message;
+            }, function(response) {
+                $scope.responseMessage = response.data.error;
+            });
+         }
+      });
+   </script>
+</body>

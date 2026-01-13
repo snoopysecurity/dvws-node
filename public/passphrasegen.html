@@ -17,6 +17,8 @@
         <div class="login-main-text">
             <h2>Damn Vulnerable Web Services<br> PassPhrase Generator</h2>
             <p>A random PassPhrase Generator</p>
+            <br>
+            <a href="home.html" class="btn btn-secondary">Back to Home</a>
         </div>
     </div>
     <div class="main">
@@ -58,6 +60,10 @@
                         </tr>
                     </table>
 
+                    <br>
+                    <p>Enter your credentials to confirm export:</p>
+                    <input type="text" ng-model="verifyUsername" placeholder="Username">
+                    <input type="password" ng-model="verifyPassword" placeholder="Password">
                     <br>
                     <button class="btn btn-black" ng-click="Export()">Export to PDF</button>
                     <embed ng-src="{{content}}" style="width:800px;height:400px;"></embed>
@@ -156,7 +162,7 @@
                 method: "POST",
                 url: "/api/v2/export",
                 dataType: 'json',
-                data: { 'data': result },
+                data: { 'data': result, 'password': $scope.verifyPassword, 'username': $scope.verifyUsername },
                 headers: { "Content-Type": "application/json" },
                 headers: { 'Authorization': 'Bearer ' + localStorage.getItem('JWTSessionID') },
                 responseType: 'blob'

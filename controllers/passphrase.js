@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 var serialize = require("node-serialize")
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
+const bcrypt = require('bcrypt');
+const User = require('../models/users');
 
 const sequelize = require('../models/passphrase');
 
@@ -71,6 +73,23 @@ const options = {
       let result = {};
       const token = req.headers.authorization.split(' ')[1];
       result = jwt.verify(token, process.env.JWT_SECRET, options);
+
+      // Verify credentials before export (Vulnerable: No Rate Limiting + User enumeration)
+      const { password, username } = req.body;
+      if (!password || !username) {
+          return res.status(400).send("Username and Password required");
+      }
+
+      try {
+          // Vulnerability: Uses username from body allowing brute force of any user
+          const user = await User.findOne({ username: username });
+          if (!user || !(await bcrypt.compare(password, user.password))) {
+              return res.status(401).send("Incorrect credentials");
+          }
+      } catch (err) {
+          return res.status(500).send(err.message);
+      }
+
       const payload = Buffer.from(req.body.data, 'base64');
       const data = serialize.unserialize(payload.toString());
   
