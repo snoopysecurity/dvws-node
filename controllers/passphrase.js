@@ -48,7 +48,7 @@ const options = {
         }
       }
     },
-  
+
     get: async (req, res) => {
       res = set_cors(req, res);
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -66,43 +66,50 @@ const options = {
 
 
     export: async (req, res) => {
-      res = set_cors(req, res);
-      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      let result = {};
-      const token = req.headers.authorization.split(' ')[1];
-      result = jwt.verify(token, process.env.JWT_SECRET, options);
-      const payload = Buffer.from(req.body.data, 'base64');
-      const data = serialize.unserialize(payload.toString());
-  
-      if (data) {
-        const myDoc = new PDFDocument({ bufferPages: true });
-        let buffers = [];
-        myDoc.on('data', buffers.push.bind(buffers));
-        myDoc.on('end', () => {
-          const pdfData = Buffer.concat(buffers);
-          res.writeHead(200, {
-            'Content-Length': Buffer.byteLength(pdfData),
-            'Content-Type': 'application/pdf',
-            'Content-disposition': 'attachment;filename=test.pdf',
-          });
-          res.end(pdfData);
-        });
-      myDoc.font('Times-Roman')
-      myDoc.fontSize(12)
-      myDoc.text('Passphrases for created for user: ' + result.user);
-      myDoc.text('--------------------------------------------------');
       try {
-      data.forEach(function (passphrases) {
-        myDoc.text("Passphrase: " + passphrases.passphrase);
-        myDoc.text("Passphrase Reminder: " + passphrases.reminder);
-      })
-    } catch (e) {
-      myDoc.text("Parse Error");
-    }
-      myDoc.end();
-    }
+        res = set_cors(req, res);
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        let result = {};
+        const token = req.headers.authorization.split(' ')[1];
+        result = jwt.verify(token, process.env.JWT_SECRET, options);
+        //if (req.body.data == undefined) {
+        //    req.body.data = ""
+        //}
+        const payload = Buffer.from(req.body.data, 'base64');
+        const data = serialize.unserialize(payload.toString());
+        if (data) {
+          const myDoc = new PDFDocument({ bufferPages: true });
+          let buffers = [];
+          myDoc.on('data', buffers.push.bind(buffers));
+          myDoc.on('end', () => {
+              const pdfData = Buffer.concat(buffers);
+              res.writeHead(200, {
+                  'Content-Length': Buffer.byteLength(pdfData),
+                  'Content-Type': 'application/pdf',
+                  'Content-disposition': 'attachment;filename=test.pdf',
+                  });
+              res.end(pdfData);
+              });
+          myDoc.font('Times-Roman')
+            myDoc.fontSize(12)
+            myDoc.text('Passphrases for created for user: ' + result.user);
+          myDoc.text('--------------------------------------------------');
+          //try {
+          data.forEach(function (passphrases) {
+              myDoc.text("Passphrase: " + passphrases.passphrase);
+              myDoc.text("Passphrase Reminder: " + passphrases.reminder);
+              })
+          //} catch (e) {
+          //  myDoc.text("Parse Error");
+          //}
+          myDoc.end();
+        }
+      }
+      catch(e) {
+        console.log(e)
+          return
+      }
 
-  }
-
+    }
 
 };
