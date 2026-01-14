@@ -142,7 +142,6 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 * Webhook security
 * Parameter Pollution
 * OAuth2/OIDC Flow Flaws
-* Rate Limit Bypassing
 
 
 ## Any Questions
