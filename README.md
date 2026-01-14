@@ -38,6 +38,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * XML Bomb Denial-of-Service
 * SOAP Injection
 * Cross-Site Request Forgery (CSRF)
+* Rate Limit Bypass
 * Client Side Template Injection
 
 ## Set Up Instructions
