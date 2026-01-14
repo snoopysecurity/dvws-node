@@ -330,6 +330,7 @@ describe("DVWS-Node Vulnerability Tests", function () {
       const authFailed = responses.every(res => res.status === 401);
       expect(authFailed).to.eql(true);
     });
+
   });
 
   describe("26. CRLF Injection (Log Pollution)", function () {
@@ -451,6 +452,37 @@ describe("DVWS-Node Vulnerability Tests", function () {
       expect(attrResponse.status).to.eql(200);
       const adminUser = attrResponse.body.results[0];
       expect(adminUser).to.have.property('password', 'letmein');
+    });
+  });
+
+  describe("36. Rate Limit Bypass", function () {
+    it("should allow bypassing IP-based rate limit using X-Forwarded-For header", async function () {
+      // 1. Flood from a specific IP to trigger ban
+      const blockedIP = "192.168.1.200";
+      const attempts = 110; // Max is 100
+      const promises = [];
+      
+      for (let i = 0; i < attempts; i++) {
+        promises.push(
+          request
+            .post("/login")
+            .set("X-Forwarded-For", blockedIP)
+            .send({ username: "admin", password: "wrong" + i })
+        );
+      }
+      
+      const responses = await Promise.all(promises);
+      const rateLimited = responses.some(res => res.status === 429);
+      expect(rateLimited).to.eql(true, "Rate limit should have been triggered");
+
+      // 2. Bypass using a different IP via X-Forwarded-For
+      const bypassIP = "192.168.1.201";
+      const response = await request
+        .post("/login")
+        .set("X-Forwarded-For", bypassIP)
+        .send({ username: "admin", password: "password" });
+        
+      expect(response.status).to.not.equal(429, "Rate limit should be bypassed with new IP");
     });
   });
 });
