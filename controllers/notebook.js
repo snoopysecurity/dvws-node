@@ -84,25 +84,27 @@ module.exports = {
     });
   },
   get_release: (req, res) => {
+    try {
+      var uservalue = decodeURI(req.params.release.toString())
+      var xpath_result = xpath.evaluate(
+        "//config/*[local-name(.)='release' and //config//release/text()='" + uservalue + "']",            // xpathExpression
+        doc,                        // contextNode
+        null,                       // namespaceResolver
+        xpath.XPathResult.ANY_TYPE, // resultType
+        null                        // result
+      )
+      
+      var result = [];
+      node = xpath_result.iterateNext();
+      while (node) {
+          result.push(node.toString());
+          node = xpath_result.iterateNext();
+      }
 
-    var uservalue = decodeURI(req.params.release.toString())
-    var xpath_result = xpath.evaluate(
-      "//config/*[local-name(.)='release' and //config//release/text()='" + uservalue + "']",            // xpathExpression
-      doc,                        // contextNode
-      null,                       // namespaceResolver
-      xpath.XPathResult.ANY_TYPE, // resultType
-      null                        // result
-    )
-    
-    var result = [];
-    node = xpath_result.iterateNext();
-    while (node) {
-        result.push(node.toString());
-        node = xpath_result.iterateNext();
+      res.send(result.toString());
+    } catch (e) {
+      res.status(500).send("Error processing request");
     }
-
-    res.send(result.toString());
-    
   },
   create_a_note: async (req, res) => {
     res = set_cors(req, res)
