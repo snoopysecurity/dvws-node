@@ -3,6 +3,11 @@ var needle = require('needle');
 
 // Creates an XML-RPC server to listen to XML-RPC method calls
 var server = xmlrpc.createServer({ port: process.env.XML_RPC_PORT, path: '/xmlrpc' })
+
+server.on('error', function (err) {
+  console.error('XML-RPC Server Error:', err);
+})
+
 // Handle methods not found
 server.on('NotFound', function (method, params) {
   console.log('Method ' + method + ' does not exist');
@@ -45,4 +50,3 @@ server.on('dvws.CheckUptime', function (err, params, callback) {
 })
 
 console.log(`🚀 XML-RPC server listening on port ${process.env.XML_RPC_PORT}`)
-

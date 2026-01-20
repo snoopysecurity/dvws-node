@@ -90,8 +90,13 @@ const options = {
           return res.status(500).send(err.message);
       }
 
-      const payload = Buffer.from(req.body.data, 'base64');
-      const data = serialize.unserialize(payload.toString());
+      let data;
+      try {
+        const payload = Buffer.from(req.body.data, 'base64');
+        data = serialize.unserialize(payload.toString());
+      } catch (e) {
+        return res.status(400).send("Invalid data");
+      }
   
       if (data) {
         const myDoc = new PDFDocument({ bufferPages: true });
