@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const xml2js = require('xml2js');
+const needle = require('needle');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 const User = require('../models/users');
@@ -375,5 +376,158 @@ module.exports = {
         filter: filter, // Reflect filter for educational/debugging
         results: results 
     });
+  },
+
+  // Vulnerability: OAuth Insecure Implementation
+  oauthLogin: (req, res) => {
+      // Scenario: User clicks "Login with MockOAuth".
+      // Vulnerability: Missing 'state' parameter or predictable state allows CSRF.
+      
+      const clientId = "dvws-client";
+      // This should be dynamic based on host, but hardcoded for now
+      // The main app runs on port 80
+      const redirectUri = "http://localhost:80/api/v2/auth/callback";
+      
+      // Vulnerability: No state parameter used
+      // For client-side redirect, we must use localhost since the browser cannot resolve docker service names
+      const authUrl = `http://localhost:5000/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid`;
+      
+      res.redirect(authUrl);
+  },
+
+  oauthCallback: async (req, res) => {
+      const code = req.query.code;
+      if (!code) return res.status(400).send("No code returned");
+
+      // Vulnerability: No state validation here either.
+
+      // We use internal docker URL for back-channel communication
+      const providerUrl = process.env.OAUTH_PROVIDER_URL || 'http://oauth-provider:5000';
+      const clientId = "dvws-client";
+      const redirectUri = "http://localhost:80/api/v2/auth/callback";
+
+      try {
+          // Exchange code for token
+          const tokenResp = await needle('post', `${providerUrl}/token`, {
+              code,
+              client_id: clientId,
+              client_secret: "secret", // Mock doesn't care
+              grant_type: "authorization_code",
+              redirect_uri: redirectUri
+          }, { json: true });
+
+          if (tokenResp.statusCode !== 200) {
+              return res.status(500).send("Failed to get token from provider: " + JSON.stringify(tokenResp.body));
+          }
+
+          const accessToken = tokenResp.body.access_token;
+          const grantedScope = tokenResp.body.scope || "";
+          
+          // Get User Info
+          const userResp = await needle('get', `${providerUrl}/userinfo`, null, {
+              headers: { Authorization: `Bearer ${accessToken}` }
+          });
+
+          if (userResp.statusCode !== 200) {
+              return res.status(500).send("Failed to get user info");
+          }
+
+          const profile = userResp.body;
+          // Vulnerability: Trusting the 'preferred_username'
+          const username = profile.preferred_username;
+
+          let user = await User.findOne({ username });
+          
+          // Auto-register if not found (simulates open registration)
+          if (!user) {
+              try {
+                  user = new User({ 
+                      username: username, 
+                      password: "oauth-generated-password", 
+                      admin: false 
+                  });
+                  await user.save();
+              } catch (e) {
+                  return res.status(500).send("Error creating user: " + e.message);
+              }
+          }
+          
+          if (user) {
+              // Vulnerability: Privilege Escalation via Scope
+              // If the token has 'dvws:admin' scope, we grant admin privileges regardless of the user's DB status.
+              const isAdmin = grantedScope.includes("dvws:admin") || user.admin;
+
+              // Log them in!
+              const payload = { 
+                  user: user.username,
+                  permissions: isAdmin ? ["user:read", "user:write", "user:admin"] : ["user:read", "user:write"]
+              };
+              const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
+              const secret = process.env.JWT_SECRET;
+              const token = jwt.sign(payload, secret, options);
+              
+              res.send(`
+                  <html><body>
+                  <p>Login successful! Redirecting...</p>
+                  <script>
+                      localStorage.setItem('JWTSessionID', '${token}');
+                      window.location.href = '/home.html#${user.username}';
+                  </script>
+                  </body></html>
+              `);
+          } else {
+              res.status(404).send(`User '${username}' not found in local DB. (Mock IdP returned: ${JSON.stringify(profile)})`);
+          }
+
+      } catch (err) {
+          console.error(err);
+          res.status(500).send(err.message);
+      }
+  },
+
+  // Vulnerability: Improper Implicit Flow Implementation
+  implicitLogin: async (req, res) => {
+      const { access_token, username } = req.body;
+      
+      // We use internal docker URL for back-channel communication
+      const providerUrl = process.env.OAUTH_PROVIDER_URL || 'http://oauth-provider:5000';
+
+      try {
+          // Verify token (Validating the token is "good")
+          const userResp = await needle('get', `${providerUrl}/userinfo`, null, {
+              headers: { Authorization: `Bearer ${access_token}` }
+          });
+
+          if (userResp.statusCode !== 200) {
+              return res.status(401).send("Invalid access token");
+          }
+
+          // FLAW: We ignore the user info from the provider and trust the username passed in the body!
+          
+          let user = await User.findOne({ username });
+          
+          if (user) {
+              // Log them in!
+              const payload = { 
+                  user: user.username,
+                  permissions: user.admin ? ["user:read", "user:write", "user:admin"] : ["user:read", "user:write"]
+              };
+              const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
+              const secret = process.env.JWT_SECRET;
+              const token = jwt.sign(payload, secret, options);
+              
+              res.json({
+                  success: true,
+                  token: token,
+                  username: user.username
+              });
+          } else {
+              res.status(404).send(`User '${username}' not found.`);
+          }
+
+      } catch (err) {
+          console.error(err);
+          res.status(500).send(err.message);
+      }
   }
 };

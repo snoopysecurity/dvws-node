@@ -20,6 +20,8 @@
                             <p>Password: <input type="text" class="form-control" name="Password" ng-model="password" required /></p>
                             <button class="btn btn-black" ng-click="SendData()">Login</button>
                             <button class="btn btn-secondary" ng-click="SendData2()">Register</button>
+                            <br><br>
+                            <a href="/api/v2/login/oauth" class="btn btn-primary btn-block">Login with MockOAuth</a>
                             <hr />
                             <div ng-bind-html="DataResponse"></div>
                         </div>
