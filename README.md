@@ -47,7 +47,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 
 ## Set Up Instructions
 
-### Manual (Preferred Method)
+### Manual
 
 **Node and NPM is needed to run dvws-node**
 
