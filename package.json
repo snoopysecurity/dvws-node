@@ -51,7 +51,7 @@
     "needle": "^3.3.1",
     "node-serialize": "0.0.4",
     "pdfkit": "^0.15.0",
-    "sequelize": "^6.37.3",
+    "sequelize": "^6.37.8",
     "superagent-proxy": "^3.0.0",
     "swagger-autogen": "^2.23.7",
     "swagger-ui-express": "^5.0.0",
