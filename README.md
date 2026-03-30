@@ -122,12 +122,18 @@ Change directory to dvws-node
 cd dvws-node
 ```
 Start Docker
+```bash
+docker-compose up --build
 ```
-`docker-compose up`
-```
-This will start the dvws service with the backend MySQL database and the NoSQL database.
+This will start the dvws service with the backend MySQL database and the NoSQL database. It will also start:
+*   **OAuth Provider (Port 5000):** A mock Identity Provider for testing OAuth flows.
+*   **Attacker Service (Port 6666):** A service to capture callbacks and tokens.
 
 If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup, then increase the value of environment variable : `WAIT_HOSTS_TIMEOUT`
+
+## OAuth Vulnerabilities
+We have added support for testing OAuth vulnerabilities (Account Takeover, CSRF, Token Leakage).
+See [answers.md](answers.md) for a detailed guide on how to exploit these flaws using the provided services.
 
 
 
@@ -145,7 +151,7 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 * GraphQL Injection
 * Webhook security
 * Parameter Pollution
-* OAuth2/OIDC Flow Flaws
+* OpenID Connect (OIDC) issues
 
 
 ## Any Questions

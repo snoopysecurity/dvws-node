@@ -19,6 +19,16 @@ services:
             WAIT_HOSTS_TIMEOUT: 160
             SQL_LOCAL_CONN_URL: dvws-mysql
             MONGO_LOCAL_CONN_URL: mongodb://dvws-mongo:27017/node-dvws
+            OAUTH_PROVIDER_URL: http://oauth-provider:5000
         depends_on:
             - dvws-mongo
             - dvws-mysql
+            - oauth-provider
+    oauth-provider:
+        build: ./oauth-provider
+        ports:
+            - "5000:5000"
+    attacker-service:
+        build: ./attacker-service
+        ports:
+            - "6666:6666"
