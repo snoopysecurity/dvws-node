@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const xml2js = require('xml2js');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
-const User = require('../models/users');
+const User = require('../models/user');
 
 const options = {
   expiresIn: '2d',

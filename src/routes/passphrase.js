@@ -1,5 +1,5 @@
 const controller = require('../controllers/passphrase');
-const validateToken = require('../utils').validateToken;
+const validateToken = require('../middleware/auth').validateToken;
 var guard = require('express-jwt-permissions')({
   requestProperty: 'identity',
   permissionsProperty: 'permissions'

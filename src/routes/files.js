@@ -1,5 +1,5 @@
-const controller = require('../controllers/storage');
-const validateToken = require('../utils').validateToken;
+const controller = require('../controllers/files');
+const validateToken = require('../middleware/auth').validateToken;
 
 
 module.exports = (router) => {

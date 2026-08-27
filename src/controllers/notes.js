@@ -1,16 +1,17 @@
-const Note = require('../models/notebook');
+const Note = require('../models/note');
 const jwt = require('jsonwebtoken')
 const { exec } = require('child_process');
 var xpath = require('xpath');
 const xml2js = require('xml2js');
 const libxml = require('libxmljs2');
 const fs = require('fs');
+const path = require('path');
 dom = require('@xmldom/xmldom').DOMParser
 const parser = new xml2js.Parser({ attrkey: "ATTR" });
 
 var MongoClient = require('mongodb').MongoClient;
 
-let xml_string = fs.readFileSync("config.xml", "utf8");
+let xml_string = fs.readFileSync(path.resolve(__dirname, '../../fixtures/xml/config.xml'), "utf8");
 xml_string = xml_string.replace(/>\s*/g, '>');  // Replace "> " with ">"
 xml_string = xml_string.replace(/\s*</g, '<');  // Replace "< " with "<"
 

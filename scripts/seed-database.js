@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const mongoose = require('mongoose');
 
-const User = require('./models/users');
+const User = require('../src/models/user');
 
 
 const connHost = process.env.SQL_LOCAL_CONN_URL;

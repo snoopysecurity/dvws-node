@@ -1,7 +1,7 @@
 const controller = require('../controllers/users');
-const validateToken = require('../utils').validateToken;
+const validateToken = require('../middleware/auth').validateToken;
 const bodyParser = require('body-parser');
-const rateLimiter = require('../utils/rateLimiter');
+const rateLimiter = require('../middleware/rate-limiter');
 
 // Rate limiter for login: 100 attempts per 30 seconds
 const loginLimiter = rateLimiter({ windowMs: 30 * 1000, max: 100 });

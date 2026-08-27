@@ -1,5 +1,5 @@
-const controller = require('../controllers/notebook');
-const validateToken = require('../utils').validateToken;
+const controller = require('../controllers/notes');
+const validateToken = require('../middleware/auth').validateToken;
 var guard = require('express-jwt-permissions')({
   requestProperty: 'identity',
   permissionsProperty: 'permissions'

@@ -4,12 +4,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const swaggerUI = require('swagger-ui-express');
-const swaggerGen = require('./swagger-generator');
+const swaggerGen = require('../scripts/generate-openapi');
 const fileUpload = require('express-fileupload');
 const path = require('path');
 
-const soapservice = require('./soapserver/dvwsuserservice'); //SOAP Service
-const rpcserver = require('./rpc_server'); //XMLRPC Service
+const soapservice = require('./services/soap/user-service'); //SOAP Service
+const rpcserver = require('./services/xml-rpc/server'); //XMLRPC Service
 
 const { ApolloServer } = require('apollo-server-express');
 const { GqSchema } = require('./graphql/schema');
@@ -58,7 +58,7 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/dvwsuserservice') || req.path.startsWith('/api-docs') || req.path.startsWith('/xmlrpc') || req.path.startsWith('/graphql')) {
     return next();
   }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
 // The ApolloServer constructor requires two parameters: your schema
@@ -82,7 +82,7 @@ const apolloServer = new ApolloServer({
 });
 
 swaggerGen().then(async () => {
-  const swaggerOutput = require('./swagger-output.json');
+  const swaggerOutput = require('../docs/openapi/openapi.json');
 
   app.get('/openAPI-spec.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');

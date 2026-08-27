@@ -5,7 +5,7 @@ var serialize = require("node-serialize")
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
-const User = require('../models/users');
+const User = require('../models/user');
 
 const sequelize = require('../models/passphrase');
 

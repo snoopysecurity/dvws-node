@@ -7,10 +7,10 @@ var router = express.Router();
 
 const mongoose = require('mongoose');
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
-const User = require('../models/users');
+const User = require('../../models/user');
 
 const path = require("path");
-const servicewsdl = fs.readFileSync(path.resolve(__dirname, "dvwsuserservice.wsdl"));
+const servicewsdl = fs.readFileSync(path.resolve(__dirname, "user-service.wsdl"));
 
 
 router.use(bodyParser.text({ type: '*/*' }));

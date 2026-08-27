@@ -55,7 +55,7 @@ jobs:
         SQL_USERNAME: root
         SQL_PASSWORD: mysecretpassword
         MONGO_LOCAL_CONN_URL: mongodb://localhost:27017/node-dvws
-      run: node startup_script.js
+      run: node scripts/seed-database.js
 
     - name: Start Server and Run Tests
       env:
@@ -69,7 +69,7 @@ jobs:
         JWT_SECRET: access
       run: |
         # Start server in background
-        node app.js > app.log 2>&1 &
+        node src/server.js > app.log 2>&1 &
         PID=$!
         echo "Server started with PID $PID"
         

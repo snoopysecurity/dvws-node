@@ -92,7 +92,7 @@ npm install --build-from-source
 Run the startup script which create some test data
 
 ```
-node startup_script.js
+node scripts/seed-database.js
 ```
 
 To start the application/API, run (**sudo privileges** is needed to bind to port 80, which is the default. You can change the port in `.env` to avoid using sudo).

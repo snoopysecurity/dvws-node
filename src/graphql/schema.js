@@ -9,8 +9,8 @@ const { gql } = require('apollo-server');
 
 const fsPromise = require("fs").promises;
 const bcrypt = require('bcrypt');
-const Note = require('../models/notebook');
-const User = require('../models/users');
+const Note = require('../models/note');
+const User = require('../models/user');
 const sql = require('../models/passphrase');
 
 
@@ -118,7 +118,7 @@ const Gqresolvers = {
           throw new Error( "Missing JWT Admin Auth Token");
        } 
         
-       filePath = __dirname + '/../public/uploads/' + context.user + "/" +  args.filePath;
+       filePath = __dirname + '/../../public/uploads/' + context.user + "/" +  args.filePath;
        await fsPromise.writeFile(filePath,args.fileContent);
 
         UpdatedFile['filePath'] = filePath

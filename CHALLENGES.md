@@ -315,7 +315,7 @@ The function executes during deserialization before any further processing.
 
 **Endpoint:** `GET /api/v2/release/:release`
 
-**Description:** The `:release` parameter is concatenated directly into an XPath expression that queries `config.xml`.
+**Description:** The `:release` parameter is concatenated directly into an XPath expression that queries `fixtures/xml/config.xml`.
 
 ### Challenge
 
@@ -333,7 +333,7 @@ The XPath query becomes:
 //config/*[local-name(.)='release' and //config//release/text()='0.0.1' or 1=1 or 'a'='a']
 ```
 
-This returns all nodes from `config.xml`, including database credentials and other sensitive configuration.
+This returns all nodes from `fixtures/xml/config.xml`, including database credentials and other sensitive configuration.
 
 ---
 

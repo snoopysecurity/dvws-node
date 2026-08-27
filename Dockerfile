@@ -27,4 +27,4 @@ RUN cd frontend && npm install && npm run build
 EXPOSE 80
 
 # Start command
-CMD node startup_script.js && npm start
+CMD node scripts/seed-database.js && npm start

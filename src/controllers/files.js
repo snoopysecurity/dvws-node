@@ -58,7 +58,7 @@ module.exports = {
 
 
         sampleFile = req.files.file;
-        uploadPath = __dirname + '/../public/uploads/' + result.user + "/";
+        uploadPath = __dirname + '/../../public/uploads/' + result.user + "/";
 
 
         if (!fs.existsSync(uploadPath)) {
@@ -72,7 +72,7 @@ module.exports = {
             }
             }
 
-        filePath = __dirname + '/../public/uploads/' + result.user + "/" + sampleFile.name;
+        filePath = __dirname + '/../../public/uploads/' + result.user + "/" + sampleFile.name;
 
 
         sampleFile.mv(filePath, function (err) {
@@ -99,7 +99,7 @@ module.exports = {
         result = jwt.verify(token, process.env.JWT_SECRET, options);
 
 
-        uploadPath = __dirname + '/../public/uploads/' + "/" + result.user;
+        uploadPath = __dirname + '/../../public/uploads/' + "/" + result.user;
         var resultData = [];
 
         fs.readdir(uploadPath, function (err, files) {

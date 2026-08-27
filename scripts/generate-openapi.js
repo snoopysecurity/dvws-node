@@ -13,7 +13,7 @@ const doc = {
   ],
 };
 
-const outputFile = './swagger-output.json';
-const endpointsFiles = ['./routes/users.js', './routes/notebook.js', './routes/passphrase.js', './routes/storage.js'];
+const outputFile = './docs/openapi/openapi.json';
+const endpointsFiles = ['./src/routes/users.js', './src/routes/notes.js', './src/routes/passphrase.js', './src/routes/files.js'];
 
 module.exports = () => swaggerAutogen(outputFile, endpointsFiles, doc);

@@ -1,12 +1,12 @@
 const users = require('./users');
-const notebook = require('./notebook');
+const notes = require('./notes');
 const passphrase = require('./passphrase');
-const storage = require('./storage');
+const files = require('./files');
 
 module.exports = (router) => {
   users(router);
-  notebook(router);
+  notes(router);
   passphrase(router);
-  storage(router);
+  files(router);
   return router;
 };

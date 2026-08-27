@@ -2,10 +2,10 @@
   "name": "dvws-node",
   "version": "0.0.1",
   "description": "Damn Vulnerable Web Service",
-  "main": "app.js",
+  "main": "src/server.js",
   "scripts": {
-    "seed": "node startup_script.js",
-    "start": "node app.js",
+    "seed": "node scripts/seed-database.js",
+    "start": "node src/server.js",
     "test": "mocha",
     "test:vulnerabilities": "mocha test/vulnerabilities.test.js --timeout 10000",
     "test:all": "mocha test/*.test.js --timeout 10000"

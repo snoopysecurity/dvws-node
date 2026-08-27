@@ -23,7 +23,7 @@ services:
         build: .
         ports:
         - "0.0.0.0:80:80"
-        command: sh -c "node startup_script.js && npm start"
+        command: sh -c "node scripts/seed-database.js && npm start"
         environment:
             SQL_LOCAL_CONN_URL: dvws-mysql
             MONGO_LOCAL_CONN_URL: mongodb://dvws-mongo:27017/node-dvws
