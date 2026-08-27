@@ -1,9 +1,6 @@
 const request = require("supertest")("http://127.0.0.1/api/v2");
 const expect = require("chai").expect;
 
-//const request = require('supertest-with-proxy')("http://127.0.0.1/api/v2");
-//      .proxy('http://127.0.0.1:8081')
-
 describe("POST /users", function () {
   it("register a new user to the API", async function () {
     // Use a random user to avoid conflicts

@@ -2,23 +2,33 @@ version: '3'
 services:
     dvws-mongo:
         image: mongo:4.0.4
+        healthcheck:
+            test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+            interval: 30s
+            timeout: 5s
+            retries: 10
+            start_period: 10s
     dvws-mysql:
         image: mysql:8
         environment:
             MYSQL_ROOT_PASSWORD: mysecretpassword
             MYSQL_DATABASE: dvws_sqldb
+        healthcheck:
+            test: mysqladmin ping -h 127.0.0.1 -u root -pmysecretpassword
+            interval: 30s
+            timeout: 5s
+            retries: 10
+            start_period: 10s
     web:
         build: .
         ports:
-        - "80:80"
-        - "4000:4000"          
-        - "9090:9090"        
-        command: sh -c "/wait && node startup_script.js && npm start"
+        - "0.0.0.0:80:80"
+        command: sh -c "node startup_script.js && npm start"
         environment:
-            WAIT_HOSTS: dvws-mysql:3306, dvws-mongo:27017
-            WAIT_HOSTS_TIMEOUT: 160
             SQL_LOCAL_CONN_URL: dvws-mysql
             MONGO_LOCAL_CONN_URL: mongodb://dvws-mongo:27017/node-dvws
         depends_on:
-            - dvws-mongo
-            - dvws-mysql
+            dvws-mongo:
+                condition: service_healthy
+            dvws-mysql:
+                condition: service_healthy

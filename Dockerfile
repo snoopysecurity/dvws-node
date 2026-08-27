@@ -20,12 +20,11 @@ RUN npm install
 # Copy application code
 COPY . .
 
-# Add wait script
-ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait /wait
-RUN chmod +x /wait
+# Build Svelte frontend (outputs directly to ../public via adapter-static config)
+RUN cd frontend && npm install && npm run build
 
 # Expose ports
-EXPOSE 80 4000 9090
+EXPOSE 80
 
 # Start command
-CMD /wait && node startup_script.js && npm start
+CMD node startup_script.js && npm start

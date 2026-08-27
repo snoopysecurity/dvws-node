@@ -113,8 +113,8 @@ The test suite validates the following vulnerabilities:
 - Test: Code review confirmation
 
 ### 17. **Client-Side Template Injection**
-- Location: `public/search.html`
-- Issue: AngularJS 1.x with user input in templates
+- Location: `frontend/` (search page)
+- Issue: User input rendered in templates
 - Test: Code review confirmation
 
 ### 18. **Unsafe Deserialization**

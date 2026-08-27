@@ -62,7 +62,7 @@ const options = {
         res.write(JSON.stringify(result[0]));
         res.end();
       } catch (err) {
-        res.send(err);
+        res.status(500).send(err.original ? err.original.sqlMessage : err.message);
       }
     },
 

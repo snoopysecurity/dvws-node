@@ -1,52 +1,72 @@
-var xmlrpc = require('xmlrpc');
+var express = require('express');
 var needle = require('needle');
+var Deserializer = require('xmlrpc/lib/deserializer');
+var Serializer = require('xmlrpc/lib/serializer');
+var { Readable } = require('stream');
 
-// Creates an XML-RPC server to listen to XML-RPC method calls
-var server = xmlrpc.createServer({ port: process.env.XML_RPC_PORT, path: '/xmlrpc' })
+var router = express.Router();
 
-server.on('error', function (err) {
-  console.error('XML-RPC Server Error:', err);
-})
+// Parse raw XML body for XML-RPC requests
+router.use(express.text({ type: ['text/xml', 'application/xml'] }));
 
-// Handle methods not found
-server.on('NotFound', function (method, params) {
-  console.log('Method ' + method + ' does not exist');
-})
-// Handle method calls by listening for events with the method call name
-server.on('dvws.RpcVersion', function (err, params, callback) {
-  callback(null, '1.3.2')
-})
+// XML-RPC method handlers
+var methods = {
+  'dvws.RpcVersion': function (params, callback) {
+    callback(null, '1.3.2');
+  },
 
-server.on('system.listMethods', function (err, params, callback) {
+  'system.listMethods': function (params, callback) {
+    var methodarray = ['system.listMethods', 'dvws.rpcversion', 'dvws.checkuptime, pingback.ping'];
+    callback(null, methodarray);
+  },
 
-  let methodarray = ['system.listMethods', 'dvws.rpcversion', 'dvws.checkuptime, pingback.ping'];
+  'pingback.ping': function (params, callback) {
+    callback(null, 'Method Disabled');
+  },
 
-  callback(null, methodarray)
-})
-
-
-server.on('pingback.ping', function (err, params, callback) {
-  callback(null, 'Method Disabled')
-})
-
-server.on('dvws.CheckUptime', function (err, params, callback) {
-
-  module.exports.get = function (url) {
-    var result = needle.get(url, { timeout: 3000 }, function (error, response) {
+  'dvws.CheckUptime': function (params, callback) {
+    var url = params.toString();
+    needle.get(url, { timeout: 3000 }, function (error, response) {
       if (!error && response.statusCode == 200) {
-        console.log('Method call params for \'checkuptime\': ' + url)
-        var rp = response.body
+        console.log('Method call params for \'checkuptime\': ' + url);
       }
-      return rp;
     });
-    return result;
+    callback(null, 'Checking uptime for: ' + url);
   }
+};
 
+router.post('/', function (req, res) {
+  var deserializer = new Deserializer();
 
-  var get_result = module.exports.get(params.toString());
-  // ...perform an action...
-  // Send a method response with a value
-  callback(null, get_result)
-})
+  // Convert the body string into a readable stream for the deserializer
+  var stream = new Readable();
+  stream.push(req.body);
+  stream.push(null);
 
-console.log(`🚀 XML-RPC server listening on port ${process.env.XML_RPC_PORT}`)
+  deserializer.deserializeMethodCall(stream, function (err, method, params) {
+    if (err) {
+      res.setHeader('Content-Type', 'text/xml');
+      res.status(400).send(Serializer.serializeFault({ faultCode: -32700, faultString: 'Parse error: ' + err.message }));
+      return;
+    }
+
+    var handler = methods[method];
+    if (!handler) {
+      console.log('Method ' + method + ' does not exist');
+      res.setHeader('Content-Type', 'text/xml');
+      res.status(200).send(Serializer.serializeFault({ faultCode: -32601, faultString: 'Method ' + method + ' not found' }));
+      return;
+    }
+
+    handler(params, function (error, result) {
+      res.setHeader('Content-Type', 'text/xml');
+      if (error) {
+        res.status(200).send(Serializer.serializeFault({ faultCode: -32603, faultString: error.message }));
+      } else {
+        res.status(200).send(Serializer.serializeMethodResponse(result));
+      }
+    });
+  });
+});
+
+module.exports = router;

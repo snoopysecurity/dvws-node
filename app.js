@@ -8,12 +8,11 @@ const swaggerGen = require('./swagger-generator');
 const fileUpload = require('express-fileupload');
 const path = require('path');
 
-// const swaggerDocument = require('./swagger'); //Swagger - Replaced by swagger-autogen
 const soapservice = require('./soapserver/dvwsuserservice'); //SOAP Service
-const rpcserver = require('./rpc_server'); //XMLRPC Sever
+const rpcserver = require('./rpc_server'); //XMLRPC Service
 
-const { ApolloServer } = require('apollo-server');
-const {  GqSchema } =  require('./graphql/schema');
+const { ApolloServer } = require('apollo-server-express');
+const { GqSchema } = require('./graphql/schema');
 
 
 const app = express();
@@ -24,20 +23,8 @@ const router = express.Router();
 const routes = require('./routes/index.js');
 
 app.use(express.static('public'));
-app.use("/css", express.static(path.join(__dirname, "node_modules/bootstrap/dist/css")));
-app.use("/js", express.static(path.join(__dirname, "node_modules/bootstrap/dist/js")));
-app.use("/js", express.static(path.join(__dirname, "node_modules/jquery/dist")));
-app.use("/js", express.static(path.join(__dirname, "node_modules/angular")));
 
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// Swagger generation and setup will be handled before app.listen
-// const swaggerOptions = { ... };
-// const swaggerSpec = swaggerJsdoc(swaggerOptions);
-
-app.use('/dvwsuserservice', soapservice);
-app.use(bodyParser.json());
-app.use(fileUpload({ parseNested: true }));
 
 const jwt = require('jsonwebtoken')
 
@@ -57,13 +44,46 @@ var corsOptions = {
 }
 
 app.use(cors(corsOptions))
+
+app.use('/dvwsuserservice', soapservice);
+app.use('/xmlrpc', rpcserver);
+app.use(bodyParser.json());
+app.use(fileUpload({ parseNested: true }));
 app.use('/api', routes(router));
 
+// SPA fallback: serve index.html for any route that doesn't match
+// an API endpoint or static file, so client-side routing works on refresh
+app.get('*', (req, res, next) => {
+  // Skip API routes, swagger, SOAP, RPC, and GraphQL paths
+  if (req.path.startsWith('/api') || req.path.startsWith('/dvwsuserservice') || req.path.startsWith('/api-docs') || req.path.startsWith('/xmlrpc') || req.path.startsWith('/graphql')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-  
-swaggerGen().then(() => {
+// The ApolloServer constructor requires two parameters: your schema
+// definition and your set of resolvers.
+const apolloServer = new ApolloServer({
+  introspection: true,
+  playground: true,
+  debug: true,
+  allowBatchedHttpRequests: true,
+  schema: GqSchema,
+  context: async ({ req }) => {
+    let verifiedToken = {}
+    try {
+      const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
+      verifiedToken = jwt.verify(token, process.env.JWT_SECRET, options);
+    } catch (error) {
+      verifiedToken = {}
+    }
+    return verifiedToken;
+  },
+});
+
+swaggerGen().then(async () => {
   const swaggerOutput = require('./swagger-output.json');
-  
+
   app.get('/openAPI-spec.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerOutput);
@@ -71,37 +91,23 @@ swaggerGen().then(() => {
 
   app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerOutput));
 
+  // Start Apollo and mount GraphQL middleware on Express
+  await apolloServer.start();
+  apolloServer.applyMiddleware({ app, path: '/graphql' });
+
   const serverInstance = app.listen(process.env.EXPRESS_JS_PORT, '0.0.0.0', () => {
-    console.log(`🚀 API listening at http://dvws.local${process.env.EXPRESS_JS_PORT == 80 ? "" : ":" + process.env.EXPRESS_JS_PORT } (127.0.0.1)`);
+    const port = process.env.EXPRESS_JS_PORT;
+    const host = `http://dvws.local${port == 80 ? "" : ":" + port}`;
+    console.log(`🚀 All services listening at ${host} (127.0.0.1)`);
+    console.log(`  ├─ REST API:  ${host}/api`);
+    console.log(`  ├─ SOAP:      ${host}/dvwsuserservice`);
+    console.log(`  ├─ XML-RPC:   ${host}/xmlrpc`);
+    console.log(`  ├─ GraphQL:   ${host}/graphql`);
+    console.log(`  └─ API Docs:  ${host}/api-docs`);
   });
 }).catch(err => {
   console.error("Unable to generate Swagger documentation", err);
   process.exit(1);
 });
-
-
-  // The ApolloServer constructor requires two parameters: your schema
-// definition and your set of resolvers.
-const server = new ApolloServer({ 
-  introspection: true,
-  playground: true,
-  debug: true,
-  allowBatchedHttpRequests: true,
-  schema: GqSchema,
-  context: async ({ req }) => {
-       let verifiedToken = {}
-        try {
-         const token = req.headers.authorization.split(' ')[1]; // Bearer <token>
-         verifiedToken = jwt.verify(token, process.env.JWT_SECRET, options);
-        } catch (error) {
-          verifiedToken = {}
-        }
-        return verifiedToken;
-  }, });
-
-
-server.listen({ port: process.env.GRAPHQL_PORT }).then(({ url }) => {
-    console.log(`🚀 GraphQL Server ready at ${url}`);
-  });;
 
 module.exports = app;

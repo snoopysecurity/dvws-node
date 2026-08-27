@@ -14,7 +14,8 @@ const connUri = process.env.MONGO_LOCAL_CONN_URL;
 // We assume the DB 'dvws_sqldb' exists initially (created by docker-compose)
 // or we can connect without DB if we handle it.
 // The original script connected to it.
-const sequelize = new Sequelize('dvws_sqldb', connUser, connPass, {
+// Connect without a specific database for setup
+const sequelizeRoot = new Sequelize('', connUser, connPass, {
   host: connHost,
   dialect: 'mysql'
 });
@@ -25,15 +26,23 @@ async function main() {
     // MySQL Setup
     try {
         console.log('[+] Resetting MySQL database for DVWS....');
-        await sequelize.authenticate();
-        await sequelize.query("DROP DATABASE IF EXISTS dvws_sqldb;");
+        await sequelizeRoot.authenticate();
+        await sequelizeRoot.query("DROP DATABASE IF EXISTS dvws_sqldb;");
         console.log("[+] Old SQL Database deleted");
-        await sequelize.query("CREATE DATABASE dvws_sqldb;");
+        await sequelizeRoot.query("CREATE DATABASE dvws_sqldb;");
         console.log("[+] SQL Database created");
+        await sequelizeRoot.query("USE dvws_sqldb;");
+        await sequelizeRoot.query(
+            'CREATE TABLE IF NOT EXISTS `passphrases` (`username` varchar(200) NOT NULL, `passphrase` varchar(200) NOT NULL, `reminder` varchar(200) NOT NULL, `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP)'
+        );
+        await sequelizeRoot.query(
+            "INSERT INTO passphrases (username, passphrase, reminder) VALUES ('admin', '5f4dcc3b5aa765d61d8327deb882cf99', 'default')"
+        );
+        console.log("[+] Passphrases table created and seeded");
     } catch (err) {
         console.error("[-] MySQL Error:", err);
     } finally {
-        await sequelize.close();
+        await sequelizeRoot.close();
     }
 
     // MongoDB Setup

@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken')
 const { exec } = require('child_process');
 var xpath = require('xpath');
 const xml2js = require('xml2js');
-const libxml = require('libxmljs');
+const libxml = require('libxmljs2');
 const fs = require('fs');
 dom = require('@xmldom/xmldom').DOMParser
 const parser = new xml2js.Parser({ attrkey: "ATTR" });
@@ -128,7 +128,7 @@ module.exports = {
   read_a_note: async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
         try {
-            const note = await Note.findOne({no: req.params.noteId});
+            const note = await Note.findById(parseInt(req.params.noteId));
             res.json(note);
         } catch (err) {
             res.send(err);

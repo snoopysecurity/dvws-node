@@ -51,7 +51,7 @@ module.exports = {
              return res.status(200).json({ status: "Vulnerable", polluted: true });
         }
 
-        if (!req.files.file || Object.keys(req.files.file).length === 0) {
+        if (!req.files || !req.files.file || Object.keys(req.files.file).length === 0) {
             res.status(400).send('No files were uploaded.');
             return;
         }
@@ -62,7 +62,7 @@ module.exports = {
 
 
         if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath);
+            fs.mkdirSync(uploadPath, { recursive: true });
         }
 
         if (typeof sampleFile.name !== 'undefined') {

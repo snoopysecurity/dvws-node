@@ -1,87 +1,38 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<link href="/_app/immutable/entry/start.Ck4cltgG.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/BlBcfCcB.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/VxSyTXvZ.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/EWAgvLfw.js" rel="modulepreload">
+		<link href="/_app/immutable/entry/app.CaY6XH2l.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/HclGiUj8.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/xihTtKlq.js" rel="modulepreload">
+		<link href="/_app/immutable/nodes/0.DHr1ARMF.js" rel="modulepreload">
+		
+		<link href="/_app/immutable/assets/0.Dp4iIq4E.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">
+			<script>
+				{
+					__sveltekit_jv5dso = {
+						base: ""
+					};
 
-<script src="./js/jquery.min.js"></script>
-<script type="text/javascript" src="./js/angular.min.js"></script>
-<link href="./css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-<script src="./js/bootstrap.min.js"></script>
-<link href="index.css" rel="stylesheet" id="inline-css">
-<!------ Include the above in your HEAD tag ---------->
+					const element = document.currentScript.parentElement;
 
-<div class="sidenav">
-         <div class="login-main-text">
-            <h2>Damn Vulnerable Web Services<br> Login Page</h2>
-            <p>Login or register for Access</p>
-         </div>
-      </div>
-      <div class="main">
-         <div class="col-md-6 col-sm-12">
-            <div class="login-form">
-                    <div ng-app="app" ng-controller="MyController">
-                            <p>Username: <input type="text" class="form-control" name="UserName" ng-model="username" required /></p>
-                            <p>Password: <input type="text" class="form-control" name="Password" ng-model="password" required /></p>
-                            <button class="btn btn-black" ng-click="SendData()">Login</button>
-                            <button class="btn btn-secondary" ng-click="SendData2()">Register</button>
-                            <hr />
-                            <div ng-bind-html="DataResponse"></div>
-                        </div>
-
-
-
-            </div>
-         </div>
-
-      </div>
-
-
-    <script type="text/javascript">
-    var app = angular.module('app', []).config(function ($sceProvider) {
-    $sceProvider.enabled(false);
-});
-    app.controller('MyController', function ($scope, $http, $window) {
-        $scope.SendData = function () {
-            var post = $http({
-                method: "POST",
-                url: "/api/v2/login",
-                dataType: 'json',
-                data: 'username=' + $scope.username +'&' + 'password=' + $scope.password,
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'}
-            });
- 
-            post.then(function (response) {
-                var data = response.data;
-                if (data.status == 200) {
-                $window.localStorage.setItem('JWTSessionID', data.token);
-                window.location = "home.html#" + data.result.username;
-                $scope.DataResponse = data.result.username;
-                 }
-            }, function (response) {
-                var data = response.data;
-                $scope.DataResponse = data.error;
-            });
-        }
-
-        $scope.SendData2 = function () {
-        var post = $http({
-            method: "POST",
-            url: "/api/v2/users",
-            dataType: 'json',
-            data: 'username=' + $scope.username +'&' + 'password=' + $scope.password,
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'}
-        });
-
-
-        post.then(function (response) {
-            var data = response.data;
-            if (data.status == 201) {
-            $scope.DataResponse = data.user + ' created successfully!';
-             } else if (data.status == 409) {
-            $scope.DataResponse = data;
-             }
-        }, function (response) {
-            var data = response.data;
-                $scope.DataResponse = data;
-            });
-        }
-
-    });
-
- </script>
+					Promise.all([
+						import("/_app/immutable/entry/start.Ck4cltgG.js"),
+						import("/_app/immutable/entry/app.CaY6XH2l.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element);
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

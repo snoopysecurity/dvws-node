@@ -293,7 +293,10 @@ module.exports = {
     try {
      
       let token;
-      if (req.headers.cookie) {
+      // Check Authorization header first (Bearer token), then fall back to cookie
+      if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+        token = req.headers.authorization.split(' ')[1];
+      } else if (req.headers.cookie) {
         const cookies = req.headers.cookie.split(';');
         const authCookie = cookies.find(c => c.trim().startsWith('auth_token='));
         if (authCookie) token = authCookie.split('=')[1];

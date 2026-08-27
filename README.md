@@ -80,7 +80,7 @@ Change directory to DVWS
 cd dvws-node
 ```
 
-npm install all dependencies  (build from source is needed for `libxmljs`, you might also need to install libxml depending on your OS: `sudo apt-get install -y libxml2 libxml2-dev`)
+npm install all dependencies  (build from source is needed for `libxmljs2`, you might also need to install libxml depending on your OS: `sudo apt-get install -y libxml2 libxml2-dev`)
 
 
 ```
@@ -132,7 +132,7 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 
 
 ## Solutions
-* [DVWS Solutions Wiki](https://github.com/snoopysecurity/dvws-node/wiki)
+* [DVWS Solutions]([https://github.com/snoopysecurity/dvws-node/wiki](https://github.com/snoopysecurity/dvws-node/blob/master/CHALLENGES.md))
 
 
 

@@ -1,7 +1,7 @@
 var express = require('express');
 var Builder = require('xml2js').Builder;
 var fs = require("fs");
-const libxml = require('libxmljs');
+const libxml = require('libxmljs2');
 var bodyParser = require('body-parser');
 var router = express.Router();
 
