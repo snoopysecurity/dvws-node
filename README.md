@@ -24,17 +24,58 @@ The browser interface is for people; these interfaces let the browser or other p
 
 ## Security issues covered
 
-The application now includes 50 guided challenges across REST, GraphQL, SOAP, XML-RPC, and browser workflows. The challenge guide has endpoint details, example requests, and mitigation notes: [open CHALLENGES.md](CHALLENGES.md).
+The application includes guided exercises across REST, GraphQL, SOAP, XML-RPC, and browser workflows. See the [challenge guide](CHALLENGES.md) for endpoint details, example requests, and mitigation notes.
 
-Coverage includes:
-
-* Injection: SQL, NoSQL, XPath, LDAP, XML/SOAP, OS command, server-side template injection, and unsafe YAML deserialization.
-* Authentication and authorization: weak and misused JWTs, missing rate limits, user enumeration, IDOR, horizontal and vertical access-control flaws, mass assignment, and recovery/session issues.
-* Browser and cross-origin issues: XSS, CSRF, CORS misconfiguration, JSONP data exposure, cookie security behavior, and cross-site WebSocket hijacking.
-* Data and file handling: sensitive data exposure, path traversal, unrestricted uploads, GraphQL file writes, XXE, XML bombs, and undocumented TRACE diagnostics.
-* API and business logic: hidden functionality, excessive page sizes, legacy login behavior, GraphQL introspection/batching, SSRF, open redirects, and log pollution.
-
-The profile area also contains account recovery, session management, notification preferences and inbox, cross-origin browser demonstrations, and XML import/export exercises.
+* SQL Injection
+* NoSQL Injection
+* OS Command Injection
+* XML External Entity Injection (XXE)
+* XML Bomb (Denial of Service)
+* Server-Side Request Forgery (SSRF)
+* Insecure Deserialization (RCE)
+* XPath Injection
+* LDAP Injection
+* Path Traversal
+* SOAP Injection
+* XML Injection (Profile Export)
+* XML Injection (Profile Import / Mass Assignment)
+* Mass Assignment (User Registration)
+* IDOR (Insecure Direct Object Reference)
+* Broken Authentication (JWT `none` Algorithm)
+* JWT Secret Key Brute Force
+* Vertical Access Control (Privilege Escalation)
+* Horizontal Access Control
+* Open Redirect
+* Cross-Site Scripting (XSS)
+* Cross-Site Request Forgery (CSRF)
+* CORS Misconfiguration
+* CRLF Injection / Log Pollution
+* User Enumeration
+* Information Disclosure
+* Sensitive Data Exposure (Password Hashes)
+* Prototype Pollution
+* API Endpoint Brute Forcing (Missing Rate Limit)
+* Rate Limit Bypass via `X-Forwarded-For`
+* Hidden API Functionality Exposure
+* GraphQL Introspection
+* GraphQL Access Control Issues
+* GraphQL Arbitrary File Write
+* GraphQL Batching Brute Force
+* GraphQL Sensitive Data Exposure
+* Unrestricted File Upload
+* Role-Based Profile Data Exposure
+* Account Recovery IDOR Chain
+* Session Revocation After Password Change
+* Cookie Security and Cross-Site Behavior
+* JSONP Cross-Origin Data Exposure
+* Cross-Site WebSocket Hijacking
+* Server-Side Template Injection
+* Unsafe YAML Supplier Import
+* Cached Monthly Report Path Traversal
+* Notification Preference Mass Assignment
+* Undocumented TRACE Diagnostics
+* Legacy Login Skips Password Verification
+* Excessive Activity Report Page Size
 
 ## Set Up Instructions
 
