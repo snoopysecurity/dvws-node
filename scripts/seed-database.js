@@ -57,7 +57,9 @@ async function main() {
         const user = new User({
             username: "admin",
             password: "letmein",
-            admin: true
+            admin: true,
+            email: "admin@dvws.local",
+            homeAddress: "1 Example Lane, Exampleton"
         });
 
         try {
@@ -70,7 +72,9 @@ async function main() {
         const user2 = new User({
             username: "test",
             password: "test",
-            admin: false
+            admin: false,
+            email: "test@dvws.local",
+            homeAddress: "2 Example Lane, Exampleton"
         });
 
         try {
@@ -78,6 +82,36 @@ async function main() {
             console.log("[+] Test user created:", savedUser2.username);
         } catch (err) {
             console.log("[-] Error creating test user (might exist):", err.message);
+        }
+
+        const recoveryVictim = new User({
+            username: "recovery-victim",
+            password: "Victim123!",
+            admin: false,
+            email: "victim@dvws.local",
+            homeAddress: "42 Fictional Crescent, Exampleton"
+        });
+
+        try {
+            const savedVictim = await recoveryVictim.save();
+            console.log("[+] Recovery challenge user created:", savedVictim.username);
+        } catch (err) {
+            console.log("[-] Error creating recovery challenge user:", err.message);
+        }
+
+        const sessionVictim = new User({
+            username: "session-victim",
+            password: "Session123!",
+            admin: false,
+            email: "session-victim@dvws.local",
+            homeAddress: "18 Fictional Orchard Road, Exampleton"
+        });
+
+        try {
+            const savedSessionVictim = await sessionVictim.save();
+            console.log("[+] Session challenge user created:", savedSessionVictim.username);
+        } catch (err) {
+            console.log("[-] Error creating session challenge user:", err.message);
         }
 
     } catch (err) {

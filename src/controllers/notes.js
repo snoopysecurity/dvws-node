@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken')
 const { exec } = require('child_process');
 var xpath = require('xpath');
 const xml2js = require('xml2js');
-const libxml = require('libxmljs2');
+const { parseVulnerableXml } = require('../utils/vulnerable-xml');
 const fs = require('fs');
 const path = require('path');
 dom = require('@xmldom/xmldom').DOMParser
@@ -224,23 +224,25 @@ module.exports = {
           return res.status(401).send({ error: "Unauthorized" });
       }
       
-      const optionsXml = { 
-          noent: true, // VULNERABLE: Enables entity substitution
-          dtdload: true,
-          huge: true // VULNERABLE: Bypasses parser limits (e.g. max node depth) to facilitate DoS
-      };
-      
       try {
-          const doc = libxml.parseXml(xmlData, optionsXml);
+          const doc = parseVulnerableXml(xmlData);
           
           // Parse and save notes
-          const notes = doc.find('//note');
+          const notes = doc.getElementsByTagName('note');
           let count = 0;
+
+          const childText = (node, name) => {
+              for (let child = node.firstChild; child; child = child.nextSibling) {
+                  if (child.nodeType === 1 && child.nodeName === name) return child.textContent;
+              }
+              return null;
+          };
           
-          for (const node of notes) {
-              const name = node.get('name') ? node.get('name').text() : ("Imported " + Date.now());
-              const body = node.get('body') ? node.get('body').text() : "";
-              const type = node.get('type') ? node.get('type').text() : "public";
+          for (let index = 0; index < notes.length; index++) {
+              const node = notes.item(index);
+              const name = childText(node, 'name') ?? ("Imported " + Date.now());
+              const body = childText(node, 'body') ?? "";
+              const type = childText(node, 'type') ?? "public";
               
               const newNote = new Note({
                   name: name,
@@ -255,7 +257,7 @@ module.exports = {
           res.send({ 
               success: true, 
               message: `Successfully imported ${count} notes.`,
-              parsedRoot: doc.root().name()
+              parsedRoot: doc.documentElement.nodeName
           });
       } catch (e) {
           res.status(500).send(e);

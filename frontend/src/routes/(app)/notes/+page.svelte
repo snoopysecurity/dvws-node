@@ -89,7 +89,8 @@
     noteName = note.name;
     noteType = note.type;
     noteBody = note.body;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('note-name')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('note-name')?.focus();
   }
   
   onMount(() => {
@@ -97,26 +98,27 @@
   });
 </script>
 
-<div class="space-y-6">
-  <div>
-    <h1 class="text-3xl font-bold text-gray-800">Notes Management</h1>
-    <p class="text-gray-600">Create, view, and manage your notes</p>
+<div class="mx-auto max-w-6xl space-y-6">
+  <div class="page-heading">
+    <div><p class="page-kicker">Workspace</p><h1 class="page-title mt-1">Notes</h1><p class="page-description mt-2">Capture and organize information for your workspace.</p></div>
+    <a href="/notes/import" class="focus-ring inline-flex rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800">Import notes</a>
   </div>
   
   <!-- Note Form -->
-  <Card class="p-6">
-    <h2 class="text-xl font-semibold mb-4">Create/Update Note</h2>
+  <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+  <Card class="p-6 xl:sticky xl:top-6">
+    <h2 class="section-title mb-1">Note editor</h2><p class="mb-5 text-sm text-slate-500">Select a note from the list to update it, or start a new one.</p>
     
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium mb-2">Note Name</label>
-        <Input bind:value={noteName} placeholder="Enter note name" />
+        <label for="note-name" class="block text-sm font-medium mb-2">Note Name</label>
+        <Input id="note-name" bind:value={noteName} placeholder="e.g. Cache response observation" />
 
       </div>
       
       <div>
-        <label class="block text-sm font-medium mb-2">Note Type</label>
-        <select bind:value={noteType} class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+        <label for="note-type" class="block text-sm font-medium mb-2">Note Type</label>
+        <select id="note-type" bind:value={noteType} class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
           {#each noteTypes as type}
             <option value={type}>{type}</option>
           {/each}
@@ -124,10 +126,11 @@
       </div>
       
       <div>
-        <label class="block text-sm font-medium mb-2">Note Body</label>
+        <label for="note-body" class="block text-sm font-medium mb-2">Note Body</label>
         <textarea 
+          id="note-body"
           bind:value={noteBody}
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
           rows="5"
           placeholder="Enter note content"
         ></textarea>
@@ -136,9 +139,6 @@
       <div class="flex gap-2">
         <Button onclick={createNote} disabled={isLoading}>Create</Button>
         <Button onclick={updateNote} disabled={isLoading} variant="secondary">Update</Button>
-        <Button variant="outline" onclick={() => window.location.href = '/notes/import'}>
-          Import XML
-        </Button>
       </div>
     </div>
     
@@ -151,14 +151,14 @@
   
   <!-- Notes List -->
   <Card class="p-6">
-    <h2 class="text-xl font-semibold mb-4">Your Notes ({notes.length})</h2>
+    <div class="mb-4 flex items-center justify-between"><div><h2 class="section-title">Your notes</h2><p class="mt-1 text-sm text-slate-500">Select a row to load it in the editor.</p></div><span class="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">{notes.length}</span></div>
     
     {#if notes.length === 0}
-      <p class="text-gray-500 text-center py-8">No notes yet. Create your first note above.</p>
+      <p class="py-8 text-center text-slate-500">No notes yet. Create your first note above.</p>
     {:else}
       <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
+        <table class="console-table">
+          <thead>
             <tr>
               <th class="px-4 py-2 text-left text-sm font-semibold">Name</th>
               <th class="px-4 py-2 text-left text-sm font-semibold">Type</th>
@@ -168,8 +168,8 @@
           </thead>
           <tbody>
             {#each notes as note}
-              <tr class="border-t hover:bg-gray-50">
-                <td class="px-4 py-3 text-sm">{note.name}</td>
+              <tr>
+                <td class="px-4 py-3 text-sm font-medium text-slate-800">{note.name}</td>
                 <td class="px-4 py-3 text-sm">
                   <span class="px-2 py-1 bg-primary-100 text-primary-700 rounded text-xs">
                     {note.type}
@@ -180,13 +180,13 @@
                   <div class="flex gap-2">
                     <button 
                       onclick={() => loadNote(note)}
-                      class="text-blue-600 hover:text-blue-800 text-sm"
+                    class="focus-ring rounded px-1 text-blue-600 hover:text-blue-800 text-sm"
                     >
                       Edit
                     </button>
                     <button 
                       onclick={() => deleteNote(note.name)}
-                      class="text-red-600 hover:text-red-800 text-sm"
+                    class="focus-ring rounded px-1 text-red-600 hover:text-red-800 text-sm"
                     >
                       Delete
                     </button>
@@ -198,5 +198,5 @@
         </table>
       </div>
     {/if}
-  </Card>
+  </Card></div>
 </div>

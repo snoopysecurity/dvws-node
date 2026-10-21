@@ -90,45 +90,45 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-3xl font-bold text-gray-800">Passphrase Generator</h1>
-    <p class="text-gray-600">Generate and manage secure passphrases</p>
+    <p class="page-kicker">Workspace</p><h1 class="page-title mt-1">Credentials</h1>
+    <p class="page-description mt-2">Generate, save, and export credential records.</p>
   </div>
   
   <!-- Generate & Save -->
   <Card class="p-6">
-    <h2 class="text-xl font-semibold mb-4">Generate Passphrase</h2>
+    <h2 class="section-title mb-4">Create credential</h2>
     
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium mb-2">Reminder (max 26 chars)</label>
-        <Input bind:value={reminder} placeholder="Enter reminder" maxlength="26" />
+        <label for="passphrase-reminder" class="block text-sm font-medium mb-2">Reminder (max 26 chars)</label>
+        <Input id="passphrase-reminder" bind:value={reminder} placeholder="Enter reminder" maxlength="26" />
       </div>
       
       <div>
-        <label class="block text-sm font-medium mb-2">Passphrase (max 35 chars)</label>
+        <label for="passphrase-value" class="block text-sm font-medium mb-2">Passphrase (max 35 chars)</label>
         <div class="flex gap-2">
-          <Input bind:value={passphrase} placeholder="Generated passphrase" maxlength="35" class="flex-1" />
+          <Input id="passphrase-value" bind:value={passphrase} placeholder="Generated passphrase" maxlength="35" class="flex-1" />
           <Button onclick={generatePassphrase}>Generate</Button>
         </div>
 
       </div>
       
       <Button onclick={savePassphrase} disabled={isLoading}>
-        Save Passphrase
+        Save credential
       </Button>
     </div>
   </Card>
   
   <!-- Saved Passphrases -->
   <Card class="p-6">
-    <h2 class="text-xl font-semibold mb-4">Saved Passphrases ({passphrases.length})</h2>
+    <h2 class="section-title mb-4">Saved credentials ({passphrases.length})</h2>
     
     {#if passphrases.length === 0}
-      <p class="text-gray-500 text-center py-8">No passphrases saved yet</p>
+      <p class="py-8 text-center text-slate-500">No credentials saved yet</p>
     {:else}
       <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
+        <table class="console-table">
+          <thead>
             <tr>
               <th class="px-4 py-2 text-left text-sm font-semibold">Reminder</th>
               <th class="px-4 py-2 text-left text-sm font-semibold">Passphrase</th>
@@ -136,7 +136,7 @@
           </thead>
           <tbody>
             {#each passphrases as item}
-              <tr class="border-t">
+              <tr>
                 <td class="px-4 py-3 text-sm">{item.reminder}</td>
                 <td class="px-4 py-3 text-sm font-mono">{item.passphrase}</td>
               </tr>
@@ -149,20 +149,20 @@
   
   <!-- Export to PDF -->
   <Card class="p-6">
-    <h2 class="text-xl font-semibold mb-4">Export to PDF</h2>
+    <h2 class="section-title mb-4">Export credentials</h2>
     
     <div class="space-y-4">
-      <p class="text-sm text-gray-600">Verify your credentials to export passphrases to PDF</p>
+      <p class="text-sm text-slate-400">Verify your account credentials to export records to PDF.</p>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium mb-2">Username</label>
-          <Input bind:value={verifyUsername} placeholder="Your username" />
+          <label for="verify-username" class="block text-sm font-medium mb-2">Username</label>
+          <Input id="verify-username" bind:value={verifyUsername} placeholder="Your username" />
         </div>
         
         <div>
-          <label class="block text-sm font-medium mb-2">Password</label>
-          <Input type="password" bind:value={verifyPassword} placeholder="Your password" />
+          <label for="verify-password" class="block text-sm font-medium mb-2">Password</label>
+          <Input id="verify-password" type="password" bind:value={verifyPassword} placeholder="Your password" />
         </div>
       </div>
       
@@ -174,7 +174,7 @@
       
       {#if pdfUrl}
         <div class="mt-4">
-          <iframe src={pdfUrl} class="w-full h-96 border rounded"></iframe>
+          <iframe src={pdfUrl} title="Generated passphrase PDF preview" class="w-full h-96 border rounded"></iframe>
           <a href={pdfUrl} download="passphrases.pdf" class="text-blue-600 hover:underline text-sm mt-2 inline-block">
             Download PDF
           </a>

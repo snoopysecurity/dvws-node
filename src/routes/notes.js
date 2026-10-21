@@ -16,6 +16,19 @@ module.exports = (router) => {
   router.route('/v2/release/:release')
     .get(controller.get_release);
 
+  // Deliberately unsafe template rendering exercise (see CHALLENGES.md).
+  router.route('/v2/greeter')
+    .get((req, res) => {
+      const name = req.query.name || 'world';
+      try {
+        // Compiling user input as a template allows expressions to execute.
+        const render = new Function(`return \`Hello ${name}\`;`);
+        res.type('text/plain').send(render());
+      } catch (err) {
+        res.status(400).send({ error: 'Template rendering failed', detail: err.message });
+      }
+    });
+
   router.route('/v2/sysinfo/:command')
     .get(validateToken, controller.get_sysinfo);
 

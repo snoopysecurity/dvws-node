@@ -71,55 +71,57 @@
   }
 </script>
 
-<div class="flex min-h-screen">
+<div class="grid min-h-screen bg-slate-50 lg:grid-cols-[minmax(22rem,0.9fr)_1.1fr]">
   <!-- Sidebar -->
-  <div class="w-1/3 bg-slate-900 text-white p-12 flex flex-col justify-center">
-    <h1 class="text-4xl font-bold mb-4">Damn Vulnerable Web Services</h1>
-    <p class="text-lg text-slate-300">Login or register for access</p>
-    <p class="text-sm text-slate-400 mt-4">⚠️ This is an intentionally vulnerable application for security training</p>
+  <div class="relative overflow-hidden border-b border-slate-800 bg-[#0c1019] p-8 text-white sm:p-12 lg:flex lg:flex-col lg:justify-center lg:border-b-0 lg:border-r">
+    <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-600/30 blur-3xl"></div>
+    <div class="relative max-w-md"><p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-300">Developer operations</p><h1 class="mt-4 text-4xl font-bold tracking-tight">DVWS Cloud</h1>
+    <p class="mt-4 text-lg text-slate-300">A compact workspace for account controls, artifacts, notes, and operational administration.</p>
+    <div class="mt-8 rounded-xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300"><p class="font-semibold text-indigo-200">Console access</p><p class="mt-1">Sign in to manage your workspace and account preferences.</p></div></div>
   </div>
   
   <!-- Main Content -->
-  <div class="flex-1 flex items-center justify-center p-8 bg-gray-50">
-    <Card class="w-full max-w-md p-8">
-      <h2 class="text-2xl font-bold mb-6 text-gray-800">
-        {isRegisterMode ? 'Register' : 'Login'}
+  <div class="flex items-center justify-center bg-slate-50 p-5 sm:p-8">
+    <Card class="w-full max-w-md p-6 shadow-lg sm:p-8">
+      <h2 class="mb-2 text-2xl font-bold text-slate-900">
+        {isRegisterMode ? 'Create account' : 'Sign in'}
       </h2>
+      <p class="mb-6 text-sm text-slate-600">Use your DVWS Cloud account to continue.</p>
       
       <form onsubmit={handleSubmit} class="space-y-4">
         <div>
-          <label class="block text-sm font-medium mb-2 text-gray-700">Username</label>
-          <Input bind:value={username} placeholder="Enter username" required />
+          <label for="username" class="mb-2 block text-sm font-medium text-slate-700">Username</label>
+          <Input id="username" bind:value={username} placeholder="Enter username" autocomplete="username" required />
         </div>
         
         <div>
-          <label class="block text-sm font-medium mb-2 text-gray-700">Password</label>
-          <Input type="text" bind:value={password} placeholder="Enter password" required />
+          <label for="password" class="mb-2 block text-sm font-medium text-slate-700">Password</label>
+          <Input id="password" type="password" bind:value={password} placeholder="Enter password" autocomplete={isRegisterMode ? 'new-password' : 'current-password'} required />
         </div>
         
         <div class="flex gap-2 pt-2">
           <Button type="submit" variant="primary" class="flex-1" disabled={isLoading}>
-            {isLoading ? 'Loading...' : (isRegisterMode ? 'Register' : 'Login')}
+            {isLoading ? 'Loading...' : (isRegisterMode ? 'Create account' : 'Sign in')}
           </Button>
           <Button 
             type="button"
             onclick={() => { isRegisterMode = !isRegisterMode; errorMessage = ''; successMessage = ''; }} 
             variant="outline"
           >
-            {isRegisterMode ? 'Back to Login' : 'Register'}
+            {isRegisterMode ? 'Back to sign in' : 'Create account'}
           </Button>
         </div>
       </form>
       
       {#if errorMessage}
-        <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded">
-          {@html errorMessage}
+        <div class="error-message mt-4">
+          <span role="alert">{@html errorMessage}</span>
         </div>
       {/if}
       
       {#if successMessage}
-        <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-          {@html successMessage}
+        <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <span role="status">{@html successMessage}</span>
         </div>
       {/if}
     </Card>

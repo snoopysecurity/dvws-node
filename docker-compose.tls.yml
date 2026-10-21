@@ -1,0 +1,11 @@
+version: '3'
+services:
+    web:
+        ports:
+        - "0.0.0.0:8443:8443"
+        environment:
+            HTTPS_PORT: 8443
+            TLS_CERT_PATH: /certs/dev-cert.pem
+            TLS_KEY_PATH: /certs/dev-key.pem
+        volumes:
+        - ./certs:/certs:ro

@@ -1,0 +1,6 @@
+{
+  "classification": "internal training data",
+  "report": "Customer support escalation summary",
+  "accountsFlaggedForReview": ["support-review", "recovery-victim"],
+  "note": "Synthetic challenge fixture; no real customer data."
+}

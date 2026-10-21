@@ -32,6 +32,18 @@ const userSchema = new Schema({
     type: 'String',
     required: false,
     default: "No bio yet."
+  },
+  email: {
+    type: 'String',
+    required: false
+  },
+  homeAddress: {
+    type: 'String',
+    required: false
+  },
+  weeklyDigest: {
+    type: Boolean,
+    default: false
   }
 });
 

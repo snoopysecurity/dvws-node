@@ -7,7 +7,7 @@
 </script>
 
 <div 
-  class="bg-white rounded-lg shadow-sm border border-gray-200 {className}"
+  class="rounded-xl border border-slate-200 bg-white shadow-sm {className}"
   {...props}
 >
   {@render children?.()}

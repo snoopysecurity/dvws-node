@@ -26,7 +26,7 @@
     userStatus = null;
     
     try {
-      // Client-side XML escaping (but backend may still be vulnerable)
+      // Preserve the request format expected by the directory service.
       const safeName = escapeXml(username);
       
       const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
@@ -70,15 +70,15 @@
 
 <div class="max-w-2xl">
   <div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-800">User Status Check (SOAP)</h1>
-    <p class="text-gray-600">Check user status using legacy SOAP service</p>
+    <p class="page-kicker">Administration</p><h1 class="page-title mt-1">User directory</h1>
+    <p class="page-description mt-2">Look up an account using the directory service.</p>
   </div>
   
   <Card class="p-6">
     <form onsubmit={(e) => { e.preventDefault(); checkUserStatus(); }} class="space-y-4">
       <div>
-        <label class="block text-sm font-medium mb-2">Username</label>
-        <Input bind:value={username} placeholder="Enter username to check" required />
+        <label for="status-username" class="block text-sm font-medium mb-2">Username</label>
+        <Input id="status-username" bind:value={username} placeholder="Enter username to check" required />
 
       </div>
       
@@ -96,11 +96,11 @@
       <div class="mt-6">
         <h3 class="font-semibold mb-3">User Status Result:</h3>
         {#if userStatus.error}
-          <div class="p-3 bg-red-50 border border-red-200 rounded">
+          <div class="error-message">
             {userStatus.error}
           </div>
         {:else}
-          <div class="space-y-2 bg-gray-50 p-4 rounded">
+          <div class="space-y-2 rounded bg-slate-800/60 p-4 text-slate-200">
             <p><strong>Username:</strong> {@html userStatus.username}</p>
             <p><strong>Role:</strong> {@html userStatus.role}</p>
             <p><strong>Status:</strong> {@html userStatus.status}</p>

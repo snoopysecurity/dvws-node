@@ -1,7 +1,7 @@
 var express = require('express');
 var Builder = require('xml2js').Builder;
 var fs = require("fs");
-const libxml = require('libxmljs2');
+const { parseVulnerableXml } = require('../../utils/vulnerable-xml');
 var bodyParser = require('body-parser');
 var router = express.Router();
 
@@ -23,21 +23,8 @@ router.use(function timeLogStart(req, res, next) {
 router.get('/', function (req, res, next) {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
 
-    if (req.query.wsdl === "") {
-        res.setHeader('Content-Type', 'application/xml');
-        res.statusCode = 200;
-
-        fs.readFile(servicewsdl, "utf8", function (err, data) {
-            if (err) {
-                res.setHeader('Content-Type', 'application/xml');
-                res.statusCode = 200;
-                res.send(err.path);
-            } else {
-                res.setHeader('Content-Type', 'application/xml');
-                res.statusCode = 200;
-                res.send(err.path);
-            }
-        });
+    if (Object.prototype.hasOwnProperty.call(req.query, 'wsdl')) {
+        res.type('application/xml').status(200).send(servicewsdl);
     } else {
         res.send("Invalid GET request");
     }
@@ -45,18 +32,14 @@ router.get('/', function (req, res, next) {
 });
 
 router.post('/', async function (req, res, next) {
-    var options = {
-        noent: true,
-        dtdload: true
-    }
     try {
-        var xmlDoc = libxml.parseXml(req.body, options);
-        var xmlchild = xmlDoc.get('//username');
+        var xmlDoc = parseVulnerableXml(req.body);
+        var xmlchild = xmlDoc.getElementsByTagName('username')[0];
         if (!xmlchild) {
              res.statusCode = 400;
              return res.send("Username missing");
         }
-        var username = xmlchild.text()
+        var username = xmlchild.textContent
         
         // Ensure connection is open (it should be from app start)
         if (mongoose.connection.readyState === 0) {

@@ -23,6 +23,39 @@ module.exports = (router) => {
   router.route('/v2/users/profile')
     .get(controller.getProfile);
 
+  router.route('/v2/users/:id/profile-details')
+    .get(validateToken, controller.getUserProfileDetails);
+
+  router.route('/v2/account-recovery/lookup')
+    .post(validateToken, controller.lookupRecoveryAccount);
+
+  router.route('/v2/account-recovery/reset')
+    .post(validateToken, controller.resetAccountPassword);
+
+  router.route('/v2/users/change-password')
+    .post(validateToken, controller.changePasswordWithoutSessionRevocation);
+
+  router.route('/v2/notifications')
+    .get(validateToken, controller.getNotifications);
+
+  router.route('/v2/notifications/:id/read')
+    .put(validateToken, controller.markNotificationRead);
+
+  router.route('/v2/session-lab/secondary-token')
+    .post(validateToken, controller.issueSessionLabToken);
+
+  router.route('/v2/cookie-lab/session')
+    .post(validateToken, controller.issueCookieLabSession);
+
+  router.route('/v2/cookie-lab/action')
+    .post(controller.performCookieLabAction);
+
+  router.route('/v2/jsonp-lab/session')
+    .post(validateToken, controller.issueJsonpLabSession);
+
+  router.route('/v2/jsonp-lab/profile')
+    .get(controller.readJsonpLabProfile);
+
   router.route('/v2/admin/logs')
     .get(validateToken, controller.getLoginLogs);
 
@@ -31,6 +64,11 @@ module.exports = (router) => {
 
   router.route('/v2/login')
     .post(loginLimiter, controller.login);
+
+  router.post('/v1/login', loginLimiter, (req, res) => {
+    // #swagger.ignore = true
+    return controller.loginLegacy(req, res);
+  });
 
   router.route('/v2/users/profile/export/xml')
     .post(controller.exportProfileXml)

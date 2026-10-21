@@ -44,8 +44,8 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-3xl font-bold text-gray-800">Search Public Notes</h1>
-    <p class="text-gray-600">Search for notes shared by other users</p>
+    <p class="page-kicker">Workspace</p><h1 class="page-title mt-1">Shared Notes</h1>
+    <p class="page-description mt-2">Find notes shared across the workspace.</p>
   </div>
   
   <!-- Search Form -->
@@ -55,14 +55,14 @@
         <Input 
           bind:value={searchQuery}
           placeholder="Enter note name to search"
-          onkeydown={(e) => e.key === 'Enter' && searchNotes()}
+          onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && searchNotes()}
         />
       </div>
       <Button onclick={searchNotes} disabled={isLoading}>
         Search
       </Button>
       <Button onclick={getAllNotes} variant="secondary" disabled={isLoading}>
-        Show All
+        Browse all
       </Button>
     </div>
   </Card>
@@ -73,8 +73,8 @@
       <h2 class="text-xl font-semibold mb-4">Search Results ({searchResults.length})</h2>
       
       <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
+        <table class="console-table">
+          <thead>
             <tr>
               <th class="px-4 py-2 text-left text-sm font-semibold">Name</th>
               <th class="px-4 py-2 text-left text-sm font-semibold">Type</th>
@@ -83,7 +83,7 @@
           </thead>
           <tbody>
             {#each searchResults as note}
-              <tr class="border-t hover:bg-gray-50">
+              <tr>
                 <td class="px-4 py-3 text-sm">{note.name}</td>
                 <td class="px-4 py-3 text-sm">
                   <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
@@ -107,8 +107,8 @@
       <h2 class="text-xl font-semibold mb-4">All Public Notes ({allResults.length})</h2>
       
       <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-gray-50">
+        <table class="console-table">
+          <thead>
             <tr>
               <th class="px-4 py-2 text-left text-sm font-semibold">Name</th>
               <th class="px-4 py-2 text-left text-sm font-semibold">Type</th>
@@ -117,7 +117,7 @@
           </thead>
           <tbody>
             {#each allResults as note}
-              <tr class="border-t hover:bg-gray-50">
+              <tr>
                 <td class="px-4 py-3 text-sm">{note.name}</td>
                 <td class="px-4 py-3 text-sm">
                   <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
@@ -138,7 +138,7 @@
   {#if searchResults.length === 0 && allResults.length === 0 && !isLoading}
     <Card class="p-12 text-center">
       <div class="text-4xl mb-4">🔍</div>
-      <p class="text-gray-500">Search for notes or click "Show All" to view all public notes</p>
+      <p class="text-slate-500">Search notes or browse all shared notes.</p>
     </Card>
   {/if}
 </div>

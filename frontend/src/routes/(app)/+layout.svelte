@@ -35,7 +35,7 @@
     {@render children()}
   </AppShell>
 {:else}
-  <div class="flex items-center justify-center min-h-screen">
-    <p class="text-gray-500">Loading...</p>
+  <div class="flex min-h-screen items-center justify-center bg-slate-50">
+    <p class="text-slate-600">Loading workspace…</p>
   </div>
 {/if}

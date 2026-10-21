@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const xml2js = require('xml2js');
+const crypto = require('crypto');
+const notifications = require('../services/notifications');
+const { broadcast } = require('../services/websocket-notifications');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 const User = require('../models/user');
@@ -15,6 +18,19 @@ const options = {
 
 // In-memory log store for login attempts (Vulnerable to Log Pollution)
 const loginLogs = [];
+const cookieLabSessions = new Map();
+const cookieLabState = new Map();
+// Deliberately vulnerable: this simulates a shared HTTP cache for the ordinary
+// profile endpoint. Entries are keyed only by URL, never by the authenticated
+// user, so a later caller can receive another user's profile response.
+const profileResponseCache = new Map();
+const PROFILE_CACHE_TTL_MS = 60 * 1000;
+
+function readCookie(req, name) {
+  const cookies = (req.headers.cookie || '').split(';');
+  const entry = cookies.find((cookie) => cookie.trim().startsWith(`${name}=`));
+  return entry ? decodeURIComponent(entry.trim().slice(name.length + 1)) : null;
+}
 
 function set_cors(req,res) {
   if (req.get('origin')) {
@@ -26,6 +42,20 @@ function set_cors(req,res) {
   }
   return res;
 };
+
+function authCookieOptions(req) {
+  const httpsRequest = req.secure || req.protocol === 'https' || Boolean(req.socket && req.socket.encrypted);
+  return {
+    httpOnly: true,
+    secure: httpsRequest,
+    sameSite: httpsRequest ? 'none' : 'lax',
+    path: '/'
+  };
+}
+
+function setAuthCookie(req, res, token) {
+  res.cookie('auth_token', token, authCookieOptions(req));
+}
 
 
 
@@ -156,9 +186,10 @@ module.exports = {
                 result.status = status;
                 result.error = `Authentication error`;
               }
-              res.setHeader('Authorization', 'Bearer '+ result.token); 
-              // Set cookie for CSRF demonstration
-              res.setHeader('Set-Cookie', `auth_token=${result.token}; Path=/; HttpOnly`);
+              if (status === 200) {
+                res.setHeader('Authorization', 'Bearer ' + result.token);
+                setAuthCookie(req, res, result.token);
+              }
               res.status(status).send(result);
             } catch (err) {
               status = 500;
@@ -178,6 +209,38 @@ module.exports = {
           result.error = err;
           res.status(status).send(result);
       }
+  },
+
+  // Legacy authentication challenge: account existence alone is treated as proof.
+  loginLegacy: async (req, res) => {
+    const { username } = req.body;
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    if (typeof username !== 'string' || username.length === 0) {
+      return res.status(400).send({ status: 400, error: 'username is required' });
+    }
+    try {
+      const user = await User.findOne({ username });
+      if (!user) {
+        return res.status(404).send({ status: 404, error: 'Login Failed! User ' + username + ' not found!' });
+      }
+
+      const permissions = ['user:read', 'user:write'];
+      if (user.admin === true) permissions.push('user:admin');
+      const token = jwt.sign(
+        { user: user.username, permissions },
+        process.env.JWT_SECRET,
+        { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: 'HS256' }
+      );
+      res.setHeader('Authorization', 'Bearer ' + token);
+      setAuthCookie(req, res, token);
+      return res.status(200).send({
+        token,
+        status: 200,
+        result: { username: user.username, admin: user.admin === true }
+      });
+    } catch (err) {
+      return res.status(500).send({ status: 500, error: err });
+    }
   },
 
   getAll: async (req, res) => {
@@ -275,18 +338,226 @@ module.exports = {
       try {
           const token = req.headers.authorization.split(' ')[1]; 
           const decoded = jwt.verify(token, process.env.JWT_SECRET, options);
+
+          const cacheKey = req.originalUrl;
+          const cached = profileResponseCache.get(cacheKey);
+          if (cached && cached.expiresAt > Date.now()) {
+              res.set('Cache-Control', 'public, max-age=60, s-maxage=60');
+              res.set('Age', String(Math.floor((Date.now() - cached.createdAt) / 1000)));
+              return res.send(cached.body);
+          }
+          if (cached) profileResponseCache.delete(cacheKey);
           
           const user = await User.findOne({ username: decoded.user });
           if (!user) return res.status(404).send("User not found");
           
-          res.send({
+          const body = {
               username: user.username,
               bio: user.bio,
-              admin: user.admin
-          });
+              admin: user.admin,
+              email: user.email,
+              weeklyDigest: user.weeklyDigest,
+              homeAddress: user.homeAddress
+          };
+          const now = Date.now();
+          profileResponseCache.set(cacheKey, { body, createdAt: now, expiresAt: now + PROFILE_CACHE_TTL_MS });
+          res.set('Cache-Control', 'public, max-age=60, s-maxage=60');
+          res.send(body);
       } catch (err) {
           res.status(500).send(err.message);
       }
+  },
+
+  getUserProfileDetails: async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
+      if (!user) return res.status(404).send({ error: "User not found" });
+
+      const profile = {
+        username: user.username,
+        bio: user.bio
+      };
+
+      // Intentional vulnerability: checks the target account's role rather than
+      // the caller's role, so any signed-in user can read an admin's private fields.
+      if (user.admin) {
+        profile.email = user.email;
+        profile.homeAddress = user.homeAddress;
+      }
+
+      res.send(profile);
+    } catch (err) {
+      res.status(500).send({ error: err.message });
+    }
+  },
+
+  // Intentional challenge vulnerability: this returns another user's object
+  // ID when an authenticated caller knows their email address.
+  lookupRecoveryAccount: async (req, res) => {
+    try {
+      const user = await User.findOne({ email: req.body.email });
+      if (!user) return res.status(404).send({ error: "Account not found" });
+
+      res.send({ userId: user._id, username: user.username });
+    } catch (err) {
+      res.status(500).send({ error: err.message });
+    }
+  },
+
+  // Intentional challenge vulnerability: there is no ownership or recovery
+  // proof check. The user ID alone is enough to replace an account password.
+  resetAccountPassword: async (req, res) => {
+    try {
+      const { userId, newPassword } = req.body;
+      if (!userId || !newPassword) {
+        return res.status(400).send({ error: "userId and newPassword are required" });
+      }
+
+      const user = await User.findById(userId);
+      if (!user) return res.status(404).send({ error: "Account not found" });
+
+      user.password = await bcrypt.hash(newPassword, 10);
+      await user.save();
+      res.send({ success: true, username: user.username });
+    } catch (err) {
+      res.status(500).send({ error: err.message });
+    }
+  },
+
+  changePasswordWithoutSessionRevocation: async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).send({ error: "currentPassword and newPassword are required" });
+      }
+
+      const user = await User.findOne({ username: req.decoded.user });
+      if (!user) return res.status(404).send({ error: "User not found" });
+
+      const matches = await bcrypt.compare(currentPassword, user.password);
+      if (!matches) return res.status(401).send({ error: "Current password is incorrect" });
+
+      user.password = await bcrypt.hash(newPassword, 10);
+      await user.save();
+      res.send({ success: true, username: user.username });
+    } catch (err) {
+      res.status(500).send({ error: err.message });
+    }
+  },
+
+  issueSessionLabToken: (req, res) => {
+    const token = jwt.sign(
+      { user: req.decoded.user, permissions: req.decoded.permissions || ["user:read", "user:write"] },
+      process.env.JWT_SECRET,
+      { expiresIn: '2d', issuer: options.issuer, algorithm: 'HS256' }
+    );
+    res.set('Cache-Control', 'no-store');
+    res.send({ token });
+  },
+
+  issueCookieLabSession: (req, res) => {
+    const profiles = {
+      readable: { httpOnly: false, secure: false, sameSite: 'lax' },
+      crossSite: { httpOnly: true, secure: true, sameSite: 'none' },
+      hardened: { httpOnly: true, secure: true, sameSite: 'strict' }
+    };
+    const profile = profiles[req.body.profile];
+    if (!profile) {
+      return res.status(400).send({ error: "profile must be readable, crossSite, or hardened" });
+    }
+
+    const sessionId = crypto.randomUUID();
+    cookieLabSessions.set(sessionId, {
+      username: req.decoded.user,
+      expiresAt: Date.now() + 15 * 60 * 1000
+    });
+    if (!cookieLabState.has(req.decoded.user)) {
+      cookieLabState.set(req.decoded.user, { notificationsEnabled: true });
+    }
+
+    res.cookie('cookie_lab', sessionId, { ...profile, path: '/', maxAge: 15 * 60 * 1000 });
+    res.send({ success: true, profile: req.body.profile, expiresInSeconds: 900 });
+  },
+
+  getNotifications: async (req, res) => {
+    try {
+      res.set('Cache-Control', 'no-store');
+      res.json({ notifications: await notifications.listForUser(req.decoded.user) });
+    } catch (err) {
+      res.status(500).send({ error: err.message });
+    }
+  },
+
+  markNotificationRead: async (req, res) => {
+    const notification = await notifications.markRead(req.decoded.user, req.params.id);
+    if (!notification) return res.status(404).send({ error: 'Notification not found' });
+    broadcast(req.decoded.user, { type: 'notification-updated', notification });
+    res.set('Cache-Control', 'no-store');
+    return res.json({ notification });
+  },
+
+  performCookieLabAction: (req, res) => {
+    const sessionId = readCookie(req, 'cookie_lab');
+    const session = sessionId && cookieLabSessions.get(sessionId);
+    if (!session || session.expiresAt < Date.now()) {
+      if (sessionId) cookieLabSessions.delete(sessionId);
+      return res.status(401).send({ error: "Cookie lab session missing or expired" });
+    }
+
+    const state = cookieLabState.get(session.username) || { notificationsEnabled: true };
+    state.notificationsEnabled = false;
+    cookieLabState.set(session.username, state);
+    res.send({ success: true, username: session.username, ...state });
+  },
+
+  issueJsonpLabSession: (req, res) => {
+    const token = jwt.sign(
+      { user: req.decoded.user, purpose: 'jsonp-lab' },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m', issuer: options.issuer, algorithm: 'HS256' }
+    );
+    res.cookie('jsonp_lab_session', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 15 * 60 * 1000
+    });
+    res.send({ success: true, expiresInSeconds: 900 });
+  },
+
+  readJsonpLabProfile: async (req, res) => {
+    const callback = req.query.callback;
+    if (typeof callback !== 'string' || !/^[A-Za-z_$][A-Za-z0-9_$]{0,63}$/.test(callback)) {
+      return res.status(400).send({ error: "callback must be a JavaScript function name" });
+    }
+
+    const token = readCookie(req, 'jsonp_lab_session');
+    if (!token) return res.status(401).send({ error: "JSONP lab session required" });
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+        issuer: options.issuer,
+        algorithms: ['HS256']
+      });
+      if (decoded.purpose !== 'jsonp-lab') {
+        return res.status(401).send({ error: "Invalid JSONP lab session" });
+      }
+
+      const user = await User.findOne({ username: decoded.user });
+      if (!user) return res.status(404).send({ error: "User not found" });
+
+      const profile = {
+        username: user.username,
+        email: user.email,
+        homeAddress: user.homeAddress
+      };
+      const json = JSON.stringify({ profile }).replace(/</g, '\\u003c');
+      res.set('Cache-Control', 'no-store');
+      res.type('application/javascript').send(`${callback}(${json});`);
+    } catch (err) {
+      res.status(401).send({ error: "Invalid or expired JSONP lab session" });
+    }
   },
 
   adminCreateUser: async (req, res) => {
@@ -378,5 +649,9 @@ module.exports = {
         filter: filter, // Reflect filter for educational/debugging
         results: results 
     });
-  }
+  },
+
+  // Exported for direct cookie-policy coverage without requiring a local TLS
+  // certificate in the HTTP API test process.
+  authCookieOptions
 };

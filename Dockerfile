@@ -24,7 +24,7 @@ COPY . .
 RUN cd frontend && npm install && npm run build
 
 # Expose ports
-EXPOSE 80
+EXPOSE 80 8443
 
 # Start command
 CMD node scripts/seed-database.js && npm start

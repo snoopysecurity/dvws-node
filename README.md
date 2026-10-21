@@ -5,11 +5,24 @@
 
 
 # dvws-node
-Damn Vulnerable Web Services is a vulnerable application with a web service and an API that can be used to learn about webservices/API related vulnerabilities.  This is a replacement for https://github.com/snoopysecurity/dvws
+DVWS-Node is an intentionally insecure web application for learning how to find security flaws. It includes a browser interface and several ways for software and security tools to communicate with its server: REST, GraphQL, SOAP, and XML-RPC. The exercises cover common flaws in these interfaces and the application behind them. This project replaces [DVWS](https://github.com/snoopysecurity/dvws).
 
 ![DVWS](https://github.com/snoopysecurity/Public/blob/master/archived-docs/dvws/dvws.png)
 
-This vulnerable application contains the following API/Web Service vulnerabilities:
+## What do API and web service mean?
+
+An **API** is a way for one program to ask another program for data or an action. A **web service** provides those functions over a network. The terms often overlap. This project offers several formats for sending those requests:
+
+| Interface | In simple terms | Example path |
+|---|---|---|
+| REST | Requests to URLs, commonly using JSON | `/api/v2/users` |
+| GraphQL | A request that names the data it wants | `/graphql` |
+| SOAP | A formal XML-based request format | `/dvwsuserservice` |
+| XML-RPC | XML requests that call named methods | `/xmlrpc` |
+
+The browser interface is for people; these interfaces let the browser or other programs communicate with the server. See [CHALLENGES.md](CHALLENGES.md) for exercises and example requests.
+
+## Security issues covered
 
 * Insecure Direct Object Reference
 * Horizontal Access Control Issues
@@ -21,7 +34,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * JSON Web Token (JWT) Secret Key Brute Force
 * Information Disclosure
 * Hidden API Functionality Exposure
-* Cross-Origin Resource Sharing Misonfiguration
+* Cross-Origin Resource Sharing Misconfiguration
 * JSON Hijacking
 * SQL Injection
 * XML External Entity Injection (XXE)
@@ -32,6 +45,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * Path Traversal
 * Unsafe Deserialization 
 * Sensitive Data Exposure
+* Role-Based Profile Data Exposure
 * GraphQL Access Control Issues
 * GraphQL Introspection Enabled
 * GraphQL Arbitrary File Write
@@ -44,6 +58,7 @@ This vulnerable application contains the following API/Web Service vulnerabiliti
 * Cross-Site Request Forgery (CSRF)
 * Rate Limit Bypass
 * Client Side Template Injection
+* Cross-Site WebSocket Hijacking
 
 ## Set Up Instructions
 
@@ -80,11 +95,10 @@ Change directory to DVWS
 cd dvws-node
 ```
 
-npm install all dependencies  (build from source is needed for `libxmljs2`, you might also need to install libxml depending on your OS: `sudo apt-get install -y libxml2 libxml2-dev`)
-
+Use Node.js 22 (the version used by the Docker image), then install the dependencies:
 
 ```
-npm install --build-from-source
+npm install
 ```
 
 
@@ -132,7 +146,9 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 
 
 ## Solutions
-* [DVWS Solutions]([https://github.com/snoopysecurity/dvws-node/wiki](https://github.com/snoopysecurity/dvws-node/blob/master/CHALLENGES.md))
+* [DVWS-Node challenge guide](CHALLENGES.md)
+
+The guide includes Profile's password-and-sessions, notification inbox and preferences, browser-session-preferences, and cross-origin-data-sharing exercises. The notification WebSocket uses the normal login cookie: the HTTPS TLS setup is required for the cross-origin WebSocket demonstration, while the default HTTP server remains suitable for ordinary same-origin development.
 
 
 
@@ -140,7 +156,7 @@ If the DVWS web service doesn't start because of delayed MongoDB or MySQL setup,
 
 * Web Socket Security
 * Type Confusion
-* LDAP Injection
+* Real LDAP integration
 * GRAPHQL Denial Of Service
 * GraphQL Injection
 * Webhook security

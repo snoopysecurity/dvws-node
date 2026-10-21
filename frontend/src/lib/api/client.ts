@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { browser } from '$app/environment';
 
-const API_BASE = import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:80';
+const API_BASE = import.meta.env.PUBLIC_API_BASE_URL || (browser ? window.location.origin : 'http://localhost:80');
 
 export const apiClient = axios.create({
   baseURL: API_BASE,

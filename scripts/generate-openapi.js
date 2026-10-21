@@ -11,9 +11,14 @@ const doc = {
       url: 'http://dvws.local/api'
     }
   ],
+  components: {
+    securitySchemes: {
+      bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }
+    }
+  },
 };
 
 const outputFile = './docs/openapi/openapi.json';
-const endpointsFiles = ['./src/routes/users.js', './src/routes/notes.js', './src/routes/passphrase.js', './src/routes/files.js'];
+const endpointsFiles = ['./src/routes/users.js', './src/routes/notes.js', './src/routes/passphrase.js', './src/routes/files.js', './src/routes/integrations.js'];
 
 module.exports = () => swaggerAutogen(outputFile, endpointsFiles, doc);

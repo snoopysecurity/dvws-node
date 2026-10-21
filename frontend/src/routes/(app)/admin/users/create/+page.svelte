@@ -35,20 +35,20 @@
 
 <div class="max-w-2xl">
   <div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-800">Create User</h1>
-    <p class="text-gray-600">Add a new user to the system</p>
+    <p class="page-kicker">Administration</p><h1 class="page-title mt-1">Create user</h1>
+    <p class="page-description mt-2">Add a workspace account and access level.</p>
   </div>
   
   <Card class="p-6">
     <form onsubmit={(e) => { e.preventDefault(); handleCreateUser(); }} class="space-y-4">
       <div>
-        <label class="block text-sm font-medium mb-2">Username</label>
-        <Input bind:value={username} placeholder="Enter username" required />
+        <label for="new-username" class="block text-sm font-medium mb-2">Username</label>
+        <Input id="new-username" bind:value={username} placeholder="Enter username" required />
       </div>
       
       <div>
-        <label class="block text-sm font-medium mb-2">Password</label>
-        <Input type="password" bind:value={password} placeholder="Enter password" required />
+        <label for="new-password" class="block text-sm font-medium mb-2">Password</label>
+        <Input id="new-password" type="password" bind:value={password} placeholder="Enter password" required />
       </div>
       
       <div class="flex items-center gap-2">
@@ -67,7 +67,7 @@
     </form>
     
     {#if responseMessage}
-      <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+      <div class="mt-4 rounded border border-indigo-500/30 bg-indigo-500/10 p-3 text-indigo-100">
         {@html responseMessage}
       </div>
     {/if}

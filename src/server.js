@@ -7,12 +7,16 @@ const swaggerUI = require('swagger-ui-express');
 const swaggerGen = require('../scripts/generate-openapi');
 const fileUpload = require('express-fileupload');
 const path = require('path');
+const fs = require('fs');
+const https = require('https');
+const { attachNotificationWebSocket } = require('./services/websocket-notifications');
 
 const soapservice = require('./services/soap/user-service'); //SOAP Service
 const rpcserver = require('./services/xml-rpc/server'); //XMLRPC Service
 
 const { ApolloServer } = require('apollo-server-express');
 const { GqSchema } = require('./graphql/schema');
+const User = require('./models/user');
 
 
 const app = express();
@@ -51,11 +55,27 @@ app.use(bodyParser.json());
 app.use(fileUpload({ parseNested: true }));
 app.use('/api', routes(router));
 
+// Intentionally undisclosed TRACE diagnostics endpoint for the route discovery
+// challenge. It returns synthetic account metadata, never process secrets.
+app.trace('/internal/diagnostics', async (req, res) => {
+  try {
+    const users = await User.find({}, 'username email admin').lean();
+    res.json({
+      service: 'DVWS customer accounts',
+      build: '2026.09-training',
+      databaseState: require('mongoose').connection.readyState,
+      accounts: users
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Diagnostics unavailable' });
+  }
+});
+
 // SPA fallback: serve index.html for any route that doesn't match
 // an API endpoint or static file, so client-side routing works on refresh
 app.get('*', (req, res, next) => {
   // Skip API routes, swagger, SOAP, RPC, and GraphQL paths
-  if (req.path.startsWith('/api') || req.path.startsWith('/dvwsuserservice') || req.path.startsWith('/api-docs') || req.path.startsWith('/xmlrpc') || req.path.startsWith('/graphql')) {
+  if (req.path.startsWith('/api') || req.path === '/openAPI-spec.json' || req.path.startsWith('/dvwsuserservice') || req.path.startsWith('/api-docs') || req.path.startsWith('/xmlrpc') || req.path.startsWith('/graphql')) {
     return next();
   }
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
@@ -105,6 +125,19 @@ swaggerGen().then(async () => {
     console.log(`  ├─ GraphQL:   ${host}/graphql`);
     console.log(`  └─ API Docs:  ${host}/api-docs`);
   });
+  attachNotificationWebSocket(serverInstance);
+
+  if (process.env.HTTPS_PORT && process.env.TLS_CERT_PATH && process.env.TLS_KEY_PATH) {
+    const tlsOptions = {
+      cert: fs.readFileSync(process.env.TLS_CERT_PATH),
+      key: fs.readFileSync(process.env.TLS_KEY_PATH)
+    };
+    const httpsServer = https.createServer(tlsOptions, app);
+    attachNotificationWebSocket(httpsServer);
+    httpsServer.listen(process.env.HTTPS_PORT, '0.0.0.0', () => {
+      console.log(`🔒 Optional HTTPS lab listening on https://dvws.local:${process.env.HTTPS_PORT}`);
+    });
+  }
 }).catch(err => {
   console.error("Unable to generate Swagger documentation", err);
   process.exit(1);

@@ -35,8 +35,8 @@
 
 <div class="max-w-4xl">
   <div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-800">Import Notes (XML)</h1>
-    <p class="text-gray-600">Import notes from XML format</p>
+    <p class="page-kicker">Notes</p><h1 class="page-title mt-1">Data import</h1>
+    <p class="page-description mt-2">Import notes from XML data.</p>
   </div>
   
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -46,7 +46,7 @@
       
       <textarea 
         bind:value={xmlData}
-        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
         rows="10"
         placeholder="Paste XML data here"
       ></textarea>
@@ -67,7 +67,7 @@
     <Card class="p-6">
       <h2 class="text-lg font-semibold mb-4">Example XML Format</h2>
       
-      <pre class="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto font-mono">{exampleXML}</pre>
+      <pre class="code-panel">{exampleXML}</pre>
       
       <Button 
         variant="outline" 
@@ -83,7 +83,7 @@
   {#if responseMessage}
     <Card class="p-6 mt-6">
       <h2 class="text-lg font-semibold mb-4">Import Result</h2>
-      <pre class="bg-gray-50 p-4 rounded text-sm overflow-x-auto">{responseMessage}</pre>
+      <pre class="code-panel">{responseMessage}</pre>
     </Card>
   {/if}
 </div>
