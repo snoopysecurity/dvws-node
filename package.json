@@ -9,9 +9,9 @@
   "scripts": {
     "seed": "node scripts/seed-database.js",
     "start": "node src/server.js",
-    "test": "mocha",
-    "test:vulnerabilities": "mocha test/vulnerabilities.test.js --timeout 10000",
-    "test:all": "mocha test/*.test.js --timeout 10000"
+    "test": "mocha --exit",
+    "test:vulnerabilities": "mocha test/vulnerabilities.test.js --timeout 10000 --exit",
+    "test:all": "mocha test/*.test.js --timeout 10000 --exit"
   },
   "repository": {
     "type": "git",

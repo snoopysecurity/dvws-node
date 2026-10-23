@@ -4,7 +4,7 @@
   let { isOpen = $bindable(false) }: { isOpen?: boolean } = $props();
   const groups = [
     { label: 'Workspace', items: [{ href: '/dashboard', label: 'Overview', icon: 'dashboard' }, { href: '/notes', label: 'Notes', icon: 'notes' }, { href: '/search', label: 'Shared Notes', icon: 'search' }, { href: '/files', label: 'Artifacts', icon: 'files' }, { href: '/passphrase', label: 'Credentials', icon: 'key' }, { href: '/profile', label: 'Account', icon: 'profile' }] },
-    { label: 'Operations', items: [{ href: '/admin', label: 'Administration', icon: 'admin' }] }
+    { label: 'Operations', items: [{ href: '/resource-store', label: 'Resource Store', icon: 'cache' }, { href: '/admin', label: 'Administration', icon: 'admin' }] }
   ];
   let currentPath = $derived($page.url.pathname);
   function close() { isOpen = false; }

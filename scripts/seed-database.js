@@ -4,6 +4,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 
 const User = require('../src/models/user');
+const SupportTicket = require('../src/models/support-ticket');
 
 
 const connHost = process.env.SQL_LOCAL_CONN_URL;
@@ -52,6 +53,7 @@ async function main() {
         
         // Reset Users collection
         await User.deleteMany({});
+        await SupportTicket.deleteMany({});
         console.log("[+] MongoDB Users collection cleared");
 
         const user = new User({
@@ -98,6 +100,15 @@ async function main() {
         } catch (err) {
             console.log("[-] Error creating recovery challenge user:", err.message);
         }
+
+        await SupportTicket.create({
+            _id: '6f1d2a40-2f5b-11ef-9a31-0242ac120002',
+            username: 'recovery-victim',
+            subject: 'Training access issue',
+            message: 'I cannot access the advanced training materials.',
+            createdAt: new Date('2024-06-20T23:18:42.448Z')
+        });
+        console.log('[+] UUID support ticket created for recovery-victim');
 
         const sessionVictim = new User({
             username: "session-victim",

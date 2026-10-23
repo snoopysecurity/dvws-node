@@ -1,5 +1,4 @@
-const port = process.env.EXPRESS_JS_PORT || 80;
-const request = require("supertest")(`http://127.0.0.1:${port}`);
+const request = require("supertest")(require('./helpers/base-url'));
 const expect = require("chai").expect;
 
 describe("GET /openAPI-spec.json", function () {

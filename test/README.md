@@ -152,6 +152,15 @@ The test suite validates the following vulnerabilities:
 - Issue: Top-level JSON arrays vulnerable to hijacking
 - Test: Verifies array responses
 
+## Additional Runtime Vulnerability Tests
+
+- `test/vulnerabilities.test.js`: GraphQL alias amplification (multiple database-backed aliases in one request) and missing security headers.
+- `test/support-tickets.test.js`: UUIDv1 ticket creation, cross-user IDOR, and retrieval of the seeded victim ticket through its exposed notification UUID.
+- `test/resource-store.test.js`: negative order quantities increase the authenticated user's balance by the catalog price multiplied by the absolute quantity; includes the 1,000-credit example and checks wallet isolation.
+- `test/jwt-key-lab.test.js`: RS256 token verification from an attacker-controlled `jku` JWKS endpoint and HS256 verification after `kid` traversal to `/dev/null`.
+
+These runtime tests exercise the routes rather than only checking source patterns.
+
 ## Test Results Interpretation
 
 - ✅ **Passing tests** indicate vulnerabilities are still present (desired for CTF)

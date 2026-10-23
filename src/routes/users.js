@@ -39,7 +39,9 @@ module.exports = (router) => {
     .get(validateToken, controller.getNotifications);
 
   router.route('/v2/notifications/:id/read')
-    .put(validateToken, controller.markNotificationRead);
+    .put(validateToken, controller.markNotificationRead)
+    // State change exposed through GET as well as the intended update method.
+    .get(validateToken, controller.markNotificationRead);
 
   router.route('/v2/session-lab/secondary-token')
     .post(validateToken, controller.issueSessionLabToken);
@@ -63,7 +65,9 @@ module.exports = (router) => {
     .get(controller.logout);    
 
   router.route('/v2/login')
-    .post(loginLimiter, controller.login);
+    .post(loginLimiter, controller.login)
+    // Credentials in the query string can be retained in browser history and logs.
+    .get(loginLimiter, controller.login);
 
   router.post('/v1/login', loginLimiter, (req, res) => {
     // #swagger.ignore = true

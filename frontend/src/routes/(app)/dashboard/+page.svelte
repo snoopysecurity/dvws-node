@@ -11,7 +11,8 @@
     { href: '/notes', title: 'Create a note', description: 'Capture workspace context and updates.', icon: 'notes' },
     { href: '/files', title: 'Upload artifact', description: 'Add a file to your workspace.', icon: 'files' },
     { href: '/passphrase', title: 'Create credentials', description: 'Generate and store a credential record.', icon: 'key' },
-    { href: '/profile', title: 'Account settings', description: 'Manage notifications, sessions, and data.', icon: 'profile' }
+    { href: '/profile', title: 'Account settings', description: 'Manage notifications, sessions, and data.', icon: 'profile' },
+    { href: '/resource-store', title: 'Resource Store', description: 'Spend workspace credits on developer services.', icon: 'cache' }
   ];
   onMount(async () => {
     try { const { data } = await apiClient.get('/api/v2/notifications'); notifications = data.notifications || []; }

@@ -235,6 +235,27 @@
       }
     },
     "/v2/notifications/{id}/read": {
+      "get": {
+        "description": "Mark a notification as read using GET.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
       "put": {
         "description": "",
         "parameters": [
@@ -373,6 +394,35 @@
       }
     },
     "/v2/login": {
+      "get": {
+        "description": "Accepts credentials in query parameters.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
       "post": {
         "description": "",
         "parameters": [
@@ -1074,7 +1124,7 @@
     },
     "/v2/reports/monthly": {
       "get": {
-        "description": "",
+        "description": "Authenticated report response is marked public-cacheable; no rate limit is applied.",
         "parameters": [
           {
             "name": "period",
@@ -1130,6 +1180,39 @@
       }
     },
     "/v2/users/notification-preferences": {
+      "post": {
+        "description": "Accepts POST when X-HTTP-Method-Override is PUT.",
+        "parameters": [
+          {
+            "name": "X-HTTP-Method-Override",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PUT"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "405": {
+            "description": "Method Not Allowed"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
       "put": {
         "description": "",
         "responses": {
@@ -1141,6 +1224,129 @@
           },
           "500": {
             "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/v2/resource-store": {
+      "get": {
+        "tags": [
+          "Resource Store"
+        ],
+        "summary": "Read the caller\\'s resource store balance, catalogue, and recent orders",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/resource-store/orders": {
+      "post": {
+        "tags": [
+          "Resource Store"
+        ],
+        "summary": "Place a resource store order using an item ID and integer quantity",
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "description": "quantity must be a non-zero integer from -1000 to 1000. Negative quantities increase the caller's credits.",
+            "schema": {
+              "type": "object",
+              "required": [
+                "itemId",
+                "quantity"
+              ],
+              "properties": {
+                "itemId": {
+                  "type": "string",
+                  "enum": [
+                    "api-monitor",
+                    "build-runner",
+                    "log-retention"
+                  ]
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": -1000,
+                  "maximum": 1000,
+                  "not": {
+                    "enum": [
+                      0
+                    ]
+                  },
+                  "description": "Negative values increase the caller's credits."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "itemId",
+                  "quantity"
+                ],
+                "properties": {
+                  "itemId": {
+                    "type": "string",
+                    "enum": [
+                      "api-monitor",
+                      "build-runner",
+                      "log-retention"
+                    ]
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": -1000,
+                    "maximum": 1000,
+                    "not": {
+                      "enum": [
+                        0
+                      ]
+                    },
+                    "description": "Negative values increase the caller's credits."
+                  }
+                }
+              }
+            }
           }
         }
       }

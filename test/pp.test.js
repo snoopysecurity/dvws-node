@@ -1,4 +1,4 @@
-const request = require("supertest")("http://127.0.0.1");
+const request = require("supertest")(require('./helpers/base-url'));
 const expect = require("chai").expect;
 const fs = require('fs');
 

@@ -1,4 +1,4 @@
-const request = require("supertest")("http://127.0.0.1/api/v2");
+const request = require("supertest")(`${require('./helpers/base-url')}/api/v2`);
 const expect = require("chai").expect;
 
 describe("POST /users", function () {

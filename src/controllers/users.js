@@ -132,7 +132,13 @@ module.exports = {
 
 
   login: async (req, res) => {
-    const { username, password } = req.body;
+    const credentials = req.method === 'GET' ? req.query : req.body;
+    const { username, password } = credentials;
+    // The legacy client calls this "encrypted" even though it is only Base64.
+    // Decoding it server-side provides no protection for the submitted secret.
+    const submittedPassword = credentials.encryptedPassword
+      ? Buffer.from(credentials.encryptedPassword, 'base64').toString('utf8')
+      : password;
     //set_cors(req,res);
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
       let result = {};
@@ -149,7 +155,7 @@ module.exports = {
         if (user) {
             // We could compare passwords in our model instead of below as well
             try {
-              const match = await bcrypt.compare(password, user.password);
+              const match = await bcrypt.compare(submittedPassword, user.password);
               if (match) {
                 status = 200;
                 if (user.admin == true) {
@@ -596,7 +602,9 @@ module.exports = {
           const newUser = new User({
               username: data.username,
               password: data.password,
-              admin: !!data.admin
+              // Text bodies bypass the field policy applied to the other
+              // formats, so this input can mass-assign an administrator role.
+              admin: req.is('text/plain') ? !!data.admin : false
           });
           await newUser.save();
           res.status(200).send({ message: `User ${data.username} created successfully.` });

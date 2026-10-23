@@ -1,9 +1,9 @@
 require('dotenv').config();
-const port = process.env.EXPRESS_JS_PORT || 3000;
-console.log(`Testing against http://localhost:${port}`);
-const request = require("supertest")(`http://localhost:${port}/api/v2`);
-const requestV1 = require("supertest")(`http://localhost:${port}/api/v1`);
-const requestRoot = require("supertest")(`http://localhost:${port}`);
+const baseUrl = require('./helpers/base-url');
+console.log(`Testing against ${baseUrl}`);
+const request = require("supertest")(`${baseUrl}/api/v2`);
+const requestV1 = require("supertest")(`${baseUrl}/api/v1`);
+const requestRoot = require("supertest")(baseUrl);
 const expect = require("chai").expect;
 
 describe("DVWS-Node Vulnerability Tests", function () {
@@ -209,6 +209,38 @@ describe("DVWS-Node Vulnerability Tests", function () {
   describe("16. GraphQL Batching / Brute Force", function () {
     it("should allow batch queries for brute force attacks", async function () {
       expect(true).to.eql(true);
+    });
+  });
+
+  describe("GraphQL Alias Amplification", function () {
+    it("should execute multiple database-backed aliases in one operation", async function () {
+      const response = await requestRoot
+        .post("/graphql")
+        .send({ query: '{ first: userSearchByUsername(username: "admin") { id username } second: userSearchByUsername(username: "test") { id username } third: userSearchByUsername(username: "nobody") { id username } }' });
+
+      expect(response.status).to.eql(200);
+      expect(response.body.errors).to.equal(undefined);
+      expect(response.body.data).to.have.keys(["first", "second", "third"]);
+      expect(response.body.data.first).to.be.an("array");
+      expect(response.body.data.second).to.be.an("array");
+      expect(response.body.data.third).to.be.an("array");
+    });
+  });
+
+  describe("Missing Security Headers", function () {
+    it("should omit the selected security headers and expose X-Powered-By", async function () {
+      const responses = await Promise.all([
+        requestRoot.head("/"),
+        requestV1.get("/info")
+      ]);
+      const absentHeaders = ["x-frame-options", "content-security-policy", "x-content-type-options"];
+
+      for (const response of responses) {
+        for (const header of absentHeaders) {
+          expect(response.headers[header]).to.equal(undefined);
+        }
+        expect(response.headers["x-powered-by"]).to.eql("Express");
+      }
     });
   });
 

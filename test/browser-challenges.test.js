@@ -2,7 +2,8 @@ require('dotenv').config();
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const request = require('supertest')(`http://127.0.0.1:${process.env.EXPRESS_JS_PORT || 80}`);
+const baseUrl = require('./helpers/base-url');
+const request = require('supertest')(baseUrl);
 const WebSocket = require('ws');
 
 describe('New account and browser challenge flows', function () {
@@ -186,7 +187,7 @@ describe('New account and browser challenge flows', function () {
   it('seeds isolated inboxes and persists an owned read state', async function () {
     const inbox = await request.get('/api/v2/notifications').set('Authorization', `Bearer ${testToken}`);
     assert.strictEqual(inbox.status, 200);
-    assert.strictEqual(inbox.body.notifications.length, 2);
+    assert.strictEqual(inbox.body.notifications.length, 3);
     const first = inbox.body.notifications[0];
     const marked = await request.put(`/api/v2/notifications/${first._id}/read`)
       .set('Authorization', `Bearer ${testToken}`);
@@ -197,7 +198,7 @@ describe('New account and browser challenge flows', function () {
     await request.post('/api/v2/users').send({ username: otherName, password: 'Other123!' });
     const otherLogin = await request.post('/api/v2/login').send({ username: otherName, password: 'Other123!' });
     const otherInbox = await request.get('/api/v2/notifications').set('Authorization', `Bearer ${otherLogin.body.token}`);
-    assert.strictEqual(otherInbox.body.notifications.length, 2);
+    assert.strictEqual(otherInbox.body.notifications.length, 3);
     const forbidden = await request.put(`/api/v2/notifications/${first._id}/read`)
       .set('Authorization', `Bearer ${otherLogin.body.token}`);
     assert.strictEqual(forbidden.status, 404);
@@ -209,7 +210,7 @@ describe('New account and browser challenge flows', function () {
     assert.match(login.headers['set-cookie'][0], /HttpOnly/);
     assert.match(login.headers['set-cookie'][0], /SameSite=Lax/);
     await new Promise((resolve, reject) => {
-      const socket = new WebSocket(`ws://127.0.0.1:${process.env.EXPRESS_JS_PORT || 80}/ws/notifications`, {
+      const socket = new WebSocket(`${baseUrl.replace(/^http/, 'ws')}/ws/notifications`, {
         headers: { Cookie: cookie, Origin: 'https://attacker.test:8443' }
       });
       const timeout = setTimeout(() => { socket.terminate(); reject(new Error('Notification WebSocket timed out')); }, 3000);
@@ -230,7 +231,7 @@ describe('New account and browser challenge flows', function () {
   it('rejects missing or invalid login cookies during a notification WebSocket upgrade', async function () {
     async function expectRejected(headers) {
       await new Promise((resolve, reject) => {
-        const socket = new WebSocket(`ws://127.0.0.1:${process.env.EXPRESS_JS_PORT || 80}/ws/notifications`, { headers });
+        const socket = new WebSocket(`${baseUrl.replace(/^http/, 'ws')}/ws/notifications`, { headers });
         const timeout = setTimeout(() => { socket.terminate(); reject(new Error('Expected WebSocket rejection')); }, 3000);
         socket.on('unexpected-response', (_request, response) => {
           clearTimeout(timeout);
@@ -252,7 +253,7 @@ describe('New account and browser challenge flows', function () {
     const otherLogin = await request.post('/api/v2/login').send({ username, password: 'Other123!' });
     const cookie = otherLogin.headers['set-cookie'][0].split(';')[0];
     await new Promise((resolve, reject) => {
-      const socket = new WebSocket(`ws://127.0.0.1:${process.env.EXPRESS_JS_PORT || 80}/ws/notifications`, {
+      const socket = new WebSocket(`${baseUrl.replace(/^http/, 'ws')}/ws/notifications`, {
         headers: { Cookie: cookie, Origin: 'https://attacker.test:8443' }
       });
       const timeout = setTimeout(() => { socket.terminate(); reject(new Error('Ownership WebSocket check timed out')); }, 3000);

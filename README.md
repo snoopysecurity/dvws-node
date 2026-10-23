@@ -43,6 +43,8 @@ The application includes guided exercises across REST, GraphQL, SOAP, XML-RPC, a
 * IDOR (Insecure Direct Object Reference)
 * Broken Authentication (JWT `none` Algorithm)
 * JWT Secret Key Brute Force
+* JWT JKU Key Source Trust
+* JWT KID Path Traversal
 * Vertical Access Control (Privilege Escalation)
 * Horizontal Access Control
 * Open Redirect
@@ -55,6 +57,14 @@ The application includes guided exercises across REST, GraphQL, SOAP, XML-RPC, a
 * Sensitive Data Exposure (Password Hashes)
 * Prototype Pollution
 * API Endpoint Brute Forcing (Missing Rate Limit)
+* HTTP Method Confusion (State Change Through GET)
+* Ignored `Accept` Headers and Content-Type Confusion
+* Credentials in URLs and Base64 Mistaken for Encryption
+* HTTP Method Override Bypass
+* Shared Caching of Authenticated Reports
+* Inconsistent Request Format Handling
+* Resource Store: Get an Item for Free
+* Resource Store: Increase Your Balance by 1,000 Credits
 * Rate Limit Bypass via `X-Forwarded-For`
 * Hidden API Functionality Exposure
 * GraphQL Introspection
@@ -62,6 +72,8 @@ The application includes guided exercises across REST, GraphQL, SOAP, XML-RPC, a
 * GraphQL Arbitrary File Write
 * GraphQL Batching Brute Force
 * GraphQL Sensitive Data Exposure
+* GraphQL Alias Amplification
+* Missing Security Headers
 * Unrestricted File Upload
 * Role-Based Profile Data Exposure
 * Account Recovery IDOR Chain
