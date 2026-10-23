@@ -1813,39 +1813,40 @@ At 10 credits per item, the response shows a 1,000-credit increase. The order hi
 
 ## 56. JWT JKU Key Source Trust
 
-**Endpoint:** `GET /api/v2/jwt-key-lab/jku/profile`
+**Endpoint:** Shared authentication used by protected routes, demonstrated with `GET /api/v2/admin/logs`
 
-**Description:** The isolated lab verifier follows the JWT `jku` header and trusts the matching public key found there. An attacker can publish their own JWK set, sign a token with its private key, and choose a synthetic profile subject. The endpoint returns only fixed lab profiles and does not authenticate or authorize access to real accounts.
+**Description:** The shared application JWT middleware follows an untrusted token's `jku` header and trusts the matching public key it retrieves. An attacker can publish their own JWK set, sign a token with its private key, and have the token accepted by protected application routes. This bypasses the normal login requirement and grants access under the identity and permissions in the forged claims.
 
 ### Challenge
 
-Create an RSA key pair and publish its public key as a JWK set on a URL reachable from the DVWS server. Sign an RS256 JWT with header fields `jku` (the JWK set URL) and `kid` (the key ID), and payload `{"sub":"admin@dvws.local"}`. Send it as a bearer token:
+Create an RSA key pair and publish its public key as a JWK set on a URL reachable from the DVWS server. Sign an RS256 JWT with header fields `jku` (the JWK set URL) and `kid` (the key ID), and payload `{"user":"admin","permissions":["user:admin"]}`. Include issuer `https://github.com/snoopysecurity`, then send the token to a protected route:
 
 ```sh
-curl http://dvws.local/api/v2/jwt-key-lab/jku/profile \
+curl http://dvws.local/api/v2/admin/logs \
   -H 'Authorization: Bearer <attacker-signed-token>'
 ```
 
-The lab accepts the token because it obtains the verification key from the token's own `jku` value.
+The shared middleware fetches the attacker's JWK set, verifies the token with that key, and returns the application's protected login logs.
 
-**Mitigation:** Bind each issuer to a server-configured key set or pinned keys. Do not let an untrusted token choose the key source; validate `iss`, `aud`, allowed algorithms, and key ID against trusted configuration. The JWK fetch has a timeout and response-size limit, but the route is intentionally vulnerable and belongs only in a local training deployment.
+**Mitigation:** Bind each issuer to a server-configured key set or pinned keys. Do not let an untrusted token choose the key source; validate `iss`, `aud`, allowed algorithms, and key ID against trusted configuration. The fetch has a timeout and response-size limit, but trust in the token-selected key source remains intentionally vulnerable.
 
 ## 57. JWT KID Path Traversal
 
-**Endpoint:** `GET /api/v2/jwt-key-lab/kid/profile`
+**Endpoints:** `GET /api/v2/jwt-key-lab/kid/profile`; shared authentication used by protected routes such as `GET /api/v2/admin/logs`
 
-**Description:** The isolated HS256 verifier uses the JWT `kid` value as a filesystem path without constraining it to the key directory. Its legacy key loader treats the selected file as Base64 key material. Traversing to `/dev/null` produces the lab's one-byte NUL signing secret (`AA==`), which allows an attacker to create a valid token for a synthetic profile.
+**Description:** The shared application JWT middleware uses an untrusted JWT `kid` value as a filesystem path without constraining it to the key directory. Its legacy loader treats the selected file as Base64 key material. Traversing to `/dev/null` yields the one-byte NUL secret (`AA==`), allowing an attacker to forge a bearer token that passes authentication on protected application routes. This is an authentication bypass. The selected file is used only as signing-key material; the application does not return its contents, so this challenge does not demonstrate arbitrary file disclosure.
 
 ### Challenge
 
-Sign an HS256 JWT with header `{"alg":"HS256","kid":"../../../../../../dev/null"}` and payload `{"sub":"admin@dvws.local"}`. Use `AA==` as the HMAC secret, then send the token:
+Sign an HS256 JWT with header `{"alg":"HS256","kid":"../../../../../../dev/null"}` and payload `{"user":"admin","permissions":["user:admin"]}` using the one-byte NUL secret. Then request a protected route, for example:
 
 ```sh
-curl http://dvws.local/api/v2/jwt-key-lab/kid/profile \
-  -H 'Authorization: Bearer <attacker-signed-token>'
+TOKEN=$(node -e 'const j=x=>Buffer.from(JSON.stringify(x)).toString("base64url");const a=j({alg:"HS256",kid:"../../../../../../dev/null"}),b=j({user:"admin",permissions:["user:admin"]}),s=require("crypto").createHmac("sha256",Buffer.from([0])).update(a+"."+b).digest("base64url");process.stdout.write(a+"."+b+"."+s)')
+curl http://dvws.local/api/v2/admin/logs \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-The handler resolves `kid` outside its intended key directory and accepts the token signed with the NUL-byte key. The route returns only synthetic lab data.
+The shared auth middleware accepts the forged token. A `200` response confirms authentication succeeded; `/api/v2/admin/logs` may have an empty body when the process has no login attempts in its in-memory log. The isolated `/kid/profile` route remains a synthetic demonstration of the same key traversal. Neither route returns the contents of the file named by `kid`.
 
 **Mitigation:** Treat `kid` as an identifier, not a path. Look it up in a fixed in-memory or configured key map; if files must be used, canonicalize the path and verify it remains beneath the key directory. Use high-entropy keys and pin the expected algorithm.
 
@@ -1857,7 +1858,7 @@ The handler resolves `kid` outside its intended key directory and accepts the to
 |----------|-----------|
 | **Injection** | `/api/v2/passphrase`, `/api/v2/notesearch`, `/api/v2/sysinfo/:cmd`, `/dvwsuserservice`, `/api/v2/release/:r`, `/api/v2/users/ldap-search` |
 | **Broken Auth** | All authenticated endpoints (JWT none/weak secret), `/api/v1/login`, `/api/v2/session-lab/secondary-token`, `/api/v2/users/change-password` |
-| **JWT Key Handling** | `/api/v2/jwt-key-lab/jku/profile`, `/api/v2/jwt-key-lab/kid/profile` |
+| **JWT Key Handling** | Shared auth middleware (`jku` trust); `/api/v2/jwt-key-lab/kid/profile` |
 | **Data Exposure** | `/api/v1/info`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/users/profile`, `/api/v2/account-recovery/lookup`, `/graphql` (userLogin, userSearchByUsername, userFindbyId) |
 | **XXE/XML** | `/dvwsuserservice`, `/api/v2/notes/import/xml`, `/api/v2/users/profile/export/xml`, `/api/v2/users/profile/import/xml` |
 | **Access Control** | `/api/v2/notes/:id`, `/api/v2/passphrase/:user`, `/api/v2/sysinfo/:cmd`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/account-recovery/lookup`, `/api/v2/account-recovery/reset` |

