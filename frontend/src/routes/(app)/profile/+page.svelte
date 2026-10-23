@@ -18,19 +18,14 @@
   let recoveryResponse = $state('');
   let currentPassword = $state('');
   let newPassword = $state('');
-  let secondaryToken = $state('');
   let passwordSessionStatus = $state('');
-  let passwordSessionResult = $state('');
   let passwordSessionError = $state('');
   let passwordSessionLoading = $state(false);
-  let browserSessionProfile = $state('readable');
-  let browserSessionStatus = $state('');
-  let browserSessionError = $state('');
-  let browserSessionCookieVisible = $state(false);
-  let browserSessionIssued = $state(false);
-  let crossOriginStatus = $state('');
-  let crossOriginError = $state('');
-  let crossOriginIssued = $state(false);
+  let sharingEnabled = $state(false);
+  let sharingPartnerOrigin = $state('https://partner.test:8443');
+  let sharingFields = $state<string[]>(['username', 'email', 'homeAddress']);
+  let sharingStatus = $state('');
+  let sharingError = $state('');
   let isLoading = $state(false);
   let inbox = $state<any[]>([]);
   let inboxStatus = $state('Loading notifications…');
@@ -92,49 +87,35 @@
     }
   }
 
-  async function issueBrowserSession() {
-    browserSessionStatus = '';
-    browserSessionError = '';
-
+  async function loadProfileSharing() {
     try {
-      await apiClient.post('/api/v2/cookie-lab/session', { profile: browserSessionProfile });
-      browserSessionIssued = true;
-      browserSessionCookieVisible = document.cookie
-        .split('; ')
-        .some((item) => item.startsWith('cookie_lab='));
-      browserSessionStatus = 'Browser session preferences updated.';
+      const { data } = await apiClient.get('/api/v2/users/profile-sharing');
+      const settings = data.profileSharing || {};
+      sharingEnabled = Boolean(settings.enabled);
+      sharingPartnerOrigin = settings.partnerOrigin || '';
+      sharingFields = settings.fields || [];
     } catch (error: any) {
-      browserSessionError = extractErrorMessage(error, 'Could not update browser session preferences');
+      sharingError = extractErrorMessage(error, 'Could not load profile sharing settings');
     }
   }
 
-  async function issueCrossOriginSession() {
-    crossOriginStatus = '';
-    crossOriginError = '';
-
-    try {
-      await apiClient.post('/api/v2/jsonp-lab/session');
-      crossOriginIssued = true;
-      crossOriginStatus = 'Temporary cross-origin sharing is enabled for this browser.';
-    } catch (error: any) {
-      crossOriginError = extractErrorMessage(error, 'Could not enable cross-origin data sharing');
-    }
+  function toggleSharingField(field: string, checked: boolean) {
+    sharingFields = checked ? [...new Set([...sharingFields, field])] : sharingFields.filter((item) => item !== field);
   }
 
-  async function createAdditionalSession() {
-    passwordSessionLoading = true;
-    passwordSessionStatus = '';
-    passwordSessionResult = '';
-    passwordSessionError = '';
-
+  async function saveProfileSharing(enabled: boolean) {
+    sharingStatus = '';
+    sharingError = '';
     try {
-      const { data } = await apiClient.post('/api/v2/session-lab/secondary-token');
-      secondaryToken = data.token;
-      passwordSessionStatus = 'An additional session is ready to verify after you update your password.';
+      const { data } = await apiClient.put('/api/v2/users/profile-sharing', {
+        enabled, partnerOrigin: sharingPartnerOrigin, fields: sharingFields
+      });
+      sharingEnabled = Boolean(data.profileSharing.enabled);
+      sharingPartnerOrigin = data.profileSharing.partnerOrigin || '';
+      sharingFields = data.profileSharing.fields || [];
+      sharingStatus = enabled ? 'Profile sharing is enabled.' : 'Profile sharing has been revoked.';
     } catch (error: any) {
-      passwordSessionError = extractErrorMessage(error, 'Could not create an additional session');
-    } finally {
-      passwordSessionLoading = false;
+      sharingError = extractErrorMessage(error, 'Could not update profile sharing');
     }
   }
 
@@ -142,39 +123,15 @@
     event.preventDefault();
     passwordSessionLoading = true;
     passwordSessionStatus = '';
-    passwordSessionResult = '';
     passwordSessionError = '';
 
     try {
       await apiClient.post('/api/v2/users/change-password', { currentPassword, newPassword });
       currentPassword = '';
       newPassword = '';
-      passwordSessionStatus = secondaryToken
-        ? 'Password updated. You can now verify the additional session.'
-        : 'Password updated. Create an additional session before a future password change to verify it.';
+      passwordSessionStatus = 'Password updated. Other signed-in sessions may remain active.';
     } catch (error: any) {
       passwordSessionError = extractErrorMessage(error, 'Password update failed');
-    } finally {
-      passwordSessionLoading = false;
-    }
-  }
-
-  async function verifyAdditionalSession() {
-    if (!secondaryToken) return;
-    passwordSessionLoading = true;
-    passwordSessionResult = '';
-    passwordSessionError = '';
-
-    try {
-      const apiBase = import.meta.env.PUBLIC_API_BASE_URL || window.location.origin;
-      const response = await fetch(`${apiBase}/api/v2/users/profile`, {
-        headers: { Authorization: `Bearer ${secondaryToken}` }
-      });
-      const profile = await response.json();
-      if (!response.ok) throw new Error(`Additional session returned HTTP ${response.status}`);
-      passwordSessionResult = `Additional session verified: profile returned HTTP ${response.status} for ${profile.username}.`;
-    } catch (error: any) {
-      passwordSessionError = error?.message || 'Could not verify the additional session';
     } finally {
       passwordSessionLoading = false;
     }
@@ -267,6 +224,7 @@
       weeklyDigest = Boolean($authStore.user.weeklyDigest);
     }
     loadNotifications();
+    loadProfileSharing();
 
     const apiBase = import.meta.env.PUBLIC_API_BASE_URL || window.location.origin;
     const socketUrl = new URL(apiBase);
@@ -292,9 +250,9 @@
 
 <div class="mx-auto max-w-6xl space-y-6">
   <div class="page-heading">
-    <div><p class="page-kicker">Account</p><h1 class="page-title mt-1">Account settings</h1><p class="page-description mt-2">Manage your profile, notifications, sessions, external access, and data.</p></div>
+    <div><p class="page-kicker">Account</p><h1 class="page-title mt-1">Account settings</h1><p class="page-description mt-2">Manage your profile, notifications, password, external access, and data.</p></div>
   </div>
-  <nav class="sticky top-2 z-10 -mx-1 overflow-x-auto rounded-xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur" aria-label="Account sections"><div class="flex w-max gap-1 text-sm font-medium"><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#account">Profile</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#notifications">Notifications</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#recovery">Recovery</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#password-sessions">Password & sessions</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#browser-labs">External access</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#xml-tools">Data import/export</a></div></nav>
+  <nav class="sticky top-2 z-10 -mx-1 overflow-x-auto rounded-xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur" aria-label="Account sections"><div class="flex w-max gap-1 text-sm font-medium"><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#account">Profile</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#notifications">Notifications</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#recovery">Recovery</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#password">Password</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#external-access">External access</a><a class="focus-ring rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="#xml-tools">Data import/export</a></div></nav>
   
   <!-- Current Profile -->
   {#if $authStore.user}
@@ -360,23 +318,12 @@
     {/if}
   </Card>
 
-  <Card id="password-sessions" class="scroll-mt-24 p-6">
-    <h2 class="text-xl font-semibold mb-2">Password and sessions</h2>
-    <p class="mb-5 text-sm text-slate-400">Update your password and manage additional signed-in sessions.</p>
+  <Card id="password" class="scroll-mt-24 p-6">
+    <h2 class="text-xl font-semibold mb-2">Password</h2>
+    <p class="mb-5 text-sm text-slate-400">Update your account password.</p>
 
     <div class="space-y-5">
-      <div class="flex flex-wrap items-center gap-3 border-b border-slate-700 pb-5">
-        <div class="flex-1 min-w-56">
-          <h3 class="font-medium">Additional session</h3>
-          <p class="text-sm text-slate-400">Create a separate signed-in session before changing your password.</p>
-        </div>
-        <Button type="button" onclick={createAdditionalSession} disabled={passwordSessionLoading}>
-          {secondaryToken ? 'Create new additional session' : 'Create additional session'}
-        </Button>
-      </div>
-
-      <form onsubmit={changePassword} class="space-y-4 border-b border-slate-700 pb-5">
-        <h3 class="font-medium">Change password</h3>
+      <form onsubmit={changePassword} class="space-y-4">
         <div>
           <label for="current-password" class="block text-sm font-medium mb-2">Current password</label>
           <Input id="current-password" type="password" bind:value={currentPassword} required autocomplete="current-password" />
@@ -387,65 +334,45 @@
         </div>
         <Button type="submit" disabled={passwordSessionLoading}>{passwordSessionLoading ? 'Updating…' : 'Update password'}</Button>
       </form>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="flex-1 min-w-56">
-          <h3 class="font-medium">Verify additional session</h3>
-          <p class="text-sm text-slate-400">Check whether the session created above can still view your profile.</p>
-        </div>
-        <Button type="button" onclick={verifyAdditionalSession} disabled={!secondaryToken || passwordSessionLoading}>Verify session</Button>
-      </div>
     </div>
 
     {#if passwordSessionStatus}
       <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm" role="status">{passwordSessionStatus}</div>
-    {/if}
-    {#if passwordSessionResult}
-      <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-sm" role="status">{passwordSessionResult}</div>
     {/if}
     {#if passwordSessionError}
       <div class="error-message mt-4" role="alert">{passwordSessionError}</div>
     {/if}
   </Card>
 
-  <Card id="browser-labs" class="scroll-mt-24 p-6">
-    <h2 class="section-title mb-2">Session settings</h2>
-    <p class="mb-5 text-sm text-slate-400">Choose how this browser session is handled when you use the application.</p>
-
+  <Card id="external-access" class="scroll-mt-24 p-6">
+    <h2 class="section-title mb-2">External access</h2>
+    <p class="mb-4 text-sm text-slate-500">Choose profile details for a partner application. Sharing remains on until you revoke it.</p>
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium mb-2" for="browser-session-profile">Browser session profile</label>
-        <select id="browser-session-profile" class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900" bind:value={browserSessionProfile}>
-          <option value="readable">Standard browser session</option>
-          <option value="crossSite">Cross-site compatible session</option>
-          <option value="hardened">Restricted browser session</option>
-        </select>
+        <label for="sharing-origin" class="block text-sm font-medium mb-2">Partner origin</label>
+        <Input id="sharing-origin" type="url" bind:value={sharingPartnerOrigin} placeholder="https://partner.example" />
       </div>
-      <Button type="button" onclick={issueBrowserSession}>Update browser session</Button>
+      <fieldset class="space-y-2">
+        <legend class="text-sm font-medium mb-2">Shared profile fields</legend>
+        {#each [['username', 'Username'], ['email', 'Email'], ['homeAddress', 'Home address']] as [field, label]}
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={sharingFields.includes(field)} onchange={(event) => toggleSharingField(field, event.currentTarget.checked)} />
+            {label}
+          </label>
+        {/each}
+      </fieldset>
+      <div class="flex items-center gap-3">
+        <Button type="button" onclick={() => saveProfileSharing(true)}>Enable sharing</Button>
+        <Button type="button" onclick={() => saveProfileSharing(false)}>Revoke sharing</Button>
+      </div>
+      <p class="text-sm" role="status">Sharing status: <strong>{sharingEnabled ? 'Enabled' : 'Revoked'}</strong>{#if sharingPartnerOrigin} for {sharingPartnerOrigin}{/if}.</p>
+      {#if sharingEnabled}<p class="text-sm text-slate-500">Selected fields: {sharingFields.length ? sharingFields.join(', ') : 'none'}</p>{/if}
     </div>
-
-    {#if browserSessionIssued}
-      <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm" role="status">
-        <p>{browserSessionStatus}</p>
-        <p class="mt-1">This session cookie is JavaScript-readable: <strong>{browserSessionCookieVisible ? 'yes' : 'no'}</strong></p>
-      </div>
+    {#if sharingStatus}
+      <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm" role="status">{sharingStatus}</div>
     {/if}
-    {#if browserSessionError}
-      <div class="error-message mt-4" role="alert">{browserSessionError}</div>
-    {/if}
-  </Card>
-
-  <Card class="p-6">
-    <h2 class="section-title mb-2">External access</h2>
-    <p class="mb-5 text-sm text-slate-400">Enable a temporary sharing session for this browser.</p>
-
-    <Button type="button" onclick={issueCrossOriginSession}>Enable temporary sharing</Button>
-
-    {#if crossOriginIssued}
-      <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm" role="status">{crossOriginStatus}</div>
-    {/if}
-    {#if crossOriginError}
-      <div class="error-message mt-4" role="alert">{crossOriginError}</div>
+    {#if sharingError}
+      <div class="error-message mt-4" role="alert">{sharingError}</div>
     {/if}
   </Card>
   

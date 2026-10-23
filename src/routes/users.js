@@ -43,20 +43,12 @@ module.exports = (router) => {
     // State change exposed through GET as well as the intended update method.
     .get(validateToken, controller.markNotificationRead);
 
-  router.route('/v2/session-lab/secondary-token')
-    .post(validateToken, controller.issueSessionLabToken);
+  router.route('/v2/users/profile-sharing')
+    .get(validateToken, controller.getProfileSharing)
+    .put(validateToken, controller.updateProfileSharing);
 
-  router.route('/v2/cookie-lab/session')
-    .post(validateToken, controller.issueCookieLabSession);
-
-  router.route('/v2/cookie-lab/action')
-    .post(controller.performCookieLabAction);
-
-  router.route('/v2/jsonp-lab/session')
-    .post(validateToken, controller.issueJsonpLabSession);
-
-  router.route('/v2/jsonp-lab/profile')
-    .get(controller.readJsonpLabProfile);
+  router.route('/v2/profile-sharing/jsonp')
+    .get(controller.readSharedProfileJsonp);
 
   router.route('/v2/admin/logs')
     .get(validateToken, controller.getLoginLogs);

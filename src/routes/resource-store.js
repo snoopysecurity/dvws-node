@@ -1,6 +1,7 @@
 const validateToken = require('../middleware/auth').validateToken;
 const Wallet = require('../models/resource-store-wallet');
 const Order = require('../models/resource-store-order');
+const { invalidateMonthlyReport } = require('../services/monthly-report-cache');
 
 const catalogue = [
   { id: 'api-monitor', name: 'API Monitor', description: 'Request tracing and endpoint health checks.', price: 10 },
@@ -61,6 +62,7 @@ module.exports = (router) => {
         { new: true }
       );
       const order = await Order.create({ username, itemId: item.id, itemName: item.name, unitPrice: item.price, quantity, creditChange });
+      await invalidateMonthlyReport(username);
       return res.status(201).json({ order, balance: updatedWallet.balance });
     } catch (error) {
       return res.status(500).json({ error: 'Unable to place order.' });

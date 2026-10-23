@@ -78,12 +78,12 @@ The application includes guided exercises across REST, GraphQL, SOAP, XML-RPC, a
 * Role-Based Profile Data Exposure
 * Account Recovery IDOR Chain
 * Session Revocation After Password Change
-* Cookie Security and Cross-Site Behavior
-* JSONP Cross-Origin Data Exposure
+* Cross-Site Request Forgery Through the Login Cookie
+* JSONP Cross-Origin Profile Sharing
 * Cross-Site WebSocket Hijacking
 * Server-Side Template Injection
 * Unsafe YAML Supplier Import
-* Cached Monthly Report Path Traversal
+* Cross-Customer Monthly Statement Path Traversal
 * Notification Preference Mass Assignment
 * Undocumented TRACE Diagnostics
 * Legacy Login Skips Password Verification

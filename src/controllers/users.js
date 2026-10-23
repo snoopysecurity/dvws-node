@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const xml2js = require('xml2js');
-const crypto = require('crypto');
 const notifications = require('../services/notifications');
 const { broadcast } = require('../services/websocket-notifications');
 
@@ -18,8 +17,6 @@ const options = {
 
 // In-memory log store for login attempts (Vulnerable to Log Pollution)
 const loginLogs = [];
-const cookieLabSessions = new Map();
-const cookieLabState = new Map();
 // Deliberately vulnerable: this simulates a shared HTTP cache for the ordinary
 // profile endpoint. Entries are keyed only by URL, never by the authenticated
 // user, so a later caller can receive another user's profile response.
@@ -29,7 +26,9 @@ const PROFILE_CACHE_TTL_MS = 60 * 1000;
 function readCookie(req, name) {
   const cookies = (req.headers.cookie || '').split(';');
   const entry = cookies.find((cookie) => cookie.trim().startsWith(`${name}=`));
-  return entry ? decodeURIComponent(entry.trim().slice(name.length + 1)) : null;
+  if (!entry) return null;
+  try { return decodeURIComponent(entry.trim().slice(name.length + 1)); }
+  catch (_err) { return null; }
 }
 
 function set_cors(req,res) {
@@ -451,40 +450,6 @@ module.exports = {
     }
   },
 
-  issueSessionLabToken: (req, res) => {
-    const token = jwt.sign(
-      { user: req.decoded.user, permissions: req.decoded.permissions || ["user:read", "user:write"] },
-      process.env.JWT_SECRET,
-      { expiresIn: '2d', issuer: options.issuer, algorithm: 'HS256' }
-    );
-    res.set('Cache-Control', 'no-store');
-    res.send({ token });
-  },
-
-  issueCookieLabSession: (req, res) => {
-    const profiles = {
-      readable: { httpOnly: false, secure: false, sameSite: 'lax' },
-      crossSite: { httpOnly: true, secure: true, sameSite: 'none' },
-      hardened: { httpOnly: true, secure: true, sameSite: 'strict' }
-    };
-    const profile = profiles[req.body.profile];
-    if (!profile) {
-      return res.status(400).send({ error: "profile must be readable, crossSite, or hardened" });
-    }
-
-    const sessionId = crypto.randomUUID();
-    cookieLabSessions.set(sessionId, {
-      username: req.decoded.user,
-      expiresAt: Date.now() + 15 * 60 * 1000
-    });
-    if (!cookieLabState.has(req.decoded.user)) {
-      cookieLabState.set(req.decoded.user, { notificationsEnabled: true });
-    }
-
-    res.cookie('cookie_lab', sessionId, { ...profile, path: '/', maxAge: 15 * 60 * 1000 });
-    res.send({ success: true, profile: req.body.profile, expiresInSeconds: 900 });
-  },
-
   getNotifications: async (req, res) => {
     try {
       res.set('Cache-Control', 'no-store');
@@ -502,67 +467,65 @@ module.exports = {
     return res.json({ notification });
   },
 
-  performCookieLabAction: (req, res) => {
-    const sessionId = readCookie(req, 'cookie_lab');
-    const session = sessionId && cookieLabSessions.get(sessionId);
-    if (!session || session.expiresAt < Date.now()) {
-      if (sessionId) cookieLabSessions.delete(sessionId);
-      return res.status(401).send({ error: "Cookie lab session missing or expired" });
+  getProfileSharing: async (req, res) => {
+    try {
+      const user = await User.findOne({ username: req.decoded.user });
+      if (!user) return res.status(404).send({ error: 'User not found' });
+      res.set('Cache-Control', 'no-store');
+      return res.json({ profileSharing: user.profileSharing || { enabled: false, partnerOrigin: '', fields: [] } });
+    } catch (err) { return res.status(500).send({ error: err.message }); }
+  },
+
+  updateProfileSharing: async (req, res) => {
+    const { enabled, partnerOrigin, fields } = req.body || {};
+    const allowedFields = ['username', 'email', 'homeAddress'];
+    if (typeof enabled !== 'boolean' || typeof partnerOrigin !== 'string' || !Array.isArray(fields) ||
+        fields.some((field) => !allowedFields.includes(field)) || new Set(fields).size !== fields.length) {
+      return res.status(400).send({ error: 'Provide enabled, partnerOrigin, and supported fields' });
     }
-
-    const state = cookieLabState.get(session.username) || { notificationsEnabled: true };
-    state.notificationsEnabled = false;
-    cookieLabState.set(session.username, state);
-    res.send({ success: true, username: session.username, ...state });
+    if (enabled) {
+      try {
+        const origin = new URL(partnerOrigin);
+        if (!['https:', 'http:'].includes(origin.protocol) || origin.origin !== partnerOrigin) throw new Error('invalid origin');
+      } catch (_err) { return res.status(400).send({ error: 'Enter a valid partner origin' }); }
+    }
+    try {
+      const user = await User.findOneAndUpdate(
+        { username: req.decoded.user },
+        { $set: { profileSharing: { enabled, partnerOrigin, fields } } },
+        { new: true, runValidators: true }
+      );
+      if (!user) return res.status(404).send({ error: 'User not found' });
+      res.set('Cache-Control', 'no-store');
+      return res.json({ profileSharing: user.profileSharing });
+    } catch (err) { return res.status(500).send({ error: err.message }); }
   },
 
-  issueJsonpLabSession: (req, res) => {
-    const token = jwt.sign(
-      { user: req.decoded.user, purpose: 'jsonp-lab' },
-      process.env.JWT_SECRET,
-      { expiresIn: '15m', issuer: options.issuer, algorithm: 'HS256' }
-    );
-    res.cookie('jsonp_lab_session', token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-      maxAge: 15 * 60 * 1000
-    });
-    res.send({ success: true, expiresInSeconds: 900 });
-  },
-
-  readJsonpLabProfile: async (req, res) => {
+  readSharedProfileJsonp: async (req, res) => {
     const callback = req.query.callback;
     if (typeof callback !== 'string' || !/^[A-Za-z_$][A-Za-z0-9_$]{0,63}$/.test(callback)) {
       return res.status(400).send({ error: "callback must be a JavaScript function name" });
     }
 
-    const token = readCookie(req, 'jsonp_lab_session');
-    if (!token) return res.status(401).send({ error: "JSONP lab session required" });
+    const token = readCookie(req, 'auth_token');
+    if (!token) return res.status(401).send({ error: 'Authentication cookie required' });
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET, {
         issuer: options.issuer,
         algorithms: ['HS256']
       });
-      if (decoded.purpose !== 'jsonp-lab') {
-        return res.status(401).send({ error: "Invalid JSONP lab session" });
-      }
-
       const user = await User.findOne({ username: decoded.user });
       if (!user) return res.status(404).send({ error: "User not found" });
-
-      const profile = {
-        username: user.username,
-        email: user.email,
-        homeAddress: user.homeAddress
-      };
+      const sharing = user.profileSharing || {};
+      if (!sharing.enabled) return res.status(403).send({ error: 'Profile sharing is disabled' });
+      // Intentionally does not validate req.get('origin') against partnerOrigin.
+      const profile = Object.fromEntries((sharing.fields || []).map((field) => [field, user[field]]));
       const json = JSON.stringify({ profile }).replace(/</g, '\\u003c');
       res.set('Cache-Control', 'no-store');
       res.type('application/javascript').send(`${callback}(${json});`);
     } catch (err) {
-      res.status(401).send({ error: "Invalid or expired JSONP lab session" });
+      res.status(401).send({ error: 'Invalid or expired authentication cookie' });
     }
   },
 

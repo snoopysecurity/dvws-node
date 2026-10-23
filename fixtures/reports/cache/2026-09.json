@@ -1,8 +1,0 @@
-{
-  "period": "2026-09",
-  "report": "Monthly exchange rate summary",
-  "rates": [
-    { "currency": "EUR", "rate": 1.0 },
-    { "currency": "GBP", "rate": 0.86 }
-  ]
-}

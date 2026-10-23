@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const User = require('../models/user');
+const ResourceStoreOrder = require('../models/resource-store-order');
+const monthlyReportCache = require('../services/monthly-report-cache');
 
 // Deliberately unsafe YAML feature for the supplier import exercise. YAML
 // tags may supply executable postImport hooks that the importer invokes.
@@ -13,7 +15,46 @@ const executableHookType = new yaml.Type('!js/function', {
 });
 const supplierSchema = yaml.DEFAULT_SCHEMA.extend([executableHookType]);
 
-const reportCacheDirectory = path.resolve(__dirname, '../../fixtures/reports/cache');
+async function cacheMonthlyReport(username, period) {
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(period);
+  if (!match) return;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const start = new Date(Date.UTC(year, month, 1));
+  const end = new Date(Date.UTC(year, month + 1, 1));
+  const user = await User.findOne({ username }, 'username email').lean();
+  if (!user) return;
+
+  const orders = await ResourceStoreOrder.find({
+    username,
+    createdAt: { $gte: start, $lt: end }
+  }).sort({ createdAt: 1 }).lean();
+  const report = {
+    period,
+    account: { username: user.username, email: user.email || null },
+    statement: {
+      orders: orders.map((order) => ({
+        itemName: order.itemName,
+        quantity: order.quantity,
+        unitPrice: order.unitPrice,
+        creditChange: order.creditChange,
+        createdAt: order.createdAt
+      })),
+      totalCreditsBilled: orders.reduce((total, order) => total + Math.max(0, -order.creditChange), 0)
+    }
+  };
+
+  const reportPath = monthlyReportCache.reportPathFor(username, period);
+  try {
+    await fs.promises.access(reportPath);
+    return;
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  await fs.promises.mkdir(path.dirname(reportPath), { recursive: true });
+  await fs.promises.writeFile(reportPath, JSON.stringify(report, null, 2));
+}
 
 module.exports = {
   importSupplierOrders: async (req, res) => {
@@ -39,18 +80,26 @@ module.exports = {
     }
   },
 
-  readMonthlyReport: (req, res) => {
-    const period = req.query.period || '2026-09';
-    // The period is intended to be YYYY-MM but is joined into a path directly.
-    const reportPath = path.resolve(reportCacheDirectory, `${period}.json`);
-    fs.readFile(reportPath, 'utf8', (err, report) => {
-      if (err) return res.status(404).send({ error: 'Cached report not found' });
+  readMonthlyReport: async (req, res) => {
+    const period = req.query.period || new Date().toISOString().slice(0, 7);
+    try {
+      // Ordinary YYYY-MM requests create a cached statement from the caller's
+      // account and Resource Store orders. Traversal values skip generation.
+      await cacheMonthlyReport(req.decoded.user, period);
+      // Vulnerability: period is joined into the user's report directory and
+      // resolved without checking that the result stays inside that directory.
+      const reportPath = path.resolve(monthlyReportCache.reportCacheDirectory,
+        monthlyReportCache.reportOwnerDirectory(req.decoded.user), `${period}.json`);
+      const report = await fs.promises.readFile(reportPath, 'utf8');
       try {
         return res.json(JSON.parse(report));
       } catch (parseError) {
         return res.status(500).send({ error: 'Cached report is invalid' });
       }
-    });
+    } catch (err) {
+      if (err.code === 'ENOENT') return res.status(404).send({ error: 'Cached report not found' });
+      return res.status(500).send({ error: 'Could not generate or read monthly report' });
+    }
   },
 
   readActivityReport: (req, res) => {

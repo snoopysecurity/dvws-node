@@ -90,6 +90,65 @@
         }
       }
     },
+    "/v2/users/profile-sharing": {
+      "get": {
+        "description": "Returns the authenticated account's profile-sharing settings.",
+        "responses": {
+          "200": {
+            "description": "Profile-sharing settings"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "description": "Updates the authenticated account's profile-sharing settings.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["enabled", "partnerOrigin", "fields"],
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "partnerOrigin": { "type": "string", "format": "uri" },
+                  "fields": {
+                    "type": "array",
+                    "items": { "type": "string", "enum": ["username", "email", "homeAddress"] }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Settings saved" },
+          "400": { "description": "Invalid settings" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/v2/profile-sharing/jsonp": {
+      "get": {
+        "description": "Returns the selected fields as JSONP when profile sharing is enabled. This endpoint intentionally does not validate the request origin.",
+        "parameters": [
+          {
+            "name": "callback",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "JavaScript callback with selected profile fields" },
+          "400": { "description": "Invalid callback" },
+          "401": { "description": "Invalid or missing auth_token cookie" },
+          "403": { "description": "Sharing is disabled" }
+        }
+      }
+    },
     "/v2/users/{id}/profile-details": {
       "get": {
         "description": "",
@@ -271,91 +330,6 @@
         "responses": {
           "200": {
             "description": "OK"
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/v2/session-lab/secondary-token": {
-      "post": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v2/cookie-lab/session": {
-      "post": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "profile": {
-                    "example": "any"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v2/cookie-lab/action": {
-      "post": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/v2/jsonp-lab/session": {
-      "post": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/v2/jsonp-lab/profile": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "callback",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
           },
           "404": {
             "description": "Not Found"
@@ -1124,13 +1098,15 @@
     },
     "/v2/reports/monthly": {
       "get": {
-        "description": "Authenticated report response is marked public-cacheable; no rate limit is applied.",
+        "description": "Generates and caches a monthly statement from the authenticated account's profile and Resource Store orders. The period is joined into the account-specific file path without a containment check; authenticated responses are marked public-cacheable.",
         "parameters": [
           {
             "name": "period",
             "in": "query",
+            "description": "Statement month in YYYY-MM format.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
             }
           }
         ],

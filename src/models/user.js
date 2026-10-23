@@ -44,6 +44,11 @@ const userSchema = new Schema({
   weeklyDigest: {
     type: Boolean,
     default: false
+  },
+  profileSharing: {
+    enabled: { type: Boolean, default: false },
+    partnerOrigin: { type: String, default: '' },
+    fields: { type: [String], default: [] }
   }
 });
 

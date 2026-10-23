@@ -8,9 +8,16 @@
 
   type StoreItem = { id: string; name: string; description: string; price: number };
   type StoreOrder = { _id: string; itemName: string; unitPrice: number; quantity: number; creditChange: number; createdAt: string };
+  type StatementOrder = { itemName: string; unitPrice: number; quantity: number; creditChange: number; createdAt: string };
+  type MonthlyStatement = {
+    period: string;
+    account: { username: string; email: string | null };
+    statement: { orders: StatementOrder[]; totalCreditsBilled: number };
+  };
   let balance = $state<number | null>(null);
   let catalogue = $state<StoreItem[]>([]);
   let orders = $state<StoreOrder[]>([]);
+  let monthlyStatement = $state<MonthlyStatement | null>(null);
   let selectedItem = $state('api-monitor');
   let quantity = $state('1');
   let loading = $state(false);
@@ -19,13 +26,17 @@
 
   async function refresh() {
     try {
-      const { data } = await apiClient.get('/api/v2/resource-store');
-      balance = data.balance;
-      catalogue = data.catalogue;
-      orders = data.orders;
+      const [storeResponse, reportResponse] = await Promise.all([
+        apiClient.get('/api/v2/resource-store'),
+        apiClient.get('/api/v2/reports/monthly')
+      ]);
+      balance = storeResponse.data.balance;
+      catalogue = storeResponse.data.catalogue;
+      orders = storeResponse.data.orders;
+      monthlyStatement = reportResponse.data;
       if (!catalogue.some((item: StoreItem) => item.id === selectedItem) && catalogue.length) selectedItem = catalogue[0].id;
     } catch (err: any) {
-      error = err.response?.data?.error || 'Resource Store is unavailable right now.';
+      error = err.response?.data?.error || 'Resource Store or monthly statement is unavailable right now.';
     }
   }
 
@@ -54,6 +65,17 @@
   {#if error}<StatusMessage tone="error">{error}</StatusMessage>{/if}
   {#if message}<StatusMessage tone="success">{message}</StatusMessage>{/if}
   <Card class="flex flex-wrap items-center justify-between gap-4 p-6"><div><p class="page-kicker">Available credits</p><p class="mt-2 text-3xl font-bold text-slate-100">{balance ?? '—'} <span class="text-base font-medium text-slate-400">credits</span></p></div><p class="max-w-md text-sm text-slate-400">Choose a service and quantity to place an order.</p></Card>
+
+  {#if monthlyStatement}
+    <Card class="p-6">
+      <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="section-title">Monthly statement</h2><p class="mt-1 text-sm text-slate-400">{monthlyStatement.account.email || monthlyStatement.account.username} · {monthlyStatement.period}</p></div><p class="text-right"><span class="block text-xs uppercase tracking-wide text-slate-500">Credits billed</span><strong class="mt-1 block text-2xl text-indigo-300">{monthlyStatement.statement.totalCreditsBilled}</strong></p></div>
+      {#if monthlyStatement.statement.orders.length === 0}
+        <p class="mt-4 text-sm text-slate-400">No billed orders for this month.</p>
+      {:else}
+        <div class="mt-4 overflow-x-auto"><table class="w-full text-left text-sm"><thead class="text-xs uppercase tracking-wide text-slate-500"><tr><th class="py-3 pr-4">Service</th><th class="py-3 pr-4">Quantity</th><th class="py-3 pr-4">Unit price</th><th class="py-3">Credits billed</th></tr></thead><tbody class="divide-y divide-slate-800">{#each monthlyStatement.statement.orders as line, index (`${line.createdAt}-${index}`)}<tr class="text-slate-300"><td class="py-3 pr-4 font-medium text-slate-100">{line.itemName}</td><td class="py-3 pr-4">{line.quantity}</td><td class="py-3 pr-4">{line.unitPrice}</td><td class="py-3">{Math.max(0, -line.creditChange)}</td></tr>{/each}</tbody></table></div>
+      {/if}
+    </Card>
+  {/if}
 
   <section><div class="page-heading"><div><p class="page-kicker">Catalogue</p><h2 class="section-title mt-1">Developer services</h2></div></div><div class="grid gap-4 md:grid-cols-3">
     {#each catalogue as item (item.id)}<Card class="flex flex-col p-5"><h3 class="font-semibold text-slate-100">{item.name}</h3><p class="mt-2 flex-1 text-sm leading-6 text-slate-400">{item.description}</p><p class="mt-5 text-sm font-semibold text-indigo-300">{item.price} credits each</p></Card>{/each}
