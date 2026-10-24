@@ -16,7 +16,7 @@ module.exports = (router) => {
 
   router.get('/v2/reports/activity', validateToken, (req, res) => {
     /* #swagger.security = [{ bearerAuth: [] }] */
-    /* #swagger.parameters['limit'] = { in: 'query', required: false, '@schema': { type: 'integer', minimum: 1, maximum: 5000, default: 20 }, description: 'Number of synthetic activity records' } */
+    /* #swagger.parameters['limit'] = { in: 'query', required: false, '@schema': { type: 'integer', minimum: 1, maximum: 5000, default: 20 }, description: 'Maximum number of recorded account events to return' } */
     return controller.readActivityReport(req, res);
   });
 

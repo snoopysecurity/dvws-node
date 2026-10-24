@@ -37,5 +37,35 @@ module.exports = async () => {
   const bodyParameter = post.parameters.find((parameter) => parameter.name === 'body');
   if (bodyParameter) bodyParameter.schema = orderSchema;
   post.requestBody.content['application/json'].schema = orderSchema;
+
+  spec.paths['/v2/release/{release}'].get.description =
+    'Look up the current release in the operational XML configuration. The release value is interpolated into XPath.';
+  const redeem = spec.paths['/v2/resource-store/promotions/redeem'].post;
+  redeem.description = 'Redeem an active promotion from the operational XML configuration once per account.';
+  redeem.security = [{ bearerAuth: [] }];
+  redeem.requestBody = { required: true, content: { 'application/json': { schema: {
+    type: 'object', required: ['code'], properties: { code: { type: 'string', maxLength: 100 } }
+  } } } };
+
+  const bio = spec.paths['/v2/users/profile/bio'].put;
+  bio.description = 'Save the authenticated account\'s bio before exporting it.';
+  bio.security = [{ bearerAuth: [] }];
+  bio.requestBody = { required: true, content: { 'application/json': { schema: {
+    type: 'object', required: ['bio'], properties: { bio: { type: 'string', maxLength: 2000 } }
+  } } } };
+
+  const exportXml = spec.paths['/v2/users/profile/export/xml'].post;
+  exportXml.description = 'Export the authenticated account\'s stored profile as signed XML. The signature is returned in X-Profile-Export-Signature.';
+  exportXml.security = [{ bearerAuth: [] }];
+  delete exportXml.requestBody;
+
+  const restoreXml = spec.paths['/v2/users/profile/restore/xml'].post;
+  restoreXml.description = 'Restore a signed XML profile export to the authenticated account.';
+  restoreXml.security = [{ bearerAuth: [] }];
+  restoreXml.requestBody = { required: true, content: { 'application/json': { schema: {
+    type: 'object', required: ['xml', 'signature'], properties: {
+      xml: { type: 'string' }, signature: { type: 'string' }
+    }
+  } } } };
   fs.writeFileSync(outputFile, `${JSON.stringify(spec, null, 2)}\n`);
 };

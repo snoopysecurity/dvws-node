@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <release>0.0.1</release>
+  <resourceStore>
+    <promotion>
+      <code>OPS-AUTUMN-2026-125</code>
+      <credits>125</credits>
+      <active>true</active>
+    </promotion>
+  </resourceStore>
+</config>

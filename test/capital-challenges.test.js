@@ -28,24 +28,50 @@ describe('Capital-inspired authentication and activity challenges', function () 
     expect(unknown.body.token).to.be.undefined;
   });
 
-  it('requires authentication and returns deterministic synthetic activity at the requested size', async function () {
+  it('returns recorded account actions and makes the oversized response measurably larger', async function () {
+    const username = `activity_${Date.now()}`;
+    const password = 'Activity123!';
+    const created = await request.post('/api/v2/users').send({ username, password });
+    expect(created.status).to.eql(201);
+    const login = await request.post('/api/v2/login').send({ username, password });
+    expect(login.status).to.eql(200);
+    const token = login.body.token;
+    const noteIds = [];
+    for (let index = 0; index < 45; index++) {
+      const note = await request.post('/api/v2/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: `Activity ${index}`, body: `Recorded note ${index}`, type: 'public' });
+      expect(note.status).to.eql(200);
+      noteIds.push(String(note.body._id));
+    }
+    const purchase = await request.post('/api/v2/resource-store/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ itemId: 'api-monitor', quantity: 1 });
+    expect(purchase.status).to.eql(201);
+
     const unauthenticated = await request.get('/api/v2/reports/activity');
     expect(unauthenticated.status).to.eql(401);
 
     const ordinary = await request.get('/api/v2/reports/activity')
-      .set('Authorization', `Bearer ${legacyToken}`);
+      .set('Authorization', `Bearer ${token}`);
     expect(ordinary.status).to.eql(200);
     expect(ordinary.body.count).to.eql(20);
     expect(ordinary.body.records).to.have.lengthOf(20);
 
     const large = await request.get('/api/v2/reports/activity')
-      .set('Authorization', `Bearer ${legacyToken}`)
+      .set('Authorization', `Bearer ${token}`)
       .query({ limit: 5000 });
     expect(large.status).to.eql(200);
-    expect(large.body.count).to.eql(5000);
-    expect(large.body.records).to.have.lengthOf(5000);
+    expect(large.body.count).to.eql(47);
+    expect(large.body.records).to.have.lengthOf(47);
     expect(large.body.records.slice(0, 20)).to.deep.eql(ordinary.body.records);
-    expect(large.text.length).to.be.greaterThan(ordinary.text.length);
+    expect(large.body.records.every((event) => event.actor === username)).to.eql(true);
+    expect(large.body.records.filter((event) => event.action === 'note.created').map((event) => event.subject).sort())
+      .to.deep.eql(noteIds.sort());
+    expect(large.body.records.some((event) => event.action === 'login')).to.eql(true);
+    expect(large.body.records.some((event) => event.action === 'resource_order.created' &&
+      event.subject === purchase.body.order._id)).to.eql(true);
+    expect(Buffer.byteLength(large.text)).to.be.greaterThan(Buffer.byteLength(ordinary.text) * 2);
   });
 
   it('rejects invalid and excessive activity limits', async function () {
@@ -65,7 +91,7 @@ describe('Capital-inspired authentication and activity challenges', function () 
     expect(report.parameters).to.deep.include({
       name: 'limit', in: 'query', required: false,
       schema: { type: 'integer', minimum: 1, maximum: 5000, default: 20 },
-      description: 'Number of synthetic activity records'
+      description: 'Maximum number of recorded account events to return'
     });
     expect(report.security).to.deep.eql([{ bearerAuth: [] }]);
     expect(spec.body.components.securitySchemes.bearerAuth).to.deep.eql({

@@ -2,8 +2,10 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const xml2js = require('xml2js');
+const crypto = require('crypto');
 const notifications = require('../services/notifications');
 const { broadcast } = require('../services/websocket-notifications');
+const { recordActivity } = require('../services/activity-events');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 const User = require('../models/user');
@@ -22,6 +24,13 @@ const loginLogs = [];
 // user, so a later caller can receive another user's profile response.
 const profileResponseCache = new Map();
 const PROFILE_CACHE_TTL_MS = 60 * 1000;
+// The restore workflow accepts only XML produced by this server process. The
+// signature covers the exact export bytes and the account that requested them.
+const profileExportKey = crypto.randomBytes(32);
+
+function profileExportSignature(username, xml) {
+  return crypto.createHmac('sha256', profileExportKey).update(username).update('\n').update(xml).digest('hex');
+}
 
 function readCookie(req, name) {
   const cookies = (req.headers.cookie || '').split(';');
@@ -192,6 +201,7 @@ module.exports = {
                 result.error = `Authentication error`;
               }
               if (status === 200) {
+                await recordActivity(user.username, 'login', 'v2');
                 res.setHeader('Authorization', 'Bearer ' + result.token);
                 setAuthCookie(req, res, result.token);
               }
@@ -236,6 +246,7 @@ module.exports = {
         process.env.JWT_SECRET,
         { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: 'HS256' }
       );
+      await recordActivity(user.username, 'login', 'v1');
       res.setHeader('Authorization', 'Bearer ' + token);
       setAuthCookie(req, res, token);
       return res.status(200).send({
@@ -273,24 +284,80 @@ module.exports = {
   },
 
 
-  // Vulnerability: XML Injection (Profile Export)
+  updateProfileBio: async (req, res) => {
+    const { bio } = req.body || {};
+    if (typeof bio !== 'string' || bio.length > 2000) {
+      return res.status(400).send({ error: 'bio must be a string of at most 2000 characters' });
+    }
+    try {
+      const user = await User.findOneAndUpdate(
+        { username: req.decoded.user }, { $set: { bio } }, { new: true, runValidators: true }
+      );
+      if (!user) return res.status(404).send({ error: 'User not found' });
+      profileResponseCache.delete('/api/v2/users/profile');
+      return res.send({ username: user.username, bio: user.bio, admin: user.admin });
+    } catch (err) {
+      return res.status(500).send({ error: 'Could not update profile bio' });
+    }
+  },
+
+  // Vulnerability: a persisted bio is interpolated into a signed XML export
+  // without XML escaping. The restore workflow trusts the signed document.
   exportProfileXml: async (req, res) => {
-    // Scenario: User exports their profile to XML.
-    // Vulnerability: The 'bio' and 'username' fields are user-controlled and concatenated directly.
-    const username = req.body.username || "guest";
-    const bio = req.body.bio || "No bio";
-    
-    // Construct XML manually (Vulnerable)
-    const xml = `
+    try {
+      const user = await User.findOne({ username: req.decoded.user });
+      if (!user) return res.status(404).send({ error: 'User not found' });
+      const xml = `
       <userProfile>
-        <username>${username}</username>
-        <role>user</role>
-        <bio>${bio}</bio>
+        <username>${user.username}</username>
+        <admin>${user.admin}</admin>
+        <bio>${user.bio || ''}</bio>
       </userProfile>
     `;
-    
-    res.set('Content-Type', 'application/xml');
-    res.send(xml);
+      res.set('X-Profile-Export-Signature', profileExportSignature(user.username, xml));
+      res.set('Access-Control-Expose-Headers', 'X-Profile-Export-Signature');
+      res.type('application/xml').send(xml);
+    } catch (err) {
+      res.status(500).send({ error: 'Could not export profile' });
+    }
+  },
+
+  restoreProfileXml: async (req, res) => {
+    const { xml, signature } = req.body || {};
+    if (typeof xml !== 'string' || xml.length > 16384 ||
+        typeof signature !== 'string' || !/^[a-f0-9]{64}$/.test(signature)) {
+      return res.status(400).send({ error: 'Signed XML export required' });
+    }
+    const expected = profileExportSignature(req.decoded.user, xml);
+    if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+      return res.status(403).send({ error: 'Export signature is invalid' });
+    }
+    try {
+      const document = new (require('@xmldom/xmldom').DOMParser)().parseFromString(xml, 'application/xml');
+      const root = document.documentElement;
+      if (!root || root.nodeName !== 'userProfile') {
+        return res.status(400).send({ error: 'Invalid profile XML' });
+      }
+      const fields = (name) => Array.from(root.childNodes).filter((node) => node.nodeType === 1 && node.nodeName === name);
+      if (fields('username').length !== 1 || fields('username')[0].textContent !== req.decoded.user) {
+        return res.status(400).send({ error: 'Export belongs to another account' });
+      }
+      const adminFields = fields('admin');
+      if (!adminFields.length || !['true', 'false'].includes(adminFields.at(-1).textContent)) {
+        return res.status(400).send({ error: 'Invalid profile role' });
+      }
+      // The migration reader uses the last admin element. A bio that closes
+      // its element can add a second value to an otherwise trusted export.
+      const admin = adminFields.at(-1).textContent === 'true';
+      const user = await User.findOneAndUpdate(
+        { username: req.decoded.user }, { $set: { admin } }, { new: true }
+      );
+      if (!user) return res.status(404).send({ error: 'User not found' });
+      profileResponseCache.delete('/api/v2/users/profile');
+      return res.send({ username: user.username, admin: user.admin });
+    } catch (err) {
+      return res.status(400).send({ error: 'Invalid profile XML' });
+    }
   },
 
   // Vulnerability: XML Injection (Profile Import - Mass Assignment)

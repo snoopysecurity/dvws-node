@@ -1,6 +1,5 @@
-const rateLimitMap = new Map();
-
 const rateLimiter = (options) => {
+  const rateLimitMap = new Map();
   const windowMs = options.windowMs || 30 * 1000; // Default: 30 seconds
   const max = options.max || 1000; // Relaxed for testing
   const message = options.message || "Too many requests, please try again later.";

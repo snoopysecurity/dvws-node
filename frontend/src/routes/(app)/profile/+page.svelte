@@ -9,6 +9,9 @@
   
   let bio = $state('');
   let exportXml = $state('');
+  let exportSignature = $state('');
+  let bioStatus = $state('');
+  let restoreStatus = $state('');
   let importXml = $state('');
   let exportResponse = $state('');
   let importResponse = $state('');
@@ -175,22 +178,46 @@
     }
   }
   
+  async function saveBio() {
+    bioStatus = '';
+    exportXml = '';
+    exportSignature = '';
+    try {
+      const { data } = await apiClient.put('/api/v2/users/profile/bio', { bio });
+      authStore.setUser({ ...$authStore.user, bio: data.bio });
+      bioStatus = 'Bio saved.';
+    } catch (error: any) {
+      bioStatus = extractErrorMessage(error, 'Could not save bio');
+    }
+  }
+
   async function handleExport() {
     isLoading = true;
     exportResponse = '';
     
     try {
-      const { data } = await apiClient.post('/api/v2/users/profile/export/xml', {
-        username: $authStore.user?.username,
-        bio
-      });
+      const { data, headers } = await apiClient.post('/api/v2/users/profile/export/xml');
       
       exportXml = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      exportSignature = String(headers['x-profile-export-signature'] || '');
       exportResponse = 'Profile exported successfully!';
     } catch (error: any) {
       exportResponse = extractErrorMessage(error, 'Failed to export profile');
     } finally {
       isLoading = false;
+    }
+  }
+
+  async function restoreExport() {
+    restoreStatus = '';
+    try {
+      const { data } = await apiClient.post('/api/v2/users/profile/restore/xml', {
+        xml: exportXml, signature: exportSignature
+      });
+      authStore.setUser({ ...$authStore.user, admin: data.admin });
+      restoreStatus = `Profile restored. Role: ${data.admin ? 'Admin' : 'User'}. Sign in again to refresh token permissions.`;
+    } catch (error: any) {
+      restoreStatus = extractErrorMessage(error, 'Could not restore export');
     }
   }
   
@@ -389,13 +416,18 @@
             bind:value={bio}
             class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
             rows="3"
+            maxlength="2000"
             placeholder="Enter your bio"
           ></textarea>
         </div>
         
-        <Button onclick={handleExport} disabled={isLoading}>
-          Export as XML
-        </Button>
+        <div class="flex flex-wrap gap-2">
+          <Button onclick={saveBio} disabled={isLoading}>Save bio</Button>
+          <Button onclick={handleExport} disabled={isLoading}>Export saved profile as XML</Button>
+          {#if exportSignature}<Button onclick={restoreExport} disabled={isLoading}>Restore signed export</Button>{/if}
+        </div>
+        {#if bioStatus}<p role="status" class="text-sm">{bioStatus}</p>{/if}
+        {#if restoreStatus}<p role="status" class="text-sm">{restoreStatus}</p>{/if}
         
         {#if exportXml}
           <div>

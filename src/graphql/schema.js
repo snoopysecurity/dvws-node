@@ -9,9 +9,11 @@ const { gql } = require('apollo-server');
 
 const fsPromise = require("fs").promises;
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const Note = require('../models/note');
 const User = require('../models/user');
 const sql = require('../models/passphrase');
+const { recordActivity } = require('../services/activity-events');
 
 
 // A schema is a collection of type definitions (hence "typeDefs")
@@ -127,24 +129,19 @@ const Gqresolvers = {
         },
 
       userLogin: async (parent, args, context, info) => {
-
-          let returnVar = {};
-          var argsusername = args.username;
-          var argspassword = args.password;
-    
-          result =  await User.find({ username: argsusername }, 'username password').exec();
-          if( result.length == 0 ) {
-            throw new Error( "User Login Failed");
+          const account = await User.findOne({ username: args.username });
+          if (!account || typeof args.password !== 'string' ||
+              !(await bcrypt.compare(args.password, account.password))) {
+            throw new Error('Authentication error');
           }
-          returnVar['username'] = result[0].username;
-          returnVar['password'] = result[0].password;
-    
-          returnval = passwordCompare(argspassword,result);
-          token = await returnval.then(function(token) {
-            returnVar['token'] = token;
-          })
-          return returnVar;
-
+          const permissions = ['user:read', 'user:write'];
+          if (account.admin) permissions.push('user:admin');
+          const token = jwt.sign({ user: account.username, permissions }, process.env.JWT_SECRET, {
+            expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: 'HS256'
+          });
+          await recordActivity(account.username, 'login', 'graphql');
+          // Keep the existing password-hash exposure challenge on successful login.
+          return { username: account.username, password: account.password, token, admin: account.admin };
         },
 
       createNote: async (parent, args, context, info) => {
@@ -171,46 +168,6 @@ const Gqresolvers = {
 
 
 
-
-function passwordCompare(argspassword,dbresult) {
-  user = dbresult[0].username;
-  dbtoken = bcrypt.compare(argspassword, dbresult[0].password).then(match => {
-    if (match) {
-
-      if (user.admin == true) {
-        const payload = { user: dbresult[0].username,"permissions": [
-          "user:read",
-          "user:write",
-          "user:admin"
-        ] };
-        const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
-        const secret = process.env.JWT_SECRET;
-        const token = jwt.sign(payload, secret, options);
-        
-
-        return token;
-      } else {
-
-        const payload = { user: dbresult[0].username,"permissions": [
-          "user:read",
-          "user:write"
-        ] };
-        const options = { expiresIn: '2d', issuer: 'https://github.com/snoopysecurity', algorithm: "HS256"};
-        const secret = process.env.JWT_SECRET;
-        const token = jwt.sign(payload, secret, options);
-
-        return token;       }
-    } else {
-      throw new Error( "Authentication error");
-      return result;
-    }
-
-  }).catch(err => {
-    dbtoken= err;
-  });
-  return dbtoken;
-
-}
 
 exports.GqSchema = graphqlTools.makeExecutableSchema({
   typeDefs: [ GqtypeDefs ],

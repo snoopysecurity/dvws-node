@@ -3,6 +3,7 @@ const path = require('path');
 const yaml = require('js-yaml');
 const User = require('../models/user');
 const ResourceStoreOrder = require('../models/resource-store-order');
+const ActivityEvent = require('../models/activity-event');
 const monthlyReportCache = require('../services/monthly-report-cache');
 
 // Deliberately unsafe YAML feature for the supplier import exercise. YAML
@@ -102,7 +103,7 @@ module.exports = {
     }
   },
 
-  readActivityReport: (req, res) => {
+  readActivityReport: async (req, res) => {
     const rawLimit = req.query.limit;
     if (rawLimit !== undefined &&
         (typeof rawLimit !== 'string' || !/^[0-9]+$/.test(rawLimit) ||
@@ -111,13 +112,23 @@ module.exports = {
     }
 
     const limit = rawLimit === undefined ? 20 : Number(rawLimit);
-    const records = Array.from({ length: limit }, (_, index) => ({
-      id: index + 1,
-      occurredAt: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
-      action: ['login', 'view_report', 'export_report'][index % 3],
-      actor: `training-user-${(index % 10) + 1}`
-    }));
-    return res.json({ count: records.length, records });
+    try {
+      const events = await ActivityEvent.find({ actor: req.decoded.user })
+        .sort({ occurredAt: -1, _id: -1 })
+        .limit(limit)
+        .select('_id occurredAt action actor subject')
+        .lean();
+      const records = events.map((event) => ({
+        id: event._id.toString(),
+        occurredAt: event.occurredAt,
+        action: event.action,
+        actor: event.actor,
+        subject: event.subject
+      }));
+      return res.json({ count: records.length, records });
+    } catch (error) {
+      return res.status(500).json({ error: 'Could not read activity report' });
+    }
   },
 
   updateNotificationPreferences: async (req, res) => {

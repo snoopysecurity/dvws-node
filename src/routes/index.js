@@ -5,7 +5,6 @@ const files = require('./files');
 const integrations = require('./integrations');
 const supportTickets = require('./support-tickets');
 const resourceStore = require('./resource-store');
-const jwtKeyLab = require('./jwt-key-lab');
 
 module.exports = (router) => {
   users(router);
@@ -15,6 +14,5 @@ module.exports = (router) => {
   integrations(router);
   supportTickets(router);
   resourceStore(router);
-  jwtKeyLab(router);
   return router;
 };

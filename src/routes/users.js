@@ -23,6 +23,8 @@ module.exports = (router) => {
   router.route('/v2/users/profile')
     .get(controller.getProfile);
 
+  router.put('/v2/users/profile/bio', validateToken, controller.updateProfileBio);
+
   router.route('/v2/users/:id/profile-details')
     .get(validateToken, controller.getUserProfileDetails);
 
@@ -67,8 +69,9 @@ module.exports = (router) => {
   });
 
   router.route('/v2/users/profile/export/xml')
-    .post(controller.exportProfileXml)
-    .get(controller.exportProfileXml);
+    .post(validateToken, controller.exportProfileXml);
+
+  router.post('/v2/users/profile/restore/xml', validateToken, controller.restoreProfileXml);
 
   router.route('/v2/users/profile/import/xml')
     .post(controller.importProfileXml);

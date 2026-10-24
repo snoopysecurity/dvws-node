@@ -2,21 +2,11 @@ const Note = require('../models/note');
 const jwt = require('jsonwebtoken')
 const { exec } = require('child_process');
 var xpath = require('xpath');
-const xml2js = require('xml2js');
 const { parseVulnerableXml } = require('../utils/vulnerable-xml');
-const fs = require('fs');
-const path = require('path');
-dom = require('@xmldom/xmldom').DOMParser
-const parser = new xml2js.Parser({ attrkey: "ATTR" });
+const { recordActivity } = require('../services/activity-events');
+const operationalConfig = require('../services/operational-config');
 
 var MongoClient = require('mongodb').MongoClient;
-
-let xml_string = fs.readFileSync(path.resolve(__dirname, '../../fixtures/xml/config.xml'), "utf8");
-xml_string = xml_string.replace(/>\s*/g, '>');  // Replace "> " with ">"
-xml_string = xml_string.replace(/\s*</g, '<');  // Replace "< " with "<"
-
-var doc = new dom().parseFromString(xml_string)
-var node = null;
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 const connUri2 = connUri.substr(0, connUri.lastIndexOf("/"));
@@ -89,14 +79,14 @@ module.exports = {
       var uservalue = decodeURI(req.params.release.toString())
       var xpath_result = xpath.evaluate(
         "//config/*[local-name(.)='release' and //config//release/text()='" + uservalue + "']",            // xpathExpression
-        doc,                        // contextNode
+        operationalConfig.document, // contextNode
         null,                       // namespaceResolver
         xpath.XPathResult.ANY_TYPE, // resultType
         null                        // result
       )
       
       var result = [];
-      node = xpath_result.iterateNext();
+      let node = xpath_result.iterateNext();
       while (node) {
           result.push(node.toString());
           node = xpath_result.iterateNext();
@@ -120,6 +110,7 @@ module.exports = {
         
         try {
             const note = await new_note.save();
+            await recordActivity(result.user, 'note.created', String(note._id));
             res.json(note);
         } catch (err) {
             res.send(err);

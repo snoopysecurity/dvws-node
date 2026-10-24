@@ -90,6 +90,25 @@
         }
       }
     },
+    "/v2/users/profile/bio": {
+      "put": {
+        "description": "Save the authenticated account's bio before exporting it.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["bio"],
+                "properties": { "bio": { "type": "string", "maxLength": 2000 } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Saved profile bio" }, "400": { "description": "Invalid bio" }, "401": { "description": "Unauthorized" } }
+      }
+    },
     "/v2/users/profile-sharing": {
       "get": {
         "description": "Returns the authenticated account's profile-sharing settings.",
@@ -433,38 +452,32 @@
       }
     },
     "/v2/users/profile/export/xml": {
-      "get": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
       "post": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
+        "description": "Export the authenticated account's stored profile as signed XML. The signature is returned in X-Profile-Export-Signature.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Signed profile XML" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/v2/users/profile/restore/xml": {
+      "post": {
+        "description": "Restore a signed XML profile export to the authenticated account.",
+        "security": [{ "bearerAuth": [] }],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["xml", "signature"],
                 "properties": {
-                  "username": {
-                    "example": "any"
-                  },
-                  "bio": {
-                    "example": "any"
-                  }
+                  "xml": { "type": "string" },
+                  "signature": { "type": "string" }
                 }
               }
             }
           }
-        }
+        },
+        "responses": { "200": { "description": "Profile restored" }, "400": { "description": "Invalid export" }, "401": { "description": "Unauthorized" }, "403": { "description": "Invalid signature" } }
       }
     },
     "/v2/users/profile/import/xml": {
@@ -639,7 +652,7 @@
     },
     "/v2/release/{release}": {
       "get": {
-        "description": "",
+        "description": "Look up the current release in the operational XML configuration. The release value is interpolated into XPath.",
         "parameters": [
           {
             "name": "release",
@@ -1131,7 +1144,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Number of synthetic activity records",
+            "description": "Maximum number of recorded account events to return",
             "schema": {
               "type": "integer",
               "minimum": 1,
@@ -1227,6 +1240,33 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/v2/resource-store/promotions/redeem": {
+      "post": {
+        "tags": ["Resource Store"],
+        "summary": "Redeem an active promotion code for workspace credits",
+        "description": "Redeem an active promotion from the operational XML configuration once per account.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": { "code": { "type": "string", "maxLength": 100 } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Credits applied to the wallet" },
+          "400": { "description": "Invalid code" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Promotion not found" },
+          "409": { "description": "Promotion already redeemed" }
+        }
       }
     },
     "/v2/resource-store/orders": {

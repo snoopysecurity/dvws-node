@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const { attachNotificationWebSocket } = require('./services/websocket-notifications');
+const rateLimiter = require('./middleware/rate-limiter');
 
 const soapservice = require('./services/soap/user-service'); //SOAP Service
 const rpcserver = require('./services/xml-rpc/server'); //XMLRPC Service
@@ -54,6 +55,10 @@ app.use('/xmlrpc', rpcserver);
 app.use(bodyParser.json());
 app.use(fileUpload({ parseNested: true }));
 app.use('/api', routes(router));
+
+// The API gateway counts HTTP requests to GraphQL, including a batched request
+// containing many login mutations, as one attempt against this request budget.
+app.post('/graphql', rateLimiter({ windowMs: 30 * 1000, max: 10 }));
 
 // Intentionally undisclosed TRACE diagnostics endpoint for the route discovery
 // challenge. It returns synthetic account metadata, never process secrets.

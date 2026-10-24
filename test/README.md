@@ -108,9 +108,9 @@ The test suite validates the following vulnerabilities:
 - Test: Code review confirmation
 
 ### 16. **GraphQL Batching / Brute Force**
-- Location: `src/server.js`
-- Issue: `allowBatchedHttpRequests: true`
-- Test: Code review confirmation
+- Location: `src/server.js` and `src/graphql/schema.js`
+- Issue: The request limiter counts one HTTP request while a batch executes many real `userLogin` password checks
+- Test: `test/graphql-batch-rate-limit.test.js` compares separate attempts with a batched login that yields a usable token
 
 ### 17. **Client-Side Template Injection**
 - Location: `frontend/` (search page)
@@ -158,7 +158,7 @@ The test suite validates the following vulnerabilities:
 - `test/support-tickets.test.js`: UUIDv1 ticket creation, cross-user IDOR, and retrieval of the seeded victim ticket through its exposed notification UUID.
 - `test/resource-store.test.js`: negative order quantities increase the authenticated user's balance by the catalog price multiplied by the absolute quantity; includes the 1,000-credit example and checks wallet isolation.
 - `test/inspired-challenges.test.js`: monthly report path traversal reads a different account's generated statement, including profile and Resource Store order data.
-- `test/jwt-key-lab.test.js`: attacker-controlled `jku` JWKS verification and HS256 `kid` traversal, both reaching a protected application endpoint through shared auth middleware.
+- `test/jwt-key-lab.test.js`: attacker-controlled `jku` JWKS verification and HS256 `kid` traversal, reaching stored user data and Resource Store records through shared auth middleware.
 
 These runtime tests exercise the routes rather than only checking source patterns.
 
