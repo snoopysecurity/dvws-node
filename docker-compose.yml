@@ -27,6 +27,7 @@ services:
         environment:
             SQL_LOCAL_CONN_URL: dvws-mysql
             MONGO_LOCAL_CONN_URL: mongodb://dvws-mongo:27017/node-dvws
+            DVWS_HOST: 127.0.0.1
         depends_on:
             dvws-mongo:
                 condition: service_healthy

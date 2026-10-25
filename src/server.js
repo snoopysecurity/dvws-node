@@ -122,7 +122,8 @@ swaggerGen().then(async () => {
 
   const serverInstance = app.listen(process.env.EXPRESS_JS_PORT, '0.0.0.0', () => {
     const port = process.env.EXPRESS_JS_PORT;
-    const host = `http://dvws.local${port == 80 ? "" : ":" + port}`;
+    const hostname = process.env.DVWS_HOST || 'dvws.local';
+    const host = `http://${hostname}${port == 80 ? "" : ":" + port}`;
     console.log(`🚀 All services listening at ${host} (127.0.0.1)`);
     console.log(`  ├─ REST API:  ${host}/api`);
     console.log(`  ├─ SOAP:      ${host}/dvwsuserservice`);
@@ -140,7 +141,7 @@ swaggerGen().then(async () => {
     const httpsServer = https.createServer(tlsOptions, app);
     attachNotificationWebSocket(httpsServer);
     httpsServer.listen(process.env.HTTPS_PORT, '0.0.0.0', () => {
-      console.log(`🔒 Optional HTTPS lab listening on https://dvws.local:${process.env.HTTPS_PORT}`);
+      console.log(`🔒 Optional HTTPS lab listening on https://${process.env.DVWS_HOST || 'dvws.local'}:${process.env.HTTPS_PORT}`);
     });
   }
 }).catch(err => {

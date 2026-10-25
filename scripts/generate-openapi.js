@@ -9,7 +9,7 @@ const doc = {
   },
   servers: [
     {
-      url: 'http://dvws.local/api'
+      url: `http://${process.env.DVWS_HOST || 'dvws.local'}/api`
     }
   ],
   components: {
