@@ -18,7 +18,16 @@ const merge = (target, source) => {
             if (!target[key]) target[key] = {};
             merge(target[key], source[key]);
         } else {
-            target[key] = source[key];
+            if (target === Object.prototype) {
+                // Keep the vulnerable inherited setting usable by the upload
+                // policy, but out of unrelated for-in registries such as PDFKit.
+                if (source[key] === null) delete target[key];
+                else Object.defineProperty(target, key, {
+                    value: source[key], writable: true, configurable: true, enumerable: false
+                });
+            } else {
+                target[key] = source[key];
+            }
         }
     }
     return target;
@@ -35,20 +44,14 @@ module.exports = {
         const token = req.headers.authorization.split(' ')[1]; 
         result = jwt.verify(token, process.env.JWT_SECRET, options);
 
+        let fileData = {};
         if (req.body.metadata) {
             try {
                 const metadata = JSON.parse(req.body.metadata);
-                const fileData = {}; 
                 merge(fileData, metadata);
             } catch (e) {
                 // ignore
             }
-        }
-
-        // Verification for testing
-        if (({}).testPollution) {
-             delete Object.prototype.testPollution; // Clean up
-             return res.status(200).json({ status: "Vulnerable", polluted: true });
         }
 
         if (!req.files || !req.files.file || Object.keys(req.files.file).length === 0) {
@@ -65,12 +68,12 @@ module.exports = {
             fs.mkdirSync(uploadPath, { recursive: true });
         }
 
-        if (typeof sampleFile.name !== 'undefined') {
-            if ( sampleFile.name.endsWith(".xml") == false ) {
-                res.status(400).send("Uploaded file is not an XML file.");
-                return;
-            }
-            }
+        const allowedExtensions = fileData.allowedExtensions || [fileData.allowedExtension || '.xml'];
+        const extension = path.extname(sampleFile.name || '').toLowerCase();
+        if (!Array.isArray(allowedExtensions) || !allowedExtensions.includes(extension)) {
+            res.status(400).send("Uploaded file type is not allowed.");
+            return;
+        }
 
         filePath = __dirname + '/../../public/uploads/' + result.user + "/" + sampleFile.name;
 
@@ -79,7 +82,7 @@ module.exports = {
             if (err) {
                 return res.status(500).send(err);
             }
-            res.json('File uploaded to your private user directory');
+            res.json({ status: 'uploaded', filename: sampleFile.name, extension, allowedExtensions });
         });
 
     },

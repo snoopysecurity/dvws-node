@@ -7,6 +7,7 @@ const orderSchema = new mongoose.Schema({
   unitPrice: { type: Number, required: true },
   quantity: { type: Number, required: true },
   creditChange: { type: Number, required: true },
+  supplier: { type: String, default: null },
   createdAt: { type: Date, default: Date.now }
 }, { versionKey: false });
 

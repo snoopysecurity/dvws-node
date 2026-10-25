@@ -17,7 +17,9 @@ describe('VulnAPI-inspired realistic challenges', function () {
       'supplier: Northstar Components',
       'orders:',
       '  - sku: BRG-104',
+      '    itemName: Bearing assembly',
       '    quantity: 12',
+      '    unitPrice: 4.5',
       `postImport: !js/function "require('fs').writeFileSync('public/${markerName}', 'executed')"`
     ].join('\n');
 
@@ -25,8 +27,12 @@ describe('VulnAPI-inspired realistic challenges', function () {
       .set('Authorization', `Bearer ${token}`)
       .attach('file', Buffer.from(yamlBatch), 'orders.yaml');
 
-    expect(response.status).to.eql(200);
+    expect(response.status).to.eql(201);
     expect(response.body.imported).to.eql(1);
+    expect(response.body.orders[0]).to.include({ itemId: 'BRG-104', itemName: 'Bearing assembly', quantity: 12, unitPrice: 4.5 });
+    const store = await request.get('/api/v2/resource-store').set('Authorization', `Bearer ${token}`);
+    expect(store.status).to.eql(200);
+    expect(store.body.orders.some((order) => order.itemId === 'BRG-104' && order.supplier === 'Northstar Components')).to.eql(true);
     try {
       const marker = await request.get(`/${markerName}`);
       expect(marker.status).to.eql(200);

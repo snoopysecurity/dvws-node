@@ -69,13 +69,49 @@ module.exports = {
         return res.status(400).send({ error: 'Order batch must contain an orders list' });
       }
 
+      const username = req.decoded.user;
+      const supplier = typeof batch.supplier === 'string' && batch.supplier.trim()
+        ? batch.supplier.trim()
+        : 'unknown';
+      const importedOrders = batch.orders.map((order) => {
+        const itemId = order && (order.sku || order.itemId);
+        const itemName = order && (order.itemName || order.name || order.sku || order.itemId);
+        const quantity = Number(order && order.quantity);
+        const unitPrice = Number(order && (order.unitPrice ?? order.unit_price ?? order.price));
+        if (typeof itemId !== 'string' || !itemId.trim() || typeof itemName !== 'string' || !itemName.trim() ||
+            !Number.isSafeInteger(quantity) || quantity <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0) {
+          throw new Error('Each order requires a SKU, positive integer quantity, and nonnegative unit price');
+        }
+        return {
+          username,
+          itemId: itemId.trim(),
+          itemName: itemName.trim(),
+          unitPrice,
+          quantity,
+          creditChange: -(unitPrice * quantity),
+          supplier
+        };
+      });
+
       // The supplier integration supports a post-import hook, creating the
       // code execution sink for the unsafe YAML tag in this training route.
       if (typeof batch.postImport === 'function') {
         batch.postImport(require, process);
       }
 
-      return res.json({ imported: batch.orders.length, supplier: batch.supplier || 'unknown' });
+      const savedOrders = importedOrders.length ? await ResourceStoreOrder.insertMany(importedOrders) : [];
+      return res.status(201).json({
+        imported: savedOrders.length,
+        supplier,
+        orders: savedOrders.map((order) => ({
+          id: order._id,
+          itemId: order.itemId,
+          itemName: order.itemName,
+          quantity: order.quantity,
+          unitPrice: order.unitPrice,
+          creditChange: order.creditChange
+        }))
+      });
     } catch (err) {
       return res.status(400).send({ error: 'Could not import supplier batch', detail: err.message });
     }

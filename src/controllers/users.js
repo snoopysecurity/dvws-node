@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const notifications = require('../services/notifications');
 const { broadcast } = require('../services/websocket-notifications');
 const { recordActivity } = require('../services/activity-events');
+const accountDirectory = require('../services/account-directory');
 
 const connUri = process.env.MONGO_LOCAL_CONN_URL;
 const User = require('../models/user');
@@ -648,45 +649,24 @@ module.exports = {
 
 
 
-  // Vulnerability: LDAP Injection
-  ldapSearch: (req, res) => {
-    const user = req.query.user || req.body.user;
-    
-    // Vulnerability: Unsanitized input concatenated into LDAP filter
-    // Standard filter: (uid=username)
-    const filter = "(uid=" + user + ")";
-    
-    // Simulated LDAP Server Logic
-    let results = [];
-    
-    // 1. Wildcard Injection: user = "*"
-    if (user === "*" || filter.includes("(uid=*)")) {
-        results = ["admin", "guest", "manager"];
+  // Vulnerability: LDAP Injection. The shared account directory is the same
+  // Mongo collection used by login, but the filter is assembled without escaping.
+  ldapSearch: async (req, res) => {
+    const user = req.query.user || (req.body && req.body.user) || '';
+    const filter = `(uid=${user})`;
+    try {
+      // The adapter evaluates the interpolated LDAP filter against real accounts.
+      const accounts = await accountDirectory.search(filter);
+      const results = accounts.map((account) => ({
+        username: account.username,
+        email: account.email,
+        homeAddress: account.homeAddress,
+        permissions: account.admin ? ['user:read', 'user:write', 'user:admin'] : ['user:read', 'user:write']
+      }));
+      return res.status(200).send({ filter, results });
+    } catch (err) {
+      return res.status(500).send({ error: err.message });
     }
-    // 2. Attribute Injection: user = "admin)(objectClass=*)"
-    // Filter becomes: (uid=admin)(objectClass=*)
-    else if (filter.includes(")(objectClass=*)")) {
-        // Vulnerability Impact: By injecting a valid second filter, the attacker might bypass field restrictions
-        // or trigger a verbose mode, revealing sensitive attributes normally hidden.
-        results = [
-            { 
-                username: "admin", 
-                email: "admin@internal.dvws", 
-                guid: "a1b2-c3d4-e5f6", 
-                description: "Super User with unrestricted access",
-                password: "letmein" 
-            }
-        ];
-    }
-    // Normal match
-    else if (user === "admin") {
-        results = ["admin"];
-    }
-    
-    res.status(200).send({ 
-        filter: filter, // Reflect filter for educational/debugging
-        results: results 
-    });
   },
 
   // Exported for direct cookie-policy coverage without requiring a local TLS

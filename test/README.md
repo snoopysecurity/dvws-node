@@ -120,7 +120,7 @@ The test suite validates the following vulnerabilities:
 ### 18. **Unsafe Deserialization**
 - Location: `src/controllers/passphrase.js` - `export()`
 - Issue: `node-serialize.unserialize()` on user data
-- Test: Attempts deserialization attack
+- Test: `test/vulnerabilities.test.js` executes a function tag that writes a temporary local marker and verifies PDF generation completes
 
 ### 19. **Sensitive Data Exposure**
 - Location: `src/graphql/schema.js` and `src/controllers/users.js`
@@ -131,6 +131,21 @@ The test suite validates the following vulnerabilities:
 - Location: `src/services/xml-rpc/server.js`
 - Issue: Exposed methods via `system.listMethods`
 - Test: Code review confirmation
+
+### **LDAP Injection (Challenge 9)**
+- Location: `src/controllers/users.js` and `src/services/account-directory.js`
+- Issue: Unescaped input is evaluated as part of a directory filter over real application accounts, allowing wildcard and boolean filter injection to enumerate account fields and permissions
+- Test: `test/vulnerabilities.test.js` checks wildcard enumeration and injected admin permission disclosure
+
+### **Prototype Pollution (Challenge 28)**
+- Location: `src/controllers/files.js` - upload metadata merge and extension policy
+- Issue: `__proto__` metadata pollution changes the inherited upload extension policy, allowing an HTML file through the normal upload flow
+- Test: `test/pp.test.js` verifies the ordinary upload succeeds and the file is stored
+
+### **Unsafe YAML Supplier Import (Challenge 45)**
+- Location: `src/controllers/integrations.js` - `importSupplierOrders()`
+- Issue: Supplier orders are persisted to the authenticated account's Resource Store history, while the custom YAML function tag remains executable during import
+- Test: `test/inspired-challenges.test.js` verifies the imported order is visible in order history and the post-import hook executes
 
 ### 21. **Hidden API Functionality**
 - Location: Various endpoints

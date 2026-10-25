@@ -576,7 +576,7 @@
     },
     "/v2/users/ldap-search": {
       "get": {
-        "description": "",
+        "description": "Searches the Mongo-backed account directory. The unescaped user value is interpolated into a directory filter; wildcard and boolean filter injection can enumerate real account fields and permissions.",
         "parameters": [
           {
             "name": "user",
@@ -593,7 +593,7 @@
         }
       },
       "post": {
-        "description": "",
+        "description": "Searches the Mongo-backed account directory. The unescaped user value is interpolated into a directory filter; wildcard and boolean filter injection can enumerate real account fields and permissions.",
         "parameters": [
           {
             "name": "user",
@@ -1009,7 +1009,7 @@
     },
     "/upload": {
       "post": {
-        "description": "",
+        "description": "Uploads a file into the authenticated user's directory. Metadata is recursively merged into an object and affects the upload extension policy; prototype pollution can allow extensions beyond the default XML policy.",
         "parameters": [
           {
             "name": "authorization",
@@ -1032,12 +1032,17 @@
         },
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "properties": {
                   "metadata": {
-                    "example": "any"
+                    "type": "string",
+                    "example": "{\"__proto__\":{\"allowedExtension\":\".html\"}}"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
                   }
                 }
               }
@@ -1098,10 +1103,10 @@
     },
     "/v2/integrations/supplier-orders/import": {
       "post": {
-        "description": "",
+        "description": "Imports supplier order lines into the authenticated account's Resource Store order history. Supplier YAML is parsed with an unsafe executable function tag, and its postImport hook runs during import.",
         "responses": {
-          "200": {
-            "description": "OK"
+          "201": {
+            "description": "Supplier orders were persisted and their IDs and normalized details are returned."
           },
           "400": {
             "description": "Bad Request"

