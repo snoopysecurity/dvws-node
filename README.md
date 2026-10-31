@@ -66,6 +66,74 @@ For Swagger links, you can add this entry to `/etc/hosts`:
 127.0.0.1 dvws.local
 ```
 
+## Security issues covered
+
+The application includes guided exercises across REST, GraphQL, SOAP, XML-RPC, and browser workflows. See the [challenge guide](CHALLENGES.md) for endpoint details, example requests, and mitigation notes.
+
+* SQL Injection
+* NoSQL Injection
+* OS Command Injection
+* XML External Entity Injection (XXE)
+* XML Bomb (Denial of Service)
+* Server-Side Request Forgery (SSRF)
+* Insecure Deserialization (RCE)
+* XPath Injection
+* LDAP Injection
+* Path Traversal
+* SOAP Injection
+* XML Injection (Profile Export)
+* XML Injection (Profile Import / Mass Assignment)
+* Mass Assignment (User Registration)
+* IDOR (Insecure Direct Object Reference)
+* Broken Authentication (JWT `none` Algorithm)
+* JWT Secret Key Brute Force
+* JWT JKU Key Source Trust
+* JWT KID Path Traversal
+* Vertical Access Control (Privilege Escalation)
+* Horizontal Access Control
+* Open Redirect
+* Cross-Site Scripting (XSS)
+* Cross-Site Request Forgery (CSRF)
+* CORS Misconfiguration
+* CRLF Injection / Log Pollution
+* User Enumeration
+* Information Disclosure
+* Sensitive Data Exposure (Password Hashes)
+* Prototype Pollution
+* API Endpoint Brute Forcing (Missing Rate Limit)
+* HTTP Method Confusion (State Change Through GET)
+* Ignored `Accept` Headers and Content-Type Confusion
+* Credentials in URLs and Base64 Mistaken for Encryption
+* HTTP Method Override Bypass
+* Shared Caching of Authenticated Reports
+* Inconsistent Request Format Handling
+* Resource Store: Get an Item for Free
+* Resource Store: Increase Your Balance by 1,000 Credits
+* Rate Limit Bypass via `X-Forwarded-For`
+* Hidden API Functionality Exposure
+* GraphQL Introspection
+* GraphQL Access Control Issues
+* GraphQL Arbitrary File Write
+* GraphQL Batching Brute Force
+* GraphQL Sensitive Data Exposure
+* GraphQL Alias Amplification
+* Missing Security Headers
+* Unrestricted File Upload
+* Role-Based Profile Data Exposure
+* Account Recovery IDOR Chain
+* Session Revocation After Password Change
+* Cross-Site Request Forgery Through the Login Cookie
+* JSONP Cross-Origin Profile Sharing
+* Cross-Site WebSocket Hijacking
+* Server-Side Template Injection
+* Unsafe YAML Supplier Import
+* Cross-Customer Monthly Statement Path Traversal
+* Notification Preference Mass Assignment
+* Undocumented TRACE Diagnostics
+* Legacy Login Skips Password Verification
+* Excessive Activity Report Page Size
+* Timing Attacks
+
 ## Tests
 
 The vulnerability tests are intentionally expected to pass when the vulnerable behaviour is present. See [`test/README.md`](test/README.md) for the commands and prerequisites.
