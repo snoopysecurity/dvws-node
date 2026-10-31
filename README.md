@@ -37,8 +37,6 @@ The app is available on port 80 by default. The optional HTTPS setup is needed f
 docker compose -f docker-compose.yml -f docker-compose.tls.yml up --build
 ```
 
-See the [TLS setup in the challenge guide](CHALLENGES.md#41-cross-site-request-forgery-through-the-login-cookie) for local certificates and hostnames.
-
 ## Run it manually
 
 You need Node.js 22, MongoDB on port 27017, and MySQL on port 3306. Docker can start the databases:
