@@ -1,18 +1,18 @@
-# DVWS-Node Challenge Guide
+# DVWS-Node challenge guide
 
-Damn Vulnerable Web Service (DVWS-Node) is a deliberately insecure web application for learning API and web service security testing. All services run on a single Express server.
+This guide walks through the deliberately vulnerable parts of DVWS-Node. It gives you the endpoint, the flaw to look for, and a working request. Run the lab locally and keep it isolated.
 
-**Base URL:** `http://dvws.local`
+**Base URL:** `http://dvws.local` (use `http://127.0.0.1` if you did not add the host entry)
 
-| Service   | Path                 | Description                       |
-|-----------|----------------------|-----------------------------------|
-| REST API  | `/api/v1/*`, `/api/v2/*` | Primary REST endpoints        |
-| SOAP      | `/dvwsuserservice`   | SOAP/XML service with WSDL        |
-| XML-RPC   | `/xmlrpc`            | XML-RPC method dispatch            |
-| GraphQL   | `/graphql`           | GraphQL queries and mutations      |
-| Swagger   | `/api-docs`          | OpenAPI documentation              |
+| Service | Path | Use |
+|---|---|---|
+| REST | `/api/v1/*`, `/api/v2/*` | Main API |
+| SOAP | `/dvwsuserservice` | SOAP/XML service and WSDL |
+| XML-RPC | `/xmlrpc` | XML-RPC methods |
+| GraphQL | `/graphql` | Queries and mutations |
+| Swagger | `/api-docs` | OpenAPI documentation |
 
-**Default credentials:** `admin` / `letmein`, `test` / `test`
+**Default accounts:** `admin` / `letmein`, `test` / `test`
 
 ---
 
@@ -1892,11 +1892,7 @@ Without authentication, `/api/v2/users` returns HTTP 401. With the forged token,
 
 **Endpoints:** `POST /api/v2/resource-store/promotions/redeem`, `POST /api/v2/resource-store/promotions/timing/validate`
 
-**Difficulty:** Intermediate.
-
-**Learning objective:** Recognize that equal HTTP status codes can still reveal secret state through response time. Measure repeated requests, recover a secret one character at a time, and verify the effect with an authenticated wallet.
-
-**Scenario:** Alongside the promotion stored in operational XML, the local lab seeds one private Resource Store campaign. Its code begins with `OPS-` and is followed by 12 hexadecimal characters. Wrong codes always return HTTP 404, but a submitted prefix of the private code takes a slower lookup path before returning 404. The delay is deliberately large enough to measure on a local lab. The private code is generated when the database is first seeded and remains stable while that database persists.
+The lab also seeds a private Resource Store campaign. Its code starts with `OPS-` and has 12 hexadecimal characters. Wrong codes return HTTP 404, but a correct prefix takes a slower path before returning the same status. The code is generated when the database is seeded and stays the same while that database exists.
 
 **Prerequisites and setup:** Node.js 22, Docker Compose, and a local DVWSNode checkout. Start the lab with `docker compose up --build -d`, then register a fresh account through `POST /api/v2/users` and sign in through `POST /api/v2/login`. For example, send `{"username":"timing-player","password":"TimingChallenge123!"}` to both endpoints, then keep the login response's bearer token for the requests below. The Compose startup seeds the private campaign. Use only the local lab address `http://127.0.0.1`.
 
@@ -1914,7 +1910,7 @@ DVWS_TOKEN='<your-token>' node scripts/solve-promotion-timing.js
 
 The solver sends several requests for each possible next hexadecimal character, compares median response times, and retains the slowest prefix. For the final character, the correct request redeems the promotion and returns a `DVWS{promotion_timing_...}` flag. It then submits the flag to `/api/v2/resource-store/promotions/timing/validate`. To verify manually, POST `{"flag":"<returned flag>"}` there with the same bearer token. A 200 response of `{"valid":true}`, a 175-credit increase in `GET /api/v2/resource-store`, and one private campaign redemption are the success criteria. A wrong flag, another player's flag, or an account that has not redeemed the campaign receives `{"valid":false}`. Repeating redemption returns HTTP 409; repeating validation remains valid. The code and account-specific flag are local lab values; neither appears in the catalogue or ordinary release response.
 
-**Why it works:** The private lookup searches for codes beginning with the submitted text. A matching prefix takes an extra database and delay path before the same 404 response is sent. Repeated measurements help separate that added work from normal network and process noise. Each successful guess reveals one more character without exposing the campaign record directly.
+The lookup is vulnerable because it does extra work for matching prefixes. Repeated measurements separate that delay from normal request noise and reveal one character at a time.
 
 **Mitigation:** Do not perform different work based on a partially matching secret. Fetch a candidate by a nonsecret identifier, compare the complete code using a constant-time comparison, and apply a uniform response path for invalid codes. Avoid logging or returning secret codes and flags in diagnostic responses. Rate limits can reduce automated probing but do not replace removing the timing difference.
 

@@ -1,192 +1,55 @@
-# DVWS-Node Vulnerability Test Suite
+# DVWS-Node tests
 
-This test suite validates that all intentional security vulnerabilities remain present after dependency updates.
+These tests check that the lab's intentional vulnerabilities are still present after code or dependency changes. A passing vulnerability test usually means the vulnerable behaviour is still there.
 
-## Running Tests
+## Requirements
 
-### Prerequisites
-- MongoDB running on localhost:27017
-- MySQL running on localhost:3306
-- Application running on port 80 (http://127.0.0.1)
+- MongoDB on `localhost:27017`
+- MySQL on `localhost:3306`
+- DVWS-Node running at `http://127.0.0.1` on port 80
 
-### Start the Application
-```bash
+Start the application with:
+
+```sh
 npm start
 ```
 
-### Run All Tests
-```bash
-# Run all tests (original + vulnerability tests)
-npm run test:all
+Run the suites with:
 
-# Run only vulnerability tests
-npm run test:vulnerabilities
-
-# Run original functional tests
-npm test
+```sh
+npm run test:all              # functional and vulnerability tests
+npm run test:vulnerabilities  # vulnerability tests only
+npm test                      # original functional tests
 ```
 
-## Vulnerability Coverage
+## What is covered
 
-The test suite validates the following vulnerabilities:
+The tests exercise or review the following areas:
 
-### 1. **NoSQL Injection**
-- Location: `src/controllers/notes.js` - `search_note()` and `display_all()`
-- Payload: `$where` clause with unsanitized user input
-- Test: Attempts injection via note search
+- SQL, NoSQL, LDAP, XPath, XML, SOAP, command, and template injection
+- XXE, XML entity expansion, unsafe deserialization, YAML function tags, and prototype pollution
+- SSRF, path traversal, arbitrary file writes, and unrestricted uploads
+- JWT weaknesses, missing password checks, account recovery flaws, and session handling
+- IDOR, horizontal and vertical access control, mass assignment, and data exposure
+- XSS, CSRF, CORS, JSONP, WebSocket origin checks, open redirects, and missing headers
+- GraphQL introspection, authorization, batching, alias amplification, and data exposure
+- Rate-limit bypasses, user enumeration, log pollution, hidden endpoints, timing leaks, and Resource Store logic bugs
 
-### 2. **SQL Injection**
-- Location: `src/controllers/passphrase.js` and `src/graphql/schema.js`
-- Payload: Raw SQL queries with string concatenation
-- Test: Attempts SQL injection in passphrase creation
+Some tests inspect source because a live exploit is not practical. The runtime tests include:
 
-### 3. **Command Injection**
-- Location: `src/controllers/notes.js` - `get_sysinfo()`
-- Payload: User input directly passed to `exec()`
-- Test: Attempts command injection via sysinfo endpoint
+- `test/vulnerabilities.test.js` — GraphQL aliases and missing headers
+- `test/support-tickets.test.js` — ticket IDOR and UUID handling
+- `test/resource-store.test.js` — negative quantities and wallet isolation
+- `test/promotion-timing.test.js` — promotion timing behaviour
+- `test/inspired-challenges.test.js` — monthly report traversal
+- `test/jwt-key-lab.test.js` — `jku` trust and `kid` traversal
 
-### 4. **XPath Injection**
-- Location: `src/controllers/notes.js` - `get_release()`
-- Payload: User input concatenated into XPath query
-- Test: Attempts XPath injection via release parameter
+Run the promotion timing test in the web container after starting Compose:
 
-### 5. **XXE (XML External Entity)**
-- Location: `src/controllers/notes.js`
-- Issue: XML parsed without disabling external entities
-- Test: Verifies XML parsing occurs without restrictions
-
-### 6. **SSRF (Server-Side Request Forgery)**
-- Location: `src/services/xml-rpc/server.js` - `CheckUptime` method
-- Issue: `needle.get()` accepts user-controlled URLs
-- Test: Code review confirmation
-
-### 7. **Path Traversal**
-- Location: `src/controllers/files.js` - `fetch()` and file operations
-- Issue: File paths constructed from user input
-- Test: Attempts path traversal in file fetch
-
-### 8. **Mass Assignment**
-- Location: `src/controllers/users.js` - `add()`
-- Issue: `new User(req.body)` accepts all fields
-- Test: Attempts to create admin user via mass assignment
-
-### 9. **Insecure Direct Object Reference (IDOR)**
-- Location: `src/controllers/notes.js` - note access methods
-- Issue: No ownership validation on note access
-- Test: Attempts to access notes without authorization check
-
-### 10. **Open Redirect**
-- Location: `src/controllers/users.js` - `logout()`
-- Issue: Redirects to user-controlled domain
-- Test: Verifies redirect without validation
-
-### 11. **JWT Weak Secret / Algorithm Confusion**
-- Location: Multiple files with JWT verification
-- Issues:
-  - Weak secret: `JWT_SECRET=access`
-  - Algorithm confusion: `algorithms: ["HS256", "none"]`
-- Test: Validates weak secret and algorithm options
-
-### 12. **CORS Misconfiguration**
-- Location: `src/server.js`
-- Issue: `origin: true` and `credentials: true` allow all origins
-- Test: Verifies permissive CORS headers
-
-### 13. **Information Disclosure**
-- Location: `src/controllers/notes.js` - `get_info()`
-- Issue: Exposes environment variables and system information
-- Test: Verifies sensitive data exposure
-
-### 14. **GraphQL Introspection Enabled**
-- Location: `src/server.js`
-- Issue: `introspection: true` and `playground: true`
-- Test: Code review confirmation
-
-### 15. **GraphQL Arbitrary File Write**
-- Location: `src/graphql/schema.js` - `updateUserUploadFile` mutation
-- Issue: User-controlled file path with minimal validation
-- Test: Code review confirmation
-
-### 16. **GraphQL Batching / Brute Force**
-- Location: `src/server.js` and `src/graphql/schema.js`
-- Issue: The request limiter counts one HTTP request while a batch executes many real `userLogin` password checks
-- Test: `test/graphql-batch-rate-limit.test.js` compares separate attempts with a batched login that yields a usable token
-
-### 17. **Client-Side Template Injection**
-- Location: `frontend/` (search page)
-- Issue: User input rendered in templates
-- Test: Code review confirmation
-
-### 18. **Unsafe Deserialization**
-- Location: `src/controllers/passphrase.js` - `export()`
-- Issue: `node-serialize.unserialize()` on user data
-- Test: `test/vulnerabilities.test.js` executes a function tag that writes a temporary local marker and verifies PDF generation completes
-
-### 19. **Sensitive Data Exposure**
-- Location: `src/graphql/schema.js` and `src/controllers/users.js`
-- Issue: Password hashes returned in responses
-- Test: Code review confirmation
-
-### 20. **XML-RPC User Enumeration**
-- Location: `src/services/xml-rpc/server.js`
-- Issue: Exposed methods via `system.listMethods`
-- Test: Code review confirmation
-
-### **LDAP Injection (Challenge 9)**
-- Location: `src/controllers/users.js` and `src/services/account-directory.js`
-- Issue: Unescaped input is evaluated in a valid LDAP-style filter over Mongo-backed accounts, allowing wildcard enumeration and boolean injection to disclose bounded directory metadata (including POSIX-style IDs and home directory)
-- Test: `test/vulnerabilities.test.js` checks normal lookup, wildcard enumeration, valid admin OR injection, directory fields, NOT and AND clauses, unknown attributes, malformed filters, and secret exclusion
-
-### **Prototype Pollution (Challenge 28)**
-- Location: `src/controllers/files.js` - upload metadata merge and extension policy
-- Issue: `__proto__` metadata pollution changes the inherited upload extension policy, allowing an HTML file through the normal upload flow
-- Test: `test/pp.test.js` verifies the ordinary upload succeeds and the file is stored
-
-### **Unsafe YAML Supplier Import (Challenge 45)**
-- Location: `src/controllers/integrations.js` - `importSupplierOrders()`
-- Issue: Supplier orders are persisted to the authenticated account's Resource Store history, while the custom YAML function tag remains executable during import
-- Test: `test/inspired-challenges.test.js` verifies the imported order is visible in order history and the post-import hook executes
-
-### 21. **Hidden API Functionality**
-- Location: Various endpoints
-- Issue: Undocumented endpoints accessible
-- Test: Verifies access to "hidden" endpoints
-
-### 22. **Vertical Access Control**
-- Location: JWT-based admin checks
-- Issue: Permissions can be manipulated
-- Test: Code review confirmation
-
-### 23. **Horizontal Access Control**
-- Location: `src/controllers/notes.js`
-- Issue: Can view other users' public data
-- Test: Verifies access to all public notes
-
-### 24. **JSON Hijacking**
-- Location: Multiple endpoints returning arrays
-- Issue: Top-level JSON arrays vulnerable to hijacking
-- Test: Verifies array responses
-
-## Additional Runtime Vulnerability Tests
-
-- `test/vulnerabilities.test.js`: GraphQL alias amplification (multiple database-backed aliases in one request) and missing security headers.
-- `test/support-tickets.test.js`: UUIDv1 ticket creation, cross-user IDOR, and retrieval of the seeded victim ticket through its exposed notification UUID.
-- `test/resource-store.test.js`: negative order quantities increase the authenticated user's balance by the catalog price multiplied by the absolute quantity; includes the 1,000-credit example and checks wallet isolation.
-- `test/promotion-timing.test.js`: checks authentication, malformed input, prefix timing, private redemption, duplicate behavior, account-specific flags, validation, and player isolation. Run in the local web container with `docker compose exec web npx mocha test/promotion-timing.test.js --exit` after `docker compose up --build -d`.
-- `test/inspired-challenges.test.js`: monthly report path traversal reads a different account's generated statement, including profile and Resource Store order data.
-- `test/jwt-key-lab.test.js`: attacker-controlled `jku` JWKS verification and HS256 `kid` traversal, reaching stored user data and Resource Store records through shared auth middleware.
-
-These runtime tests exercise the routes rather than only checking source patterns.
-
-## Test Results Interpretation
-
-- ✅ **Passing tests** indicate vulnerabilities are still present (desired for CTF)
-- ❌ **Failing tests** may indicate a vulnerability was accidentally fixed
-- Some tests use code review confirmation where dynamic testing isn't feasible
+```sh
+docker compose exec web npx mocha test/promotion-timing.test.js --exit
+```
 
 ## Notes
 
-- These vulnerabilities are **intentional** for security training purposes
-- Do not deploy this application in production environments
-- Tests require the application to be running before execution
-- Some tests validate code patterns rather than exploit behavior
+This is a training application, not a production service. Keep it isolated. A failing vulnerability test may mean that the vulnerable code was changed or that the application is not running correctly; check the test output before drawing conclusions.
