@@ -134,8 +134,8 @@ The test suite validates the following vulnerabilities:
 
 ### **LDAP Injection (Challenge 9)**
 - Location: `src/controllers/users.js` and `src/services/account-directory.js`
-- Issue: Unescaped input is evaluated as part of a directory filter over real application accounts, allowing wildcard and boolean filter injection to enumerate account fields and permissions
-- Test: `test/vulnerabilities.test.js` checks wildcard enumeration and injected admin permission disclosure
+- Issue: Unescaped input is evaluated in a valid LDAP-style filter over Mongo-backed accounts, allowing wildcard enumeration and boolean injection to disclose bounded directory metadata (including POSIX-style IDs and home directory)
+- Test: `test/vulnerabilities.test.js` checks normal lookup, wildcard enumeration, valid admin OR injection, directory fields, NOT and AND clauses, unknown attributes, malformed filters, and secret exclusion
 
 ### **Prototype Pollution (Challenge 28)**
 - Location: `src/controllers/files.js` - upload metadata merge and extension policy
@@ -172,6 +172,7 @@ The test suite validates the following vulnerabilities:
 - `test/vulnerabilities.test.js`: GraphQL alias amplification (multiple database-backed aliases in one request) and missing security headers.
 - `test/support-tickets.test.js`: UUIDv1 ticket creation, cross-user IDOR, and retrieval of the seeded victim ticket through its exposed notification UUID.
 - `test/resource-store.test.js`: negative order quantities increase the authenticated user's balance by the catalog price multiplied by the absolute quantity; includes the 1,000-credit example and checks wallet isolation.
+- `test/promotion-timing.test.js`: checks authentication, malformed input, prefix timing, private redemption, duplicate behavior, account-specific flags, validation, and player isolation. Run in the local web container with `docker compose exec web npx mocha test/promotion-timing.test.js --exit` after `docker compose up --build -d`.
 - `test/inspired-challenges.test.js`: monthly report path traversal reads a different account's generated statement, including profile and Resource Store order data.
 - `test/jwt-key-lab.test.js`: attacker-controlled `jku` JWKS verification and HS256 `kid` traversal, reaching stored user data and Resource Store records through shared auth middleware.
 

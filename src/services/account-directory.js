@@ -1,73 +1,89 @@
 const User = require('../models/user');
 
-// Small LDAP filter evaluator backed by the application's real account store.
-// It accepts the filter string as assembled by the controller, so unescaped
-// input can add wildcards and boolean clauses just as it would in a directory.
+// A deliberately small RFC 4515-style filter evaluator over application users.
+// Limits keep malformed training inputs from exhausting the process.
 function parseFilter(input) {
+  if (typeof input !== 'string' || input.length > 4096) throw new Error('Invalid directory filter');
   let index = 0;
-
-  function parseOne() {
-    if (input[index++] !== '(') throw new Error('Invalid directory filter');
+  let nodes = 0;
+  function parseOne(depth = 0) {
+    if (depth > 32 || ++nodes > 128 || input[index++] !== '(') throw new Error('Invalid directory filter');
     const operator = input[index];
     if (operator === '&' || operator === '|') {
       index++;
       const children = [];
-      while (input[index] === '(') children.push(parseOne());
+      while (input[index] === '(') children.push(parseOne(depth + 1));
       if (!children.length || input[index++] !== ')') throw new Error('Invalid directory filter');
       return { type: operator, children };
     }
     if (operator === '!') {
       index++;
-      const child = parseOne();
+      const child = parseOne(depth + 1);
       if (input[index++] !== ')') throw new Error('Invalid directory filter');
       return { type: '!', child };
     }
-    const end = input.indexOf(')', index);
-    if (end < 0) throw new Error('Invalid directory filter');
-    const assertion = input.slice(index, end);
-    const equals = assertion.indexOf('=');
-    if (equals < 1) throw new Error('Invalid directory filter');
-    index = end + 1;
-    return { type: '=', attribute: assertion.slice(0, equals).toLowerCase(), value: assertion.slice(equals + 1) };
-  }
-
-  // LDAP permits one root filter; concatenated roots from injection are
-  // interpreted as an implicit conjunction by this deliberately permissive adapter.
-  const roots = [];
-  while (index < input.length) {
-    // The controller's own closing parenthesis becomes an extra trailing
-    // delimiter after a filter-closing injection payload.
-    if (roots.length && input[index] === ')' && index === input.length - 1) {
-      index++;
-      break;
+    const start = index;
+    while (index < input.length && input[index] !== '=' && input[index] !== ')') index++;
+    const attribute = input.slice(start, index).toLowerCase();
+    if (!/^[a-z][a-z0-9-]*$/.test(attribute) || input[index++] !== '=') throw new Error('Invalid directory filter');
+    const byteParts = [[]];
+    while (index < input.length && input[index] !== ')') {
+      const character = input[index++];
+      if (character === '(' || character === '\0') throw new Error('Invalid directory filter');
+      if (character === '*') { byteParts.push([]); continue; }
+      if (character === '\\') {
+        const hex = input.slice(index, index + 2);
+        if (!/^[0-9a-fA-F]{2}$/.test(hex)) throw new Error('Invalid directory filter');
+        byteParts[byteParts.length - 1].push(parseInt(hex, 16));
+        index += 2;
+      } else byteParts[byteParts.length - 1].push(...Buffer.from(character, 'utf8'));
     }
-    roots.push(parseOne());
+    if (input[index++] !== ')') throw new Error('Invalid directory filter');
+    let parts;
+    try { parts = byteParts.map((bytes) => new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(bytes))); }
+    catch (_err) { throw new Error('Invalid directory filter'); }
+    return { type: '=', attribute, parts, presence: parts.length === 2 && parts.every((part) => part === '') };
   }
-  if (!roots.length) throw new Error('Invalid directory filter');
-  return roots.length === 1 ? roots[0] : { type: '&', children: roots };
+  const filter = parseOne();
+  if (index !== input.length) throw new Error('Invalid directory filter');
+  return filter;
 }
 
-function matches(account, filter) {
-  if (filter.type === '&') return filter.children.every((child) => matches(account, child));
-  if (filter.type === '|') return filter.children.some((child) => matches(account, child));
-  if (filter.type === '!') return !matches(account, filter.child);
-  const attributes = {
-    uid: account.username,
-    cn: account.username,
-    mail: account.email,
-    email: account.email,
-    objectclass: 'account'
+function directoryEntry(account) {
+  const uid = String(account.username || '');
+  // Stable lab-only POSIX-style IDs, derived without reading host account data.
+  const uidNumber = 10000 + [...uid].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) % 50000, 0);
+  return {
+    uid,
+    cn: uid,
+    mail: account.email || '',
+    description: account.admin ? 'Privileged application account' : 'Application account',
+    uidNumber,
+    gidNumber: account.admin ? 100 : 1000,
+    homeDirectory: `/home/dvws/${uid.replace(/[^a-zA-Z0-9_-]/g, '_')}`,
+    objectClass: ['top', 'account', 'posixAccount']
   };
-  const actual = attributes[filter.attribute];
+}
+
+function matches(entry, filter) {
+  if (filter.type === '&') return filter.children.every((child) => matches(entry, child));
+  if (filter.type === '|') return filter.children.some((child) => matches(entry, child));
+  if (filter.type === '!') return !matches(entry, filter.child);
+  const actual = entry[filter.attribute === 'objectclass' ? 'objectClass' :
+    Object.keys(entry).find((key) => key.toLowerCase() === filter.attribute)];
   if (actual === undefined || actual === null) return false;
-  const pattern = filter.value.split('*').map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
-  return new RegExp(`^${pattern}$`, 'i').test(String(actual));
+  const values = Array.isArray(actual) ? actual : [actual];
+  if (filter.presence) return values.some((value) => String(value).length > 0);
+  const pattern = filter.parts.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+  const expression = new RegExp(`^${pattern}$`, 'i');
+  return values.some((value) => expression.test(String(value)));
 }
 
 async function search(filterString) {
   const filter = parseFilter(filterString);
   const accounts = await User.find({}).select('username email homeAddress admin').lean();
-  return accounts.filter((account) => matches(account, filter));
+  return accounts.map((account) => ({ ...account, directory: directoryEntry(account) }))
+    .filter((account) => matches(account.directory, filter));
 }
 
-module.exports = { search };
+module.exports = { search, parseFilter, matches };

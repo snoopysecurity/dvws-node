@@ -41,11 +41,35 @@ module.exports = async () => {
   spec.paths['/v2/release/{release}'].get.description =
     'Look up the current release in the operational XML configuration. The release value is interpolated into XPath.';
   const redeem = spec.paths['/v2/resource-store/promotions/redeem'].post;
-  redeem.description = 'Redeem an active promotion from the operational XML configuration once per account.';
+  redeem.description = 'Redeem an active promotion once per account. Private campaign prefix matches take a slower lookup path.';
   redeem.security = [{ bearerAuth: [] }];
   redeem.requestBody = { required: true, content: { 'application/json': { schema: {
     type: 'object', required: ['code'], properties: { code: { type: 'string', maxLength: 100 } }
   } } } };
+  redeem.responses = {
+    200: { description: 'Credits applied. A private campaign redemption also returns an account-specific flag.', content: { 'application/json': { schema: {
+      type: 'object', required: ['balance', 'credits', 'redemption'], properties: {
+        balance: { type: 'number' }, credits: { type: 'number' }, redemption: { type: 'object' }, flag: { type: 'string' }
+      }
+    } } } },
+    400: { description: 'Missing or invalid code' }, 401: { description: 'Unauthorized' },
+    404: { description: 'Promotion not found' }, 409: { description: 'Promotion already redeemed' },
+    500: { description: 'Unable to redeem promotion' }
+  };
+
+  const timing = spec.paths['/v2/resource-store/promotions/timing/validate'].post;
+  timing.description = 'Validate an account-specific flag after that account redeems the private campaign.';
+  timing.security = [{ bearerAuth: [] }];
+  timing.requestBody = { required: true, content: { 'application/json': { schema: {
+    type: 'object', required: ['flag'], properties: { flag: { type: 'string', minLength: 1, maxLength: 100 } }
+  } } } };
+  timing.responses = {
+    200: { description: 'Validation result for the authenticated account', content: { 'application/json': { schema: {
+      type: 'object', required: ['valid'], properties: { valid: { type: 'boolean' } }
+    } } } },
+    400: { description: 'Missing or invalid flag' }, 401: { description: 'Unauthorized' },
+    500: { description: 'Unable to validate flag' }
+  };
 
   const bio = spec.paths['/v2/users/profile/bio'].put;
   bio.description = 'Save the authenticated account\'s bio before exporting it.';

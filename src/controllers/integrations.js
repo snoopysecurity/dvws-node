@@ -8,13 +8,22 @@ const monthlyReportCache = require('../services/monthly-report-cache');
 
 // Deliberately unsafe YAML feature for the supplier import exercise. YAML
 // tags may supply executable postImport hooks that the importer invokes.
-const executableHookType = new yaml.Type('!js/function', {
-  kind: 'scalar',
-  construct(source) {
-    return new Function('require', 'process', source);
-  }
-});
-const supplierSchema = yaml.DEFAULT_SCHEMA.extend([executableHookType]);
+const constructExecutableHook = (source) => new Function('require', 'process', source);
+const executableHookType = yaml.defineScalarTag
+  ? yaml.defineScalarTag('!js/function', {
+      resolve(source, isExplicit) {
+        return isExplicit ? constructExecutableHook(source) : yaml.NOT_RESOLVED;
+      },
+      identify: () => false
+    })
+  : new yaml.Type('!js/function', {
+      kind: 'scalar',
+      construct: constructExecutableHook
+    });
+const baseSchema = yaml.DEFAULT_SCHEMA || yaml.YAML11_SCHEMA;
+const supplierSchema = baseSchema.withTags
+  ? baseSchema.withTags(executableHookType)
+  : baseSchema.extend([executableHookType]);
 
 async function cacheMonthlyReport(username, period) {
   const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(period);

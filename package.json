@@ -26,7 +26,7 @@
   "homepage": "https://github.com/snoopysecurity/dvws-node#readme",
   "dependencies": {
     "@graphql-tools/schema": "^10.0.0",
-    "@xmldom/xmldom": "^0.8.10",
+    "@xmldom/xmldom": "^0.9.12",
     "apollo-server": "^3.13.0",
     "apollo-server-express": "^3.13.0",
     "bcrypt": "^5.1.1",
@@ -37,15 +37,15 @@
     "express-fileupload": "^1.5.0",
     "express-jwt-permissions": "^1.3.7",
     "graphql": "^16.8.1",
-    "js-yaml": "^4.1.0",
+    "js-yaml": "^5.5.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^5.9.2",
-    "mongoose": "^7.6.10",
-    "mysql2": "^3.9.4",
+    "mongoose": "^7.8.9",
+    "mysql2": "^3.24.6",
     "needle": "^3.3.1",
     "node-serialize": "0.0.4",
     "pdfkit": "^0.15.0",
-    "sequelize": "^6.37.3",
+    "sequelize": "^6.37.8",
     "swagger-autogen": "^2.23.7",
     "swagger-ui-express": "^5.0.0",
     "ws": "^8.22.0",
@@ -54,8 +54,12 @@
     "xpath": "0.0.32"
   },
   "devDependencies": {
+    "brace-expansion": "^5.0.12",
     "chai": "^4.4.1",
-    "mocha": "^10.4.0",
+    "diff": "^9.0.0",
+    "minimatch": "^11.0.3",
+    "mocha": "^12.0.3",
+    "serialize-javascript": "^7.1.4",
     "supertest": "^7.0.0"
   }
 }

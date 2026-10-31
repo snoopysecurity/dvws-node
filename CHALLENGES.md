@@ -75,6 +75,7 @@ Damn Vulnerable Web Service (DVWS-Node) is a deliberately insecure web applicati
 55. [Resource Store: Increase Your Balance by 1,000 Credits](#55-resource-store-increase-your-balance-by-1000-credits)
 56. [JWT JKU Key Source Trust](#56-jwt-jku-key-source-trust)
 57. [JWT KID Path Traversal](#57-jwt-kid-path-traversal)
+58. [Resource Store Promotion Timing Side Channel](#58-resource-store-promotion-timing-side-channel)
 
 ---
 
@@ -374,29 +375,19 @@ The response reports the credited amount and new balance. `GET /api/v2/resource-
 
 **Endpoint:** `GET /api/v2/users/ldap-search?user=<input>` or `POST /api/v2/users/ldap-search`
 
-**Description:** The `user` parameter is concatenated directly into an LDAP filter string `(uid=<input>)` without sanitization. The directory adapter evaluates that filter against the same Mongo-backed account records used by login.
+**Description:** The `user` parameter is interpolated unescaped into the single LDAP-style filter `(&(objectClass=account)(|(uid=<input>)(cn=directory-service)))`. A Mongo-backed adapter evaluates RFC 4515-style equality, wildcard/presence, AND, OR, and NOT filters against application accounts. The `cn=directory-service` branch is a reserved directory alias; ordinary lookups match `uid`.
 
 ### Challenge
 
-Enumerate all LDAP users and extract sensitive attributes.
+Look up an account, enumerate the directory, then alter the boolean filter to disclose an administrator's directory metadata.
 
 ### Solution
 
-**Wildcard injection to enumerate all users:**
-```
-GET /api/v2/users/ldap-search?user=* HTTP/1.1
-Host: dvws.local
-```
+1. Normal lookup: `GET /api/v2/users/ldap-search?user=test`.
+2. Wildcard enumeration: `GET /api/v2/users/ldap-search?user=*` matches every account with a `uid`.
+3. Boolean injection: send `user=missing)(uid=admin` (URL encode the query value when needed). The resulting valid filter is `(&(objectClass=account)(|(uid=missing)(uid=admin)(cn=directory-service)))`, which returns the admin entry despite the nonexistent requested user.
 
-Returns matching account records from the application, including usernames, configured email/address fields, and permissions derived from each account's role.
-
-**Attribute injection to extract sensitive data:**
-```
-GET /api/v2/users/ldap-search?user=admin)(objectClass=*) HTTP/1.1
-Host: dvws.local
-```
-
-The filter becomes `(uid=admin)(objectClass=*)`. The injected second clause is evaluated as part of the directory search and returns the real admin account record and its `user:admin` permission. Passwords are not returned by this endpoint.
+The response retains `username`, `email`, `homeAddress`, and `permissions`, and adds `uid`, `cn`, `mail`, `description`, `uidNumber`, `gidNumber`, `homeDirectory`, and `objectClass`. The lab directory metadata is derived from existing users; it does not include password hashes or secrets. For a real service, escape the user value per RFC 4515, restrict returned fields by authorization, and use a supported LDAP library.
 
 ---
 
@@ -1897,6 +1888,36 @@ Without authentication, `/api/v2/users` returns HTTP 401. With the forged token,
 
 **Mitigation:** Treat `kid` as an identifier, not a path. Look it up in a fixed in-memory or configured key map; if files must be used, canonicalize the path and verify it remains beneath the key directory. Use high-entropy keys and pin the expected algorithm.
 
+## 58. Resource Store Promotion Timing Side Channel
+
+**Endpoints:** `POST /api/v2/resource-store/promotions/redeem`, `POST /api/v2/resource-store/promotions/timing/validate`
+
+**Difficulty:** Intermediate.
+
+**Learning objective:** Recognize that equal HTTP status codes can still reveal secret state through response time. Measure repeated requests, recover a secret one character at a time, and verify the effect with an authenticated wallet.
+
+**Scenario:** Alongside the promotion stored in operational XML, the local lab seeds one private Resource Store campaign. Its code begins with `OPS-` and is followed by 12 hexadecimal characters. Wrong codes always return HTTP 404, but a submitted prefix of the private code takes a slower lookup path before returning 404. The delay is deliberately large enough to measure on a local lab. The private code is generated when the database is first seeded and remains stable while that database persists.
+
+**Prerequisites and setup:** Node.js 22, Docker Compose, and a local DVWSNode checkout. Start the lab with `docker compose up --build -d`, then register a fresh account through `POST /api/v2/users` and sign in through `POST /api/v2/login`. For example, send `{"username":"timing-player","password":"TimingChallenge123!"}` to both endpoints, then keep the login response's bearer token for the requests below. The Compose startup seeds the private campaign. Use only the local lab address `http://127.0.0.1`.
+
+### Challenge
+
+Sign in, open **Operations → Resource Store**, and try a few different promotion code prefixes. Send authenticated JSON requests such as `{"code":"OPS-0"}` to `/api/v2/resource-store/promotions/redeem`. Compare the response times of repeated 404 responses, extending the slower prefix one hexadecimal character at a time. Recover the full private code, redeem it to add 175 credits, and submit the returned flag to the validation endpoint. The XPath promotion in challenge 8 is separate and does not complete this challenge.
+
+### Solution
+
+Use the included local solver after obtaining a bearer token with `POST /api/v2/login`:
+
+```sh
+DVWS_TOKEN='<your-token>' node scripts/solve-promotion-timing.js
+```
+
+The solver sends several requests for each possible next hexadecimal character, compares median response times, and retains the slowest prefix. For the final character, the correct request redeems the promotion and returns a `DVWS{promotion_timing_...}` flag. It then submits the flag to `/api/v2/resource-store/promotions/timing/validate`. To verify manually, POST `{"flag":"<returned flag>"}` there with the same bearer token. A 200 response of `{"valid":true}`, a 175-credit increase in `GET /api/v2/resource-store`, and one private campaign redemption are the success criteria. A wrong flag, another player's flag, or an account that has not redeemed the campaign receives `{"valid":false}`. Repeating redemption returns HTTP 409; repeating validation remains valid. The code and account-specific flag are local lab values; neither appears in the catalogue or ordinary release response.
+
+**Why it works:** The private lookup searches for codes beginning with the submitted text. A matching prefix takes an extra database and delay path before the same 404 response is sent. Repeated measurements help separate that added work from normal network and process noise. Each successful guess reveals one more character without exposing the campaign record directly.
+
+**Mitigation:** Do not perform different work based on a partially matching secret. Fetch a candidate by a nonsecret identifier, compare the complete code using a constant-time comparison, and apply a uniform response path for invalid codes. Avoid logging or returning secret codes and flags in diagnostic responses. Rate limits can reduce automated probing but do not replace removing the timing difference.
+
 ## Appendix: Quick Reference
 
 ### Endpoints by Vulnerability Category
@@ -1922,3 +1943,4 @@ Without authentication, `/api/v2/users` returns HTTP 401. With the forged token,
 | **Mass Assignment** | `/api/v2/users`, `/api/v2/users/profile/import/xml`, `/api/v2/users/notification-preferences` |
 | **Hidden Endpoint** | `TRACE /internal/diagnostics` |
 | **Business Logic** | `/api/v2/resource-store/orders` (negative quantity increases credits) |
+| **Side Channel** | `/api/v2/resource-store/promotions/redeem` (private promotion prefix changes response time) |

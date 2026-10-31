@@ -576,7 +576,7 @@
     },
     "/v2/users/ldap-search": {
       "get": {
-        "description": "Searches the Mongo-backed account directory. The unescaped user value is interpolated into a directory filter; wildcard and boolean filter injection can enumerate real account fields and permissions.",
+        "description": "Challenge 9 LDAP Injection: searches a Mongo-backed LDAP-like account directory. The unescaped user value enters an RFC 4515-style filter; * enumerates entries and a value such as missing)(uid=admin adds an OR clause. Results include bounded directory metadata, including uidNumber, gidNumber, and homeDirectory; no passwords or secrets.",
         "parameters": [
           {
             "name": "user",
@@ -588,12 +588,15 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Search result with filter and results; each entry retains username, email, homeAddress, permissions and adds uid, cn, mail, description, uidNumber, gidNumber, homeDirectory, objectClass."
+          },
+          "400": {
+            "description": "Invalid directory filter"
           }
         }
       },
       "post": {
-        "description": "Searches the Mongo-backed account directory. The unescaped user value is interpolated into a directory filter; wildcard and boolean filter injection can enumerate real account fields and permissions.",
+        "description": "Challenge 9 LDAP Injection: searches a Mongo-backed LDAP-like account directory. The unescaped user value enters an RFC 4515-style filter; * enumerates entries and a value such as missing)(uid=admin adds an OR clause. Results include bounded directory metadata, including uidNumber, gidNumber, and homeDirectory; no passwords or secrets.",
         "parameters": [
           {
             "name": "user",
@@ -605,7 +608,10 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Search result with filter and results; each entry retains username, email, homeAddress, permissions and adds uid, cn, mail, description, uidNumber, gidNumber, homeDirectory, objectClass."
+          },
+          "400": {
+            "description": "Invalid directory filter"
           }
         },
         "requestBody": {
@@ -1251,7 +1257,7 @@
       "post": {
         "tags": ["Resource Store"],
         "summary": "Redeem an active promotion code for workspace credits",
-        "description": "Redeem an active promotion from the operational XML configuration once per account.",
+        "description": "Redeem an active promotion once per account. Private campaign prefix matches take a slower lookup path.",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -1266,11 +1272,33 @@
           }
         },
         "responses": {
-          "200": { "description": "Credits applied to the wallet" },
-          "400": { "description": "Invalid code" },
+          "200": { "description": "Credits applied. A private campaign redemption also returns an account-specific flag.", "content": { "application/json": { "schema": { "type": "object", "required": ["balance", "credits", "redemption"], "properties": { "balance": { "type": "number" }, "credits": { "type": "number" }, "redemption": { "type": "object" }, "flag": { "type": "string" } } } } } },
+          "400": { "description": "Missing or invalid code" },
           "401": { "description": "Unauthorized" },
           "404": { "description": "Promotion not found" },
-          "409": { "description": "Promotion already redeemed" }
+          "409": { "description": "Promotion already redeemed" },
+          "500": { "description": "Unable to redeem promotion" }
+        }
+      }
+    },
+    "/v2/resource-store/promotions/timing/validate": {
+      "post": {
+        "tags": ["Resource Store"],
+        "summary": "Validate the promotion timing challenge flag after redemption",
+        "description": "Validate an account-specific flag after that account redeems the private campaign.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": {
+            "type": "object", "required": ["flag"],
+            "properties": { "flag": { "type": "string", "minLength": 1, "maxLength": 100 } }
+          } } }
+        },
+        "responses": {
+          "200": { "description": "Validation result for the authenticated account", "content": { "application/json": { "schema": { "type": "object", "required": ["valid"], "properties": { "valid": { "type": "boolean" } } } } } },
+          "400": { "description": "Missing or invalid flag" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Unable to validate flag" }
         }
       }
     },

@@ -1,6 +1,8 @@
+const crypto = require('crypto');
 const validateToken = require('../middleware/auth').validateToken;
 const Wallet = require('../models/resource-store-wallet');
 const Order = require('../models/resource-store-order');
+const Promotion = require('../models/resource-store-promotion');
 const { invalidateMonthlyReport } = require('../services/monthly-report-cache');
 const { recordActivity } = require('../services/activity-events');
 const { findActivePromotion } = require('../services/operational-config');
@@ -22,6 +24,15 @@ async function getWallet(username) {
     if (error.code === 11000) return Wallet.findOne({ username });
     throw error;
   }
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function timingChallengeFlag(code, username) {
+  const digest = crypto.createHash('sha256').update(`${code}\0${username}`).digest('hex').slice(0, 16);
+  return `DVWS{promotion_timing_${digest}}`;
 }
 
 module.exports = (router) => {
@@ -50,11 +61,36 @@ module.exports = (router) => {
     if (typeof code !== 'string' || !code.trim() || code.length > 100) {
       return res.status(400).json({ error: 'A promotion code is required.' });
     }
-    const promotion = findActivePromotion(code.trim());
-    if (!promotion) return res.status(404).json({ error: 'Promotion code not found.' });
     const username = req.decoded.user;
     if (!username) return res.status(401).json({ error: 'Authentication error. Invalid token.' });
     try {
+      const submittedCode = code.trim();
+      let promotion = findActivePromotion(submittedCode);
+      let challengeFlag;
+      if (!promotion) {
+        const normalizedCode = submittedCode.toUpperCase();
+        // The legacy campaign lookup searches by prefix before checking
+        // eligibility and the complete voucher code. Matching prefixes cause
+        // extra database work even when the eventual response is a 404.
+        const candidate = await Promotion.findOne({
+          code: { $regex: `^${escapeRegex(normalizedCode)}` }, active: true
+        }).lean();
+        if (candidate) {
+          // Intentional timing oracle for the CTF: a matching prefix takes a
+          // measurably slower path even when the full code is still wrong.
+          await new Promise((resolve) => setTimeout(resolve, 40));
+          const previousWallet = await Wallet.findOne({ username }).select('redemptions.code').lean();
+          const orderCount = await Order.countDocuments({ username });
+          if (candidate.code === normalizedCode && orderCount < candidate.maxOrders) {
+            if (previousWallet?.redemptions?.some((entry) => entry.code === candidate.publicId)) {
+              return res.status(409).json({ error: 'Promotion already redeemed.' });
+            }
+            promotion = { code: candidate.publicId, credits: candidate.credits };
+            challengeFlag = timingChallengeFlag(candidate.code, username);
+          }
+        }
+      }
+      if (!promotion) return res.status(404).json({ error: 'Promotion code not found.' });
       const wallet = await getWallet(username);
       const updatedWallet = await Wallet.findOneAndUpdate(
         { _id: wallet._id, 'redemptions.code': { $ne: promotion.code } },
@@ -67,9 +103,30 @@ module.exports = (router) => {
       if (!updatedWallet) return res.status(409).json({ error: 'Promotion already redeemed.' });
       await recordActivity(username, 'promotion.redeemed', promotion.code);
       return res.json({ balance: updatedWallet.balance, credits: promotion.credits,
-        redemption: updatedWallet.redemptions.at(-1) });
+        redemption: updatedWallet.redemptions.at(-1), ...(challengeFlag ? { flag: challengeFlag } : {}) });
     } catch (error) {
       return res.status(500).json({ error: 'Unable to redeem promotion.' });
+    }
+  });
+
+  router.post('/v2/resource-store/promotions/timing/validate', validateToken, async (req, res) => {
+    // #swagger.tags = ['Resource Store']
+    // #swagger.summary = 'Validate the promotion timing challenge flag after redemption'
+    // #swagger.security = [{ bearerAuth: [] }]
+    const username = req.decoded.user;
+    if (!username) return res.status(401).json({ error: 'Authentication error. Invalid token.' });
+    const flag = req.body?.flag;
+    if (typeof flag !== 'string' || !flag.trim() || flag.length > 100) return res.status(400).json({ error: 'A flag is required.' });
+    try {
+      const campaign = await Promotion.findOne({ slug: 'workspace-credit-2026', active: true }).lean();
+      const wallet = await Wallet.findOne({ username }).select('redemptions.code').lean();
+      const redeemed = wallet?.redemptions?.some((entry) => entry.code === campaign?.publicId);
+      if (!campaign || !redeemed) return res.json({ valid: false });
+      const expected = Buffer.from(timingChallengeFlag(campaign.code, username));
+      const submitted = Buffer.from(flag);
+      return res.json({ valid: submitted.length === expected.length && crypto.timingSafeEqual(submitted, expected) });
+    } catch (error) {
+      return res.status(500).json({ error: 'Unable to validate flag.' });
     }
   });
 

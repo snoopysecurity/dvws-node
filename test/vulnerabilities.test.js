@@ -479,22 +479,64 @@ describe("DVWS-Node Vulnerability Tests", function () {
   });
 
   describe("35. LDAP Injection", function () {
-    it("should be vulnerable to LDAP injection", async function () {
-      const wildcardResponse = await request
-        .get("/users/ldap-search")
-        .query({ user: "*" });
-        
-      expect(wildcardResponse.status).to.eql(200);
-      expect(wildcardResponse.body.results.map((account) => account.username)).to.include("test");
-      
-      const attrResponse = await request
-        .get("/users/ldap-search")
-        .query({ user: "admin)(objectClass=*)" });
-        
-      expect(attrResponse.status).to.eql(200);
-      const adminUser = attrResponse.body.results[0];
-      expect(adminUser).to.have.property('username', 'admin');
-      expect(adminUser.permissions).to.include('user:admin');
+    it("evaluates RFC-style AND, OR, NOT, and escaped special characters", function () {
+      const { parseFilter, matches } = require('../src/services/account-directory');
+      const entry = { uid: 'admin', mail: 'admin@dvws.local', objectClass: ['account'] };
+      expect(matches(entry, parseFilter('(&(uid=admin)(mail=admin@dvws.local))'))).to.eql(true);
+      expect(matches(entry, parseFilter('(&(uid=admin)(mail=other@dvws.local))'))).to.eql(false);
+      expect(matches(entry, parseFilter('(|(uid=missing)(uid=admin))'))).to.eql(true);
+      expect(matches(entry, parseFilter('(!(uid=admin))'))).to.eql(false);
+      expect(matches(entry, parseFilter('(unknown=*)'))).to.eql(false);
+      expect(matches({ uid: 'a*b' }, parseFilter('(uid=a\\2ab)'))).to.eql(true);
+      expect(matches({ uid: 'café' }, parseFilter('(uid=caf\\c3\\a9)'))).to.eql(true);
+    });
+
+    const lookup = (user) => request.get("/users/ldap-search").query({ user });
+
+    it("returns a normal lookup and bounded LDAP-like directory fields", async function () {
+      const response = await lookup("test");
+      expect(response.status).to.eql(200);
+      const account = response.body.results.find((item) => item.username === "test");
+      expect(account).to.include({ uid: "test", cn: "test", mail: "test@dvws.local" });
+      expect(account).to.have.property('description');
+      expect(account).to.have.property('uidNumber').that.is.a('number');
+      expect(account).to.have.property('gidNumber').that.is.a('number');
+      expect(account).to.have.property('homeDirectory', '/home/dvws/test');
+      expect(account.objectClass).to.include('account');
+      expect(JSON.stringify(response.body)).not.to.match(/password|jwt.secret|private.key/i);
+    });
+
+    it("enumerates users with a wildcard and discloses the admin directory entry with a valid OR injection", async function () {
+      const wildcard = await lookup("*");
+      expect(wildcard.status).to.eql(200);
+      expect(wildcard.body.results.map((account) => account.username)).to.include("test");
+      const injected = await lookup("missing)(uid=admin");
+      expect(injected.status).to.eql(200);
+      expect(injected.body.results.map((account) => account.username)).to.eql(['admin']);
+      expect(injected.body.results[0].permissions).to.include('user:admin');
+      expect(injected.body.results[0].homeDirectory).to.eql('/home/dvws/admin');
+    });
+
+    it("handles AND, OR, NOT, presence, case-insensitive names, and unknown attributes", async function () {
+      const all = await lookup("*)(UID=admin");
+      expect(all.status).to.eql(200);
+      expect(all.body.results.map((account) => account.username)).to.include('admin');
+      const excluded = await lookup("missing)(!(UID=admin)");
+      expect(excluded.status).to.eql(200);
+      expect(excluded.body.results.map((account) => account.username)).to.include('test');
+      expect(excluded.body.results.map((account) => account.username)).not.to.include('admin');
+      const unknown = await lookup("missing)(unknown=*");
+      expect(unknown.status).to.eql(200);
+      expect(unknown.body.results).to.eql([]);
+    });
+
+    it("rejects malformed and unusually long filters without crashing", async function () {
+      for (const user of ['admin)(', 'abc\\zz', 'x'.repeat(5000)]) {
+        const response = await lookup(user);
+        expect(response.status).to.eql(400);
+        expect(response.body.error).to.eql('Invalid directory filter');
+      }
+      expect((await lookup('test')).status).to.eql(200);
     });
   });
 

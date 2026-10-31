@@ -2,9 +2,11 @@ const Sequelize = require('sequelize');
 require('dotenv').config();
 
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const User = require('../src/models/user');
 const SupportTicket = require('../src/models/support-ticket');
+const ResourceStorePromotion = require('../src/models/resource-store-promotion');
 
 
 const connHost = process.env.SQL_LOCAL_CONN_URL;
@@ -50,6 +52,16 @@ async function main() {
     try {
         console.log('[+] Creating MongoDB Admin/Test users...');
         await mongoose.connect(connUri);
+
+        // The private voucher stays stable while this database persists.
+        await ResourceStorePromotion.findOneAndUpdate(
+            { slug: 'workspace-credit-2026' },
+            { $setOnInsert: {
+                code: `OPS-${crypto.randomBytes(6).toString('hex').toUpperCase()}`,
+                publicId: 'workspace-credit-2026', credits: 175, maxOrders: 100, active: true
+            } },
+            { upsert: true, setDefaultsOnInsert: true }
+        );
         
         // Reset Users collection
         await User.deleteMany({});

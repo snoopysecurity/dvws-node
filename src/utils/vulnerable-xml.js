@@ -74,10 +74,9 @@ function parseVulnerableXml(xml) {
   }
 
   const document = new DOMParser({
-    errorHandler: {
-      warning: () => {},
-      error: (message) => { throw new Error(message); },
-      fatalError: (message) => { throw new Error(message); }
+    onError: (level, message) => {
+      if (level === 'warning') return;
+      throw new Error(message);
     }
   }).parseFromString(expand(documentXml), 'application/xml');
 

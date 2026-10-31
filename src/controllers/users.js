@@ -653,7 +653,7 @@ module.exports = {
   // Mongo collection used by login, but the filter is assembled without escaping.
   ldapSearch: async (req, res) => {
     const user = req.query.user || (req.body && req.body.user) || '';
-    const filter = `(uid=${user})`;
+    const filter = `(&(objectClass=account)(|(uid=${user})(cn=directory-service)))`;
     try {
       // The adapter evaluates the interpolated LDAP filter against real accounts.
       const accounts = await accountDirectory.search(filter);
@@ -661,11 +661,12 @@ module.exports = {
         username: account.username,
         email: account.email,
         homeAddress: account.homeAddress,
-        permissions: account.admin ? ['user:read', 'user:write', 'user:admin'] : ['user:read', 'user:write']
+        permissions: account.admin ? ['user:read', 'user:write', 'user:admin'] : ['user:read', 'user:write'],
+        ...account.directory
       }));
       return res.status(200).send({ filter, results });
     } catch (err) {
-      return res.status(500).send({ error: err.message });
+      return res.status(err.message === 'Invalid directory filter' ? 400 : 500).send({ error: err.message === 'Invalid directory filter' ? err.message : 'Directory search failed' });
     }
   },
 
