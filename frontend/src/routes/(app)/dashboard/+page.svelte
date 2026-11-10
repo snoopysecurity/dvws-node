@@ -23,7 +23,7 @@
 <div class="mx-auto max-w-6xl space-y-7">
   <section class="overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-6 shadow-sm sm:p-8">
     <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">Workspace overview</p>
-    <div class="mt-3 flex flex-col gap-6 md:flex-row md:items-end md:justify-between"><div><h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Welcome, {$authStore.user?.username || 'account'}.</h1><p class="mt-2 max-w-2xl text-slate-600">Your DVWS Cloud workspace is ready for the next update.</p></div><a class="focus-ring inline-flex items-center gap-2 self-start rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700" href="/profile">Open account <Icon name="chevron" size={16} /></a></div>
+    <div class="mt-3 flex flex-col gap-6 md:flex-row md:items-end md:justify-between"><div><h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Welcome, {$authStore.user?.username || 'account'}.</h1><p class="mt-2 max-w-2xl text-slate-600">Your DVWS workspace is ready for the next update.</p></div><a class="focus-ring inline-flex items-center gap-2 self-start rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700" href="/profile">Open account <Icon name="chevron" size={16} /></a></div>
   </section>
   <section class="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
     <Card class="p-5 sm:p-6"><div class="flex items-center justify-between"><div><p class="page-kicker">Activity</p><h2 class="section-title mt-1">Recent activity</h2></div><a class="focus-ring text-sm font-semibold text-indigo-300 hover:text-indigo-200" href="/profile#notifications">View notifications</a></div>

@@ -149,9 +149,9 @@
     try {
       const { data } = await apiClient.post('/api/v2/account-recovery/lookup', { email: recoveryEmail });
       recoveryAccount = { userId: data.userId, username: data.username };
-      recoveryResponse = 'Password reset request created.';
+      recoveryResponse = 'Request received.';
     } catch (error: any) {
-      recoveryResponse = extractErrorMessage(error, 'Could not find an account for that email');
+      recoveryResponse = 'Request received.';
     } finally {
       isLoading = false;
     }
@@ -316,22 +316,21 @@
   </Card>
 
   <Card id="recovery" class="scroll-mt-24 p-6">
-    <h2 class="section-title mb-2">Recovery</h2>
-    <p class="mb-4 text-sm text-slate-400">Request a password reset for an account using its email address.</p>
+    <h2 class="section-title mb-2">Account access</h2>
+    <p class="mb-4 text-sm text-slate-400">Need help signing in?</p>
 
     <form onsubmit={lookupRecoveryAccount} class="space-y-4">
       <div>
-        <label for="recovery-email" class="block text-sm font-medium mb-2">Account email</label>
-        <Input id="recovery-email" type="email" bind:value={recoveryEmail} required placeholder="Enter an account email" />
+        <label for="recovery-email" class="block text-sm font-medium mb-2">Email</label>
+        <Input id="recovery-email" type="email" bind:value={recoveryEmail} required placeholder="Enter email" />
       </div>
-      <Button type="submit" disabled={isLoading}>{isLoading ? 'Loading…' : 'Request password reset'}</Button>
+      <Button type="submit" disabled={isLoading}>{isLoading ? 'Loading…' : 'Continue'}</Button>
     </form>
 
     {#if recoveryAccount}
       <form onsubmit={resetRecoveryPassword} class="mt-6 space-y-4 border-t pt-5">
-        <p class="text-sm text-slate-300">Reset request for <strong>{recoveryAccount.username}</strong></p>
         <div>
-          <label for="recovery-password" class="block text-sm font-medium mb-2">New password</label>
+          <label for="recovery-password" class="block text-sm font-medium mb-2">Enter your new password</label>
           <Input id="recovery-password" type="password" bind:value={recoveryPassword} required minlength="4" autocomplete="new-password" />
         </div>
         <Button type="submit" disabled={isLoading}>{isLoading ? 'Resetting…' : 'Set new password'}</Button>
@@ -347,7 +346,7 @@
 
   <Card id="password" class="scroll-mt-24 p-6">
     <h2 class="text-xl font-semibold mb-2">Password</h2>
-    <p class="mb-5 text-sm text-slate-400">Update your account password.</p>
+    <p class="mb-5 text-sm text-slate-400">Change the password used to sign in.</p>
 
     <div class="space-y-5">
       <form onsubmit={changePassword} class="space-y-4">

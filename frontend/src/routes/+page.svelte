@@ -75,7 +75,7 @@
   <!-- Sidebar -->
   <div class="relative overflow-hidden border-b border-slate-800 bg-[#0c1019] p-8 text-white sm:p-12 lg:flex lg:flex-col lg:justify-center lg:border-b-0 lg:border-r">
     <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-600/30 blur-3xl"></div>
-    <div class="relative max-w-md"><p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-300">Developer operations</p><h1 class="mt-4 text-4xl font-bold tracking-tight">DVWS Cloud</h1>
+    <div class="relative max-w-md"><p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-300">Developer operations</p><h1 class="mt-4 text-4xl font-bold tracking-tight">DVWS</h1>
     <p class="mt-4 text-lg text-slate-300">A compact workspace for account controls, artifacts, notes, and operational administration.</p>
     <div class="mt-8 rounded-xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300"><p class="font-semibold text-indigo-200">Console access</p><p class="mt-1">Sign in to manage your workspace and account preferences.</p></div></div>
   </div>
@@ -86,7 +86,7 @@
       <h2 class="mb-2 text-2xl font-bold text-slate-900">
         {isRegisterMode ? 'Create account' : 'Sign in'}
       </h2>
-      <p class="mb-6 text-sm text-slate-600">Use your DVWS Cloud account to continue.</p>
+      <p class="mb-6 text-sm text-slate-600">Use your DVWS account to continue.</p>
       
       <form onsubmit={handleSubmit} class="space-y-4">
         <div>

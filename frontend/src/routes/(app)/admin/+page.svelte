@@ -10,6 +10,7 @@
   let isAdmin = $state(false);
   let isLoading = $state(true);
   let errorMessage = $state('');
+  let sessionToken = $state('');
   
   onMount(async () => {
     try {
@@ -20,12 +21,13 @@
       if (isAdmin) {
         // Get system info
         const sysInfo = await apiClient.get('/api/v2/sysinfo/uname');
-        systemInfo = sysInfo.data.sysinfo || '';
+        systemInfo = typeof sysInfo.data === 'string'
+          ? sysInfo.data
+          : sysInfo.data?.sysinfo || '';
         
         setTimeout(() => {
           if (browser) {
-            const token = localStorage.getItem('JWTSessionID');
-            window.postMessage(token, '*');
+            sessionToken = localStorage.getItem('JWTSessionID') || '';
           }
         }, 1000);
       }
@@ -63,8 +65,7 @@
     </Card>
     
     <Card class="p-6">
-      <h2 class="section-title mb-4">Session receiver</h2>
-      <ReceiverIframe />
+      <ReceiverIframe token={sessionToken} />
     </Card>
     
     <!-- Admin Actions -->

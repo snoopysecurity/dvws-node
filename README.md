@@ -87,6 +87,7 @@ The application includes guided exercises across REST, GraphQL, SOAP, XML-RPC, a
 * JWT Secret Key Brute Force
 * JWT JKU Key Source Trust
 * JWT KID Path Traversal
+* JWT Disclosure Through PostMessage
 * Vertical Access Control (Privilege Escalation)
 * Horizontal Access Control
 * Open Redirect
