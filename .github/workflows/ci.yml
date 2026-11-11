@@ -19,7 +19,6 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: mysecretpassword
-          MYSQL_DATABASE: dvws_sqldb
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
@@ -31,23 +30,13 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Install system dependencies (Linux)
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libxml2 libxml2-dev
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.x'
-
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v6
       with:
         node-version: ${{ matrix.node-version }}
 
     - name: Install Dependencies
-      run: npm install --build-from-source
+      run: npm ci
 
     - name: Seed Database
       env:
@@ -60,8 +49,6 @@ jobs:
     - name: Start Server and Run Tests
       env:
         EXPRESS_JS_PORT: 3000
-        XML_RPC_PORT: 9090
-        GRAPHQL_PORT: 4000
         SQL_LOCAL_CONN_URL: localhost
         SQL_USERNAME: root
         SQL_PASSWORD: mysecretpassword
@@ -73,8 +60,8 @@ jobs:
         PID=$!
         echo "Server started with PID $PID"
         
-        # Wait for server to be ready (using wait-on http)
-        npx wait-on http://127.0.0.1:3000/openAPI-spec.json --timeout 60000
+        # Wait for the generated API spec before running tests
+        curl --fail --silent --show-error --retry 12 --retry-connrefused --retry-delay 5 --max-time 10 --output /dev/null http://127.0.0.1:3000/openAPI-spec.json
         
         # Debug connectivity
         echo "Testing connectivity with curl..."
