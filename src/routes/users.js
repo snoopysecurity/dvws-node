@@ -11,11 +11,18 @@ var guard = require('express-jwt-permissions')({
   requestProperty: 'identity',
   permissionsProperty: 'permissions'
 })
-
+// Only allow tokens that carry the admin permission
+const requireAdmin = (req, res, next) => {
+  const perms = (req.decoded && req.decoded.permissions) || [];
+  if (!perms.includes('user:admin')) {
+    return res.status(403).send({ error: 'Forbidden' });
+  }
+  next();
+};
 module.exports = (router) => {
   router.route('/v2/users')
     .post(controller.add)
-    .get(validateToken, controller.getAll);
+    .get(validateToken, requireAdmin, controller.getAll);
 
   router.route('/v2/users/checkadmin')
     .get(validateToken, controller.checkadmin);

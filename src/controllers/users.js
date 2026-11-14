@@ -179,7 +179,12 @@ module.exports = {
                   
                   result.token = token;
                   result.status = status;
-                  result.result = user;
+                  result.result = {
+                    username: user.username,
+                    email: user.email,
+                    admin: user.admin,
+                     bio: user.bio
+                  };
                 } else {
 
                   const payload = { user: user.username,"permissions": [
@@ -192,7 +197,12 @@ module.exports = {
                   
                   result.token = token;
                   result.status = status;
-                  result.result = user;
+                  result.result = {
+                    username: user.username,
+                    email: user.email,
+                    admin: user.admin,
+                    bio: user.bio
+                  };
                 }
                 // Create a token
               
@@ -267,7 +277,7 @@ module.exports = {
       let status = 200;
 
       try {
-          const users = await User.find({});
+          const users = await User.find({}).select('-password');
           result.status = status;
           result.result = users;
       } catch (err) {
