@@ -1,145 +1,125 @@
-[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/snoopysecurity/dvws-node)
-![Node.js Version](https://img.shields.io/badge/node-v22-green)
-![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)
-![Security](https://img.shields.io/badge/Security-Intentionally%20Vulnerable-red)
+# Web Vulnerability Detection and Fixing
 
-# DVWS-Node
+A university cybersecurity project in which our team detects, demonstrates, fixes and re-tests 12 web application vulnerabilities in a deliberately vulnerable Node.js application, running locally in Docker.
 
-DVWS-Node is a deliberately vulnerable web application for practising API and web-service security testing. It includes a browser UI and REST, GraphQL, SOAP, and XML-RPC interfaces. The vulnerabilities are intentional; do not expose this project to an untrusted network.
+> ⚠️ **For education only.** This application contains intentional security vulnerabilities. Run it only on your own machine or in an isolated VM. Never deploy it to a public server.
 
-It is the successor to [DVWS](https://github.com/snoopysecurity/dvws). The hands-on exercises are in the [challenge guide](CHALLENGES.md).
+## Team
 
-## Interfaces
+| Name | Student ID | Focus area |
+|---|---|---|
+| Amr Hosni | 200064 | Injection |
+| Momen Amin | 241492 | Access Control |
+| Bashar Zain | 249625 | Data Exposure |
+| Ahmed Ramadan | 245882 | Authentication and Client-Side |
 
-| Interface | Path |
-|---|---|
-| REST | `/api/v1/*`, `/api/v2/*` |
-| GraphQL | `/graphql` |
-| SOAP | `/dvwsuserservice` |
-| XML-RPC | `/xmlrpc` |
-| Swagger | `/api-docs` |
+## Project Goal
 
-The exercises cover injection, broken authentication and access control, unsafe file handling, browser attacks, GraphQL flaws, and several business-logic bugs.
+For each vulnerability in our scope, we:
 
-## Run it with Docker Compose
+1. **Detect** the vulnerability and locate the vulnerable code.
+2. **Demonstrate** that it exists, with evidence (screenshots or logs).
+3. **Fix** it with an appropriate security control.
+4. **Re-test** with the same method to prove the fix works.
 
-```sh
-git clone https://github.com/snoopysecurity/dvws-node.git
+Every vulnerability in our scope leads to unauthorized access to, or exposure of, user data, so the project also looks at each one from a **data privacy** angle.
+
+## Scope: 12 Vulnerabilities
+
+Numbers refer to the sections in [`CHALLENGES.md`](CHALLENGES.md).
+
+| # | Vulnerability | Owner | Status |
+|---|---|---|---|
+| 1 | SQL Injection | Amr Hosni | ⬜ To do |
+| 2 | NoSQL Injection | Amr Hosni | ⬜ To do |
+| 3 | OS Command Injection | Amr Hosni | ⬜ To do |
+| 15 | IDOR (Insecure Direct Object Reference) | Momen Amin | ⬜ To do |
+| 18 | Vertical Access Control (Privilege Escalation) | Momen Amin | ⬜ To do |
+| 19 | Horizontal Access Control | Momen Amin | ⬜ To do |
+| 26 | Information Disclosure | Bashar Zain | ⬜ To do |
+| 27 | Sensitive Data Exposure (Password Hashes) | Bashar Zain | ⬜ To do |
+| 51 | Missing Security Headers | Bashar Zain | ⬜ To do |
+| 16 | JWT "none" Algorithm | Ahmed Ramadan | ⬜ To do |
+| 17 | Weak JWT Secret | Ahmed Ramadan | ⬜ To do |
+| 21 | Cross-Site Scripting (XSS) | Ahmed Ramadan | ⬜ To do |
+
+Update the status to ✅ **Fixed** when your fix is merged.
+
+## Tech Stack
+
+- **Backend:** Node.js, Express
+- **Frontend:** Svelte
+- **Databases:** MongoDB, MySQL
+- **Environment:** Docker, Docker Compose
+
+## Getting Started
+
+### Requirements
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) (running, with "Engine running" shown)
+- [Git](https://git-scm.com/downloads)
+
+### Run the application
+
+```bash
+git clone https://github.com/basharzin/dvws-node.git
 cd dvws-node
 docker compose up --build
 ```
 
-This starts the application, MongoDB, and MySQL. If startup fails because a database is still coming up, increase `WAIT_HOSTS_TIMEOUT`.
+Wait for `All services listening at http://127.0.0.1`, then open:
 
-The app is available on port 80 by default. The optional HTTPS setup is needed for the cross-origin browser exercises:
+| URL | What it is |
+|---|---|
+| http://localhost | The web application (login: `test` / `test`) |
+| http://localhost/api-docs | API documentation (Swagger) |
 
-```sh
-docker compose -f docker-compose.yml -f docker-compose.tls.yml up --build
+Stop the app with `Ctrl + C`, or `docker compose down`.
+Use `--build` again after any code change so the fix is included.
+
+## Team Workflow
+
+1. Create a branch for your vulnerability:
+   ```bash
+   git checkout -b fix/<vulnerability-name>
+   ```
+2. Confirm the vulnerability and take a **"before"** screenshot.
+3. Find the vulnerable code in `src/`.
+4. Apply the fix and rebuild with `docker compose up --build`.
+5. Repeat the same test and take an **"after"** screenshot.
+6. Fill in your section in `docs/fixes/` using the template below.
+7. Commit, push and open a Pull Request:
+   ```bash
+   git add .
+   git commit -m "Fix <vulnerability> (#<number>)"
+   git push origin fix/<vulnerability-name>
+   ```
+
+## Fix Report Template
+
+Copy this for each vulnerability:
+
+```markdown
+## #<number> <Vulnerability name>
+
+- **Owner:**
+- **Location:** endpoint and file (e.g. `GET /api/v1/info`, `src/controllers/notes.js`)
+- **Severity:** Low / Medium / High / Critical
+- **Data privacy impact:** what user data is exposed and to whom
+
+### Evidence (before)
+<screenshot>
+
+### Root cause
+<what is wrong in the code>
+
+### Fix
+<code before and after>
+
+### Verification (after)
+<screenshot showing the same test now fails>
 ```
 
-## Run it manually
+## Credits and License
 
-You need Node.js 22, MongoDB on port 27017, and MySQL on port 3306. Docker can start the databases:
-
-```sh
-docker run -d -p 27017:27017 --name dvws-mongo mongo:4.0.4
-docker run -d -p 3306:3306 --name dvws-mysql \
-  -e MYSQL_ROOT_PASSWORD=mysecretpassword \
-  -e MYSQL_DATABASE=dvws_sqldb mysql:8
-```
-
-Then install, seed, and start the app:
-
-```sh
-npm install
-node scripts/seed-database.js
-npm start
-```
-
-Set the database values in `.env` if your services use different settings. The server listens on port 80; set `EXPRESS_JS_PORT` to an unprivileged port if needed.
-
-For Swagger links, you can add this entry to `/etc/hosts`:
-
-```text
-127.0.0.1 dvws.local
-```
-
-## Security issues covered
-
-The application includes guided exercises across REST, GraphQL, SOAP, XML-RPC, and browser workflows. See the [challenge guide](CHALLENGES.md) for endpoint details, example requests, and mitigation notes.
-
-* SQL Injection
-* NoSQL Injection
-* OS Command Injection
-* XML External Entity Injection (XXE)
-* XML Bomb (Denial of Service)
-* Server-Side Request Forgery (SSRF)
-* Insecure Deserialization (RCE)
-* XPath Injection
-* LDAP Injection
-* Path Traversal
-* SOAP Injection
-* XML Injection (Profile Export)
-* XML Injection (Profile Import / Mass Assignment)
-* Mass Assignment (User Registration)
-* IDOR (Insecure Direct Object Reference)
-* Broken Authentication (JWT `none` Algorithm)
-* JWT Secret Key Brute Force
-* JWT JKU Key Source Trust
-* JWT KID Path Traversal
-* JWT Disclosure Through PostMessage
-* Vertical Access Control (Privilege Escalation)
-* Horizontal Access Control
-* Open Redirect
-* Cross-Site Scripting (XSS)
-* Cross-Site Request Forgery (CSRF)
-* CORS Misconfiguration
-* CRLF Injection / Log Pollution
-* User Enumeration
-* Information Disclosure
-* Sensitive Data Exposure (Password Hashes)
-* Prototype Pollution
-* API Endpoint Brute Forcing (Missing Rate Limit)
-* HTTP Method Confusion (State Change Through GET)
-* Ignored `Accept` Headers and Content-Type Confusion
-* Credentials in URLs and Base64 Mistaken for Encryption
-* HTTP Method Override Bypass
-* Shared Caching of Authenticated Reports
-* Inconsistent Request Format Handling
-* Resource Store: Get an Item for Free
-* Resource Store: Increase Your Balance by 1,000 Credits
-* Rate Limit Bypass via `X-Forwarded-For`
-* Hidden API Functionality Exposure
-* GraphQL Introspection
-* GraphQL Access Control Issues
-* GraphQL Arbitrary File Write
-* GraphQL Batching Brute Force
-* GraphQL Sensitive Data Exposure
-* GraphQL Alias Amplification
-* Missing Security Headers
-* Unrestricted File Upload
-* Role-Based Profile Data Exposure
-* Account Recovery IDOR Chain
-* Session Revocation After Password Change
-* Cross-Site Request Forgery Through the Login Cookie
-* JSONP Cross-Origin Profile Sharing
-* Cross-Site WebSocket Hijacking
-* Server-Side Template Injection
-* Unsafe YAML Supplier Import
-* Cross-Customer Monthly Statement Path Traversal
-* Notification Preference Mass Assignment
-* Undocumented TRACE Diagnostics
-* Legacy Login Skips Password Verification
-* Excessive Activity Report Page Size
-* Timing Attacks
-
-## Tests
-
-The vulnerability tests are intentionally expected to pass when the vulnerable behaviour is present. See [`test/README.md`](test/README.md) for the commands and prerequisites.
-
-## Further reading
-
-- [Challenge guide](CHALLENGES.md)
-- [Frontend README](frontend/README.md)
-
-Questions and bug reports are welcome as [GitHub issues](https://github.com/snoopysecurity/dvws-node/issues).
+This project is built on [DVWS-node](https://github.com/snoopysecurity/dvws-node) by snoopysecurity, an intentionally vulnerable application for security training. The original application and our modifications are distributed under the [GNU GPL v3.0](LICENSE).
