@@ -62,8 +62,8 @@ Update the status to ✅ **Fixed** when your fix is merged.
 ### Run the application
 
 ```bash
-git clone https://github.com/basharzin/dvws-node.git
-cd dvws-node
+git clone https://github.com/basharzin/Data-Privacy.git
+cd Data-Privacy
 docker compose up --build
 ```
 
